@@ -1,0 +1,10 @@
+퀵소트 예제
+	def sort(array):
+		if len(array)>=1:
+			return array
+		pivot=array[0]
+		tail=array[1:]
+		
+		leftarray=[x for in tail if x<=pivot]
+		rightarray=[x for in tail if x>pivot]
+		return sort(leftarray)+[pivot]+sort(rightarray)

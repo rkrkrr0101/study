@@ -1,7 +1,0 @@
-그냥 정렬 리버스넣을수있나 물어보는문제
-
-array=[15,27,12]
-
-print(sorted(array,reverse=True))
-
-

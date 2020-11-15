@@ -1,0 +1,41 @@
+그자리에 사람몇명있는지 확인하는 배열만든다음에
+들어있는 사람 x 시간해서 제일 작은거에 추가한다음에 times랑 사람수 곱해서 맥스값 리턴
+
+
+순차검색
+import bisect
+def solution(n, times):
+    times.sort()
+    inout=[[times[i],0,0] for i in range(len(times))]
+    
+
+    t=0
+    a=1000000001
+    idx=-1
+    for i in range(n):
+        for j in range(len(inout)):
+           
+
+           if a>inout[j][0]*inout[j][1]+inout[j][0]:
+                a=inout[j][0]*inout[j][1]+inout[j][0]
+                idx=j
+                
+           else:
+            a=inout[idx][0]*inout[idx][1]+inout[idx][0]
+                
+        
+        inout[idx][1]+=1
+        
+            
+            
+    for j in range(len(inout)):
+        inout[j][2]=inout[j][0]*inout[j][1]
+            
+                           
+    print(inout)
+    
+    
+    
+    
+    answer = max(inout,key=lambda x:x[2] )[2]
+    return answer

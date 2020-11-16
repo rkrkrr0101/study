@@ -1,0 +1,94 @@
+그자리에 사람몇명있는지 확인하는 배열만든다음에
+들어있는 사람 x 시간해서 제일 작은거에 추가한다음에 times랑 사람수 곱해서 맥스값 리턴
+
+
+순차검색
+import bisect
+def solution(n, times):
+    times.sort()
+    inout=[[times[i],0,0] for i in range(len(times))]
+    
+
+    t=0
+    a=1000000001
+    idx=-1
+    for i in range(n):
+        for j in range(len(inout)):
+           
+
+           if a>inout[j][0]*inout[j][1]+inout[j][0]:
+                a=inout[j][0]*inout[j][1]+inout[j][0]
+                idx=j
+                
+           else:
+            a=inout[idx][0]*inout[idx][1]+inout[idx][0]
+                
+        
+        inout[idx][1]+=1
+        
+            
+            
+    for j in range(len(inout)):
+        inout[j][2]=inout[j][0]*inout[j][1]
+            
+                           
+    print(inout)
+    
+    
+    
+    
+    answer = max(inout,key=lambda x:x[2] )[2]
+    return answer
+	
+	
+	
+기본적으로 이렇게하면 안되고 이진탐색은 최적화로 풀라고 주는게 아니라 무조건 탐색으로 풀라고 주는거같음
+일반적으로 풀떄 그냥 최대시간(제일 비효율적으로 한 시간) 구해놓고 절반나눠서 되면 왼쪽 안되면 오른쪽해서 
+스타트랑 엔드가 갈리거나 같아지면(서로 교차나면=탐색완료되면) 리턴
+
+배열정렬
+스타트 엔드 세팅
+
+
+와일 스타트<=엔드:
+	미드=스타트엔드/2
+	카운트=0
+	time for 배열:
+		count+=mid//time
+		만약 카운트가 n보다커지면
+			브레이크
+	카운트가 n보다 크면
+		answer=mid
+		end=mid-1
+	작으면
+		start=mid+1
+	return answer
+
+def solution(n, times):
+    times.sort()
+    start=1
+    end=times[-1]*n
+    
+    answer = 0
+    print(end)
+    while start<=end:
+        count=0
+        mid=(start+end)//2
+        for time in times:
+            count+=mid//time
+            if count>=n:
+                break
+        if count>=n:
+            answer=mid
+            end=mid-1
+            
+        else :
+            start=mid+1
+            
+        
+    
+    
+    
+    return answer			
+
+

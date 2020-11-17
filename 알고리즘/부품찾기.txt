@@ -1,0 +1,45 @@
+배열 정렬하고 반복문 요청갯수만큼 돌려서 이진탐색으로 체크한다음에 yes no 리턴배열에 추가
+그냥 집합으로 바꿔서 확인하는게 편하긴할텐데 이진탐색으로 풀라니까 이렇게하자
+
+
+배열 정렬
+
+answer=[]
+for i in 요청배열:
+	start=0
+	end=len(배열)-1
+	while start<=end:
+		mid=(start+end)//2
+		만약 i가 mid보다 크면
+			start=mid
+		만약 i가 mid보다 작으면
+			end=mid
+		만약 i가 mid랑같으면
+			answer.append('yes')
+			break 
+		
+	if start<=end:
+		answer.append('no')
+		
+		
+n=[8,3,7,9,2]
+m=[5,7,9]
+answer=[]
+
+for i in m:
+    start=0
+    end=len(n)-1
+    while True:
+        mid=(start+end)//2
+        if start>=end:
+            answer.append('no')
+            break
+        if i>n[mid]:
+            start=mid+1
+        if i<n[mid]:
+            end=mid-1
+        if i==n[mid]:
+            answer.append('yes')
+            break
+print(answer)
+

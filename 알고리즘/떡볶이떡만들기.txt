@@ -1,0 +1,41 @@
+이거도 높이가지고 이진탐색 돌리면될듯
+절단기 높이가 올라갈수록 떡 작아지니까 딱 m만큼 나오면 엔서에 저장하고 오른쪽으로 쭉돌리고 끝나면 엔서리턴
+작으면 왼쪽 크거나같으면 오른쪽 
+
+배열받고 정렬
+wl=총길이
+answer=0
+start=0 절단기높이 최저
+end=배열[-1] 절단기높이 최대
+while start<=end:
+	mid=(start+end)//2
+	total=0
+	for i in 배열:
+	 if i-mid>0:
+		total+=i-mid
+	if total>=wl:
+		answer=mid
+		start=mid+1
+	if total<wl:
+		end=mid-1
+return answer
+
+array=[19,15,10,17]
+array.sort()
+wl=6
+answer=0
+start=0
+end=array[-1]
+
+while start<=end:
+    mid=(start+end)//2
+    total=0
+    for i in array:
+        if i-mid>0:
+            total+=i-mid
+    if total>=wl:
+        answer=mid
+        start=mid+1
+    if total<wl:
+        end=mid-1
+print(answer)

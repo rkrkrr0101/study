@@ -1,0 +1,31 @@
+그냥 액수만 가지고 계속 채워나가면서 15원만들기 bfs처럼
+2원 3원이 있을떄 [-1,-1,1,1,2,2 이런식으로 가지고있는 모든화폐써서 array[n+i]해서 지금값+1해서 더하고 쭉채우고 끝나면리턴 
+불가능하면 -1넣고 가능
+
+배열이랑 n넣고
+d넣고
+for i in array:
+	d[i]=1#처음 1 초기화
+
+for i in range(n):
+	di가있으면 
+		for배열돌려서
+			배열안에있는거만큼 위치이동해서 현재값+1만큼 추가
+
+리턴
+
+array=[3,5,7]
+n=13
+inf=100000000
+d=[inf]*(n+1)
+
+for i in array:
+    if i<=n:
+        d[i]=1
+    
+
+for i in range(n):
+    if d[i]!=inf:
+        for j in array:
+            if j+i<=n:
+                d[j+i]=min( d[i]+1,d[j+i])

@@ -1,0 +1,16 @@
+이차원배열 만들어서 계속 진행시키면서 max값 계속 찾은다음에 맨밑층에서 젤큰거리턴
+
+
+
+
+def solution(triangle):
+    d=[ [-1]*len(triangle[i]) for i in range(len(triangle))]
+    d[0][0]=triangle[0][0]
+    for i in range(len(triangle)-1):
+        for j in range(len(triangle[i])):
+
+            d[i+1][j]=max(d[i][j]+triangle[i+1][j],d[i+1][j])
+            d[i+1][j+1]=max(d[i][j]+triangle[i+1][j+1],d[i+1][j+1])
+
+    answer = max(d[len(triangle)-1])
+    return answer

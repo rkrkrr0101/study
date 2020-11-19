@@ -2,6 +2,11 @@ start=time.time()
 	사이에 들어간거 시간체크
 end=time.time()
 
+collections.Counter(p) p에들어간거 갯수세서 disc형태로 들고있음
+import collections 넣고 해야함
+ex){'d': 4, 'a': 1, 'b': 1, 'c': 1}
+배열2개로 만들어서 뺄수도있으니 동명이인같은거 처리하기편함 c=a-b
+찾을때는 키로 찾던가하면됨 list(a.keys())[0] 0번째 
 
 가장 큰 순서대로 가장 작은 순서대로 이런거나오면 그리드일확률 높음
 큰단위가 작은거의 배수이면 그리드처리가능

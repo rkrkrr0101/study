@@ -1,0 +1,39 @@
+import collections
+
+def solution(p, c):
+    a = collections.Counter(p)
+    print(a)
+    b=collections.Counter(c)
+    print(b)
+    c=a-b
+    
+    
+    return list(c.keys())[0]
+
+
+
+
+
+
+ÇØ½¬
+
+
+
+import java.util.*;
+
+class Solution {
+    public String solution(String[] participant, String[] completion) {
+        String answer = "";
+        Hashtable inputtable=new Hashtable();
+        Hashtable outputtable=new Hashtable();
+        
+        for (int i=0;i<participant.length;i++)
+        
+        
+        
+        
+        
+        
+        return answer;
+    }
+}

@@ -1,0 +1,33 @@
+플로이드워셜로 전부적어두고 1~k랑 k~x를 더하고 리턴
+
+
+코스트배열 [inf]*(n+1) range(n+1)
+
+도로배열잡고 cost[i[0]][i[1]]=1 cost[i[1]][i[0]]=1 해서 연결하고
+
+코스트배열에 2중루프로 ij같은거(자기자신)0만들고(그냥 1중으로 ii해서 0해도되겠다)
+
+3중반복문해서 점화식돌리고
+
+k+x가 inf보다 작으면 리턴
+
+
+
+n=5
+array=[[1,2],[1,3],[1,4],[2,4],[3,4],[3,5],[4,5]]
+x=4
+k=5
+inf=int(1e9)
+cost=[[inf]*(n+1) for _ in range(n+1)]
+for i in array:
+    cost[i[0]][i[1]]=1
+    cost[i[1]][i[0]]=1
+for i in range(1,n+1):
+    cost[i][i]=0
+    
+for k in range(1,n+1):
+    for a in range(1,n+1):
+        for b in range(1,n+1):
+            cost[a][b]=min(cost[a][b],cost[a][k]+cost[k][b])
+            
+print(cost[1][k],cost[k][x])#inf처리는 귀찮아서안했음 inf보다 작으면대충글케하면됨

@@ -1,0 +1,57 @@
+다익스트라로 최단경로 찾은다음에 코스트배열에서 inf가 아닌거중 최대치 리턴
+
+코스트배열 비지트배열만들고
+코스트배열에 도시들 1차원배열로 inf초기화걸고 만들고(최단경로담을배열)
+자기자신 코스트 0
+도로배열 만들고
+[],[[2,4],[3,4]]이런식으로 담고
+for i in array:
+	도로[i[0]]에 어펜드 [2,4]하는식으로
+q생성
+q에 시작점추가
+큐로 루프돌리고(큐바닥날떄까지):
+	큐에서 코스트기준 우선순위팝하고
+	방문한적없으면
+		그거잡고 연결된도시들 전부 루프돌려서
+				코스트배열값>자기자신코스트+그도시가는비용이면:
+					코스트=자기자신코스트+그도시가는비용
+					큐에 푸시(비용,도시숫자)
+					
+	
+끝나면 코스트배열로 inf가 아닌 갯수세고 inf가 아닌 최대치찾아서 리턴
+
+
+import heapq
+n=5
+m=2
+c=1
+inf=int(1e9)
+array=[[1,2,4],[1,3,2]]
+
+
+costarray=[inf for i in range(n+1)]
+costarray[c]=0
+visit=[0 for i in range(n+1)]
+graf=[[] for i in range(n+1)]
+for i in array:
+    graf[i[0]].append((i[1],i[2]))
+q=[]
+heapq.heappush(q,(0,c))
+
+while q:
+    dist,now=heapq.heappop(q)
+    if visit[now]==0:
+        visit[now]=1
+        for i in graf[now]:
+            cost=dist+i[1]
+            if cost<costarray[i[0]]:
+                costarray[i[0]]=cost
+                heapq.heappush(q,(cost,i[0]))
+                
+count=0
+maxv=0
+for i in costarray:
+    if i!=inf and i!=0:
+        count+=1
+        maxv=max(maxv,i)
+print (count,maxv)

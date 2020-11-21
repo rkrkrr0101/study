@@ -1,0 +1,56 @@
+최소신장트리 만들기 
+길코스트 제일 작은거부터 잡고 이어가면서 부모노드도 적어두면서 작은거끼리 서로 부모노드가 안겹치면 계속잇고 다이어졌으면
+코스트 제일큰거 끊으면됨
+
+집갯수받고 길배열에 길 받고 길배열 코스트로 정렬
+부모노드배열 집갯수+1만큼 만들고 자기자신으로 초기화
+카운트=0
+맥스카운트
+파인드함수(배열,x):
+	if 배열[x]!=x:
+		배열[x]=파인드(배열,배열[x])
+	리턴 배열[x]
+유니온배열(배열,a,b):
+	a=파인드(배열,a)
+	b=파인드(배열,b)
+	if a>b:
+		배열[a]=b
+	else:
+		배열[b]=a
+for 코스트 in 길배열:
+	if 파인드 (배열,코스트[1])!=파인드 (배열,코스트[2]):
+		유니온(배열,코스트[1],코스트[2])
+		카운트+=코스트[0]
+		맥스카운트=max(맥스카운트,코스트[0])
+count=count-맥스카운트
+print (count)
+
+
+
+
+
+n=7
+array=[[1,2,3],[1,3,2],[3,2,1],[2,5,2],[3,4,4],[7,3,6],[5,1,5],[1,6,2],[6,4,1],[6,5,3],[4,5,3],[6,7,4]]
+fararray=[i for i in range(n+1)]
+count=0
+maxcount=0
+
+def findfar(far,x):
+    if far[x]!=x:
+        far[x]=findfar(far,far[x])
+    return far[x]
+def unionfar(far,a,b):
+    a=findfar(far,a)
+    b=findfar(far,b)
+    if a>b:
+        far[a]=b
+    else:
+        far[b]=a
+array=sorted(array,key= lambda x:x[2])
+for cost in array:
+    if findfar(fararray,cost[0])!=findfar(fararray,cost[1]):
+        unionfar(fararray,cost[0],cost[1])
+        count+=cost[2]
+        maxcount=max(maxcount,cost[2])
+count=count-maxcount
+print(count)

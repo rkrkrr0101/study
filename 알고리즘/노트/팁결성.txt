@@ -1,0 +1,36 @@
+그냥 서로소쓰라는문제임
+명령 배열받고 n+1만큼 배열만든담에(par= [[i,i] for i in range(n+1)])
+파인드랑 유니온 만들어서 사용하고리턴
+
+유니온할떄 자기자신을 하는게 아니라 자기자신으로 파인드해서 루트가지고 서로 합치는거임
+3,7이면 37받아서 3의 루트랑 7의루트중 큰걸 작은거 속으로 넣어주면됨 루트만 연결하면 나머지는 루트타고 합쳐짐
+
+
+n=7
+array=[[0,1,3],[1,1,7],[0,7,6],[1,7,1],[0,3,7],[0,4,2],[0,1,1],[1,1,1],[1,1,6]]
+par= [[i,i] for i in range(n+1)]
+
+
+def findparent(parent,x):
+    if parent[x][1]!=x:
+        parent[x][1]=findparent(parent,parent[x][1])
+    return parent[x][1]
+def unionparent(parent,a,b):
+    a=findparent(parent,a)
+    b=findparent(parent,b)
+    if a>b:
+        parent[a][1]=b
+    else:
+        parent[b][1]=a
+
+for com in array:
+    if com[0]==0:
+        unionparent(par,com[1],com[2])
+    else:
+        apar=findparent(par,com[1])
+        bpar=findparent(par,com[2])
+        if apar==bpar:
+            print('yes')
+        else :print('no')
+		
+		

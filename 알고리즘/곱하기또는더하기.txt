@@ -1,0 +1,12 @@
+문자열이0,1이면 무조건 더하고 2면 전체값이 1이면 더하고 아니면 곱하고 3부터는 무조건 곱하고 
+문자열 받고
+
+
+s='02984'
+count=0
+for i in s:
+    a=int(i)
+    if a<=1 or count<=1:
+        count+=a
+    else:count=count*a
+    

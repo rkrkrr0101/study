@@ -1,0 +1,71 @@
+위상정렬로 돌려서 연결된선 0개되면 큐에 넣고 큐 다떨어질떄까지 반복후 큐 다떨어지면 리턴
+
+연결된선 배열받고
+카운트=[0*(n+1)]
+for돌려서:
+	grade=[[],[2,3],[4,5]]이렇게 자기자신 들어있는거 연결해두고
+	카운트도 받아서 넣어두고(기본값)
+gradecount=[n*n+1]
+for range(n+1):
+	gradecount=len(grade[i])
+	
+
+진입차수 카운트 넣어주고 [[],2,2]
+진입차수 0인거 일단 큐에 넣고
+
+
+
+
+큐로 와일:
+	큐하나 팝하고
+	그 큐시간만큼 카운트+
+	연결된선 for돌려서 
+		내부 for돌려서
+			진입차수 1빼고
+			그거 0되면 큐에삽입
+			
+			
+			
+from collections import deque
+n=5
+
+array=[[],[10,-1],[10,1,-1],[4,1,-1],[4,3,1,-1],[3,3,-1]]
+count=[0 for i in range(n+1)]
+grade=[[] for i in range(n+1)]
+gradecount=[0 for i in range(n+1)]
+for i in range(1,n+1):
+    count[i]=array[i][0]
+    for j in array[i][1:]:
+        if j!=-1:
+            grade[j]+=[i]
+            gradecount[i]+=1
+
+
+q=[]    
+for i in range(1,n+1):
+    if gradecount[i]==0:
+        q=deque([i])
+        
+
+
+while q:
+    now=q.popleft()
+    for i in grade[now]:
+        gradecount[i]+=-1
+        count[i]+=count[now]
+        if gradecount[i]==0:
+            q.append(i)
+            
+
+
+    
+            
+
+    
+            
+
+
+    
+
+    
+			

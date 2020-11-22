@@ -2,6 +2,12 @@ start=time.time()
 	사이에 들어간거 시간체크
 end=time.time()
 
+딕셔너리에서 삽입할때 a.get('abc')해서 키가 있는지없는지 확인한후에 없으면 a['abc']=['a']해서 a배열로 넣던가 그렇게하고
+있으면 a['abc']+=['a']로 뒤에 더하면 됨
+키들 모아보고싶으면 a.keys() value모아보고싶으면 a.values() 세트로 전부보고싶으면 a.items() 
+a.get대신 'abc' in a 하면 키값검색한다음에 TF돌려줌(똑같이사용가능)
+del a['abc'] 하면 abc삭제
+
 collections.Counter(p) p에들어간거 갯수세서 disc형태로 들고있음
 import collections 넣고 해야함
 ex){'d': 4, 'a': 1, 'b': 1, 'c': 1}

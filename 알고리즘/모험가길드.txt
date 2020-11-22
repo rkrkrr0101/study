@@ -1,0 +1,38 @@
+정렬친다음에 공포도가 제일 높은애 하나잡고 걔수치만큼 자기밑에 데려가고 만약 사람수가 수치보다 작으면 카운트 리턴
+
+배열받고 정렬하고
+n받고
+카운트=0
+
+무한루프:
+	if len(a)!=0
+		a=배열[-1]뽑고
+		del 배열[-1]
+		for i in range(1,a):
+			if len(a)!=0
+				del 배열[-1]
+		count+=1
+			else:return count
+		
+	else:return count
+	
+array=[2,3,1,2,2,4,1]
+n=5
+array.sort()
+
+def guild():
+    count=0
+    while True:
+        if len(array)!=0:
+            a=array[-1]
+            del array[-1]
+            for i in range(1,a):
+                if len(array)!=0:
+                    del array[-1]
+                else: return count
+            count+=1
+        else: return count
+print(guild())
+	
+			
+		

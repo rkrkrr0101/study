@@ -1,0 +1,19 @@
+0이든 1이든 전에 들어온거 기억하고 바뀌면 0인지 1인지 +1카운트한다음에 둘중 적은거 갯수리턴
+
+s='0001100'
+onecount=0
+zerocount=0
+count=s[0]
+if s[0]=='1':
+    onecount+=1
+else:
+    zerocount+=1
+for i in s:
+    if i!=count:
+        if i=='1':
+            onecount+=1
+        else:
+            zerocount+=1
+        count=i
+    
+print(min(onecount,zerocount))    

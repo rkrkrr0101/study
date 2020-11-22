@@ -1,4 +1,7 @@
-정렬친다음에 공포도가 제일 높은애 하나잡고 걔수치만큼 자기밑에 데려가고 만약 사람수가 수치보다 작으면 카운트 리턴
+틀림 :정렬친다음에 공포도가 제일 높은애 하나잡고 걔수치만큼 자기밑에 데려가고 만약 사람수가 수치보다 작으면 카운트 리턴
+정답: 배열 정렬치고 제일 낮은거부터 그륩에 하나씩 더하면서 현재공포도랑 같거나높으면 결과값+1하고 카운트초기화 배열끝나면리턴
+
+
 
 배열받고 정렬하고
 n받고
@@ -15,6 +18,22 @@ n받고
 			else:return count
 		
 	else:return count
+
+
+array=[2,3,1,2,2]
+n=5
+array.sort()
+
+def guild():
+    res=0
+    count=0
+    for i in array:
+        count+=1
+        if count>=i:
+            res+=1
+            count=0
+    return res
+print(guild())
 	
 array=[2,3,1,2,2,4,1]
 n=5
@@ -33,6 +52,19 @@ def guild():
             count+=1
         else: return count
 print(guild())
+res=0
+def guild():
+    count=0
+	for i in array:
+		count+=1
+		if count>=i:
+			res+=1
+			count=0
+			
+		
+			
+			
+		
 	
 			
 		

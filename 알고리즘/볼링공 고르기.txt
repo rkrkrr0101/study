@@ -1,0 +1,22 @@
+배열 정렬친다음에 2중 반복문으로 자기보다 큰거찾고 그뒤로 쭉더해서 반복
+
+
+배열받고
+정렬
+카운트=0
+for i 배열:
+	for j 배열:
+		if i<j:
+			count+=1
+
+
+array=[1,5,4,3,2,4,5,2]
+array.sort()
+
+count=0
+
+for i in array:
+    for j in array:
+        if i<j:
+            count+=1
+print(count)

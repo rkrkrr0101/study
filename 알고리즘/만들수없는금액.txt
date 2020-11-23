@@ -1,0 +1,26 @@
+틀림)  동전 정렬친다음에 그냥 다더한거+1만큼 배열만들고 1부터 n까지 루프돌리면서 제일작은거부터 하나씩 빼가면서 하다가 -1나오면 그거 리턴
+
+
+1부터시작해서 sum+1(처음기본값)이 다음동전보다 작을경우엔 sum+1이 최저값임(dp같은느낌인데 sum+1이 n이면 다음동전이 n보다 작으면
+n은 어떻게든 만들수있다는거고 n보다 크면 그사이가 비어서 그걸리턴하면됨)
+
+
+동전받고
+m=sum(동전)
+for i in range(1,m)
+	a=0
+	for coin in 동전:
+		a-=coin
+		if a>=0
+			break:
+			
+m=5
+coinarray=[3,2,1,9]
+coinarray.sort()
+
+t=1
+for coin in coinarray:
+    if t<coin:
+        break
+    t+=coin
+print( t)

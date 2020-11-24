@@ -1,0 +1,50 @@
+1번부터 시작해서 반복문 돌리면서 0이아니면 1씩 깍고 1초증가 만약 시간이 서버종료시간이면 다음값리턴
+
+카운트=0
+
+무한루프
+	for i in 배열랭스:
+		if count==k:return i
+		if 배열[i]!=0:
+			 배열[i]+=-1
+			 카운트+=1
+	if sum(배열)==0 return -1
+			
+			
+def solution(ft, k):#효율성테스트 아웃
+    count=0
+    ftlen=len(ft)
+    while True:
+        for i in range(ftlen):
+            
+            
+            if ft[i]!=0:
+                if count==k:return (i+1)
+                ft[i]+= -1
+                count+=1
+                
+        if sum(ft)==0: return -1
+		
+그냥 0갯수세고 -갯수 1갯수 - 하다가 k가 -로 내려가면 그거 취소하고 count보다 큰거만 걸리게해서 i찾기
+
+
+
+def solution(ft, k):
+    countnum=0
+    res=0
+    ftcountarray=0
+    ftmax=sum(ft)
+    if ftmax<k:return -1
+    while True:
+        ftcountarray+=ft.count(countnum)
+        if k-ftcountarray<=0:
+            for i in ft:
+                if i>countnum:
+                    if res==k:return (res+1)
+                    res+=1
+        else:count+=1
+
+
+
+
+			

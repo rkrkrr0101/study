@@ -1,50 +1,75 @@
-1번부터 시작해서 반복문 돌리면서 0이아니면 1씩 깍고 1초증가 만약 시간이 서버종료시간이면 다음값리턴
+우선순위큐에 음식갯수랑 번호랑 적어서 넣은다음에 음식갯수 젤많은거x음식전체갯수 k에서 빼고 만약 k가 -이면 빼던거 취소하고 
+현재 큐배열가지고 루프돌려서 k뺀다음 k0되면 그거 번호 리턴
 
-카운트=0
+음식배열랭스로 반복문 돌려서
+	큐에 크기번호 넣고
+음식 썸이 더작으면 리턴
+무한반복:
+	now=큐하나뺴고
+	if k> nowx랭스:
+		큐에 now만큼 전부 빼주고(반복문)
+		k-=now
+	else:
+		break
+return q[k mod len(q)][1]
+실패
+import heapq
+fk=[3, 1, 2]
+k=5
+q=[]
+countnum=0
+countfood=0
+for i in range(len(fk)):
+    heapq.heappush(q,(fk[i],i))
+a=True    
+while a:
+    now=heapq.heappop(q)
+    if now[0]<=countnum:continue
+    if k>(now[0]-countnum)*(len(q)+1):
+        countfood=now[1]
+        k+=-((now[0]-countnum)*(len(q)+1))
+        countnum=now[0]-countnum
+        
+        
+        
+    else:
+        heapq.heappush(q,now)
+        break
+q.sort(key=lambda x:x[1])
+print(q)
+for i in range(k):
+    abc=i % len(q)
+    res=q[i % len(q)][1]
+    
 
-무한루프
-	for i in 배열랭스:
-		if count==k:return i
-		if 배열[i]!=0:
-			 배열[i]+=-1
-			 카운트+=1
-	if sum(배열)==0 return -1
-			
-			
-def solution(ft, k):#효율성테스트 아웃
-    count=0
-    ftlen=len(ft)
-    while True:
-        for i in range(ftlen):
-            
-            
-            if ft[i]!=0:
-                if count==k:return (i+1)
-                ft[i]+= -1
-                count+=1
-                
-        if sum(ft)==0: return -1
-		
-그냥 0갯수세고 -갯수 1갯수 - 하다가 k가 -로 내려가면 그거 취소하고 count보다 큰거만 걸리게해서 i찾기
 
 
-
-def solution(ft, k):
+성공(다시풀기)
+import heapq
+def solution(fk, k):
+    q=[]
     countnum=0
-    res=0
-    ftcountarray=0
-    ftmax=sum(ft)
-    if ftmax<k:return -1
-    while True:
-        ftcountarray+=ft.count(countnum)
-        if k-ftcountarray<=0:
-            for i in ft:
-                if i>countnum:
-                    if res==k:return (res+1)
-                    res+=1
-        else:count+=1
+    countfood=0
+    sumfood=0
+    if sum(fk)<=k:return-1
+    length=len(fk)
+    for i in range(len(fk)):
+        heapq.heappush(q,(fk[i],i))
+    a=True    
+    while sumfood+((q[0][0]-countnum)*length)<=k :
+        now=heapq.heappop(q)
+        sumfood+=(now[0]-countnum)*length
+        length+=-1
+        countnum=now[0]
 
 
 
 
-			
+    q.sort(key=lambda x:x[1])
+    res=q[(k-sumfood)%length][1]
+
+    return res+1
+
+	
+	
+		

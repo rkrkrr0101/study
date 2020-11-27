@@ -1,0 +1,19 @@
+정수 받아서 문자열로 바꾸고 0부터 나누기2까지랑 나누기2부터 끝까지 더해서 같으면 다르면리턴
+
+ 
+ 
+a=7755
+strnum=str(a)
+midd=len(strnum)
+lcount=0
+rcount=0
+
+for i in range(midd):
+    if i+1<=midd/2:
+        lcount+=int(strnum[i])
+    else:
+        rcount+=int(strnum[i])
+if lcount==rcount:
+    print('LUCKY')
+else:
+    print('READY')

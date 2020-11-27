@@ -1,0 +1,20 @@
+for문돌려서 알파벳이랑 숫자랑 구분해서 배열넣은다음데 두개 정렬치고 더해서리턴
+
+a='AJKDLSI412K4JSJ9D'
+alp=[]
+num=0
+
+for i in a:
+    if i.isalpha():
+        alp+=i
+    else:
+        num+=int(i)
+        
+alp.sort()
+
+res=''
+for i in alp:
+    res+=i
+
+res+=str(num)
+print(res)

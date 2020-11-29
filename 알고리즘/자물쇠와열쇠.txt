@@ -1,13 +1,75 @@
+자물쇠를 열쇠크기만큼 확장한다음에 열쇠를 전부 대입해보고(두개 합치고 자물쇠 전부1인지) 없으면 90도돌리고 반복해서 4번반복할때까지
+key+1만큼  ij간다음에 거기부터 넣으면됨
+
+자물쇠 회전함수
+2key+lock만큼 배열
+그배열에 lock넣기
+반복카운트3까지반복
+	0,0부터 2key+lock-key,2key+lock-key까지 반복
+		 exlock에 다집어넣고 lock만 슬라이스해서 전부1인지확인
+		 
+		 반복카운트+1
+		 key회전후 반복
+	 
 
 
 00 01 02
 10 11 12
 20 21 22
 
+20 10 00
+21 11 01
+22 12 02
 
+     keylen+-j-i 
 i줄은 2 0  +1-1 0-2
     1 1   0 0  -1-1
 	0 2   -1+1 -20
 	
-	i는  -1
-	j는 +1
+import copy
+def keyrotation(key):
+    keylen=len(key)
+    temp=[[0]*(keylen) for i in range(keylen)]
+    for i in range(keylen):
+        for j in range(keylen):
+
+            temp[keylen-1-j][i]=key[i][j]
+    return temp
+
+def solution(key, lock):
+    keylen=len(key)
+    locklen=len(lock)
+    ok=[[1]*locklen for _ in range(locklen)]
+    exlock=[[0]*(keylen+keylen+locklen) for i in range(keylen+keylen+locklen)]
+
+    for i in range(locklen):
+        for j in range(locklen):
+            keyi=keylen+i
+            keyj=keylen+j
+            exlock[keyi][keyj]=lock[i][j]
+    for k in range(4):
+        temp=copy.deepcopy(exlock)
+        for i in range(keylen+locklen):
+            for j in range(keylen+locklen):
+                for a in range(keylen):
+                    for b in range(keylen):
+                        temp[i+a][j+b]+=key[a][b]
+
+
+                tempa=temp[keylen:keylen+locklen]
+                tempb=[]
+                for arr in tempa:
+                    tempb+=[arr[keylen:keylen+locklen]]
+                #print(tempb)
+                if ok==tempb:
+                    return True
+                temp=copy.deepcopy(exlock)
+
+        key=keyrotation(key)
+
+
+
+
+
+    answer = False
+    return answer

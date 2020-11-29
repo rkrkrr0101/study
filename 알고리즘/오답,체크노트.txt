@@ -13,12 +13,3 @@ heapq.heappush(supdate,(-num[i],bal[i]) ) 이런식
 유니온할떄 자기자신을 하는게 아니라 자기자신으로 파인드해서 루트가지고 서로 합치는거임
 3,7이면 37받아서 3의 루트랑 7의루트중 큰걸 작은거 속으로 넣어주면됨 루트만 연결하면 나머지는 루트타고 합쳐짐
 
-def rotate_a_matrix_by_90_degree(a):
- n = len(a) # 행 길이 계산
- m = len(a[0]) # 열 길이 계산
- result = [[0] * n for _ in range(m)] # 결과 리스트
- for i in range(n):
- for j in range(m):
- result[j][n - i - 1] = a[i][j]
- return result
- 2차원배열 90도회전함수

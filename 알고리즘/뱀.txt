@@ -1,1 +1,109 @@
-ㅎㅇ
+크기받고 nxn [0]배열만들고 0,0 2처리하고 뱀 이동방향 받고 뱀 이동배열 만든다음에 l,d에따라 이동배열포인터 변경
+뱀은 뱀 머리포인터랑 뱀꼬리끝큐(큐로 선입선출로 비어있을떄 한개빼고 한개넣고 사과일때 한개넣고) 2개가지고있음
+0은 빈곳
+1은꼬리
+2는머리
+3은사과
+1카운트마다(반복문)뱀 이동방향앞에 뭐있나 확인하고(꼬리나 배열밖이나 사과나 없거나) 
+꼬리나 배열이면 리턴
+사과면 이동후(머리포인터이동 큐에 삽입)컨티뉴
+비어있으면  머리포인터이동하고 큐빼고큐삽입
+
+크기받고
+사과위치받고
+뱀방향변환받고
+
+크기배열 0으로초기화후 0,0 2로만들고
+사과배열 for돌려서 그위치에 넣고
+뱀 동,남,서,북 순으로 이동배열만들고 레프트가 -1 라이트가 +1 계산할때 mod 4로하면될듯
+카운트0
+방향카운트0
+while true:
+	카운트+1
+	카운트가 방향변환에 있으면
+		레프트면 -1
+		라이트면 +1
+	현재 더하기한게 배열밖이면
+		리턴
+	now=현재 더하기한거값
+	만약 now가 1이면
+		리턴
+	만약 now가 0이면
+		그위치는 2
+		꼬리 팝 어펜드
+		전위치1
+		꼬리팝한곳0
+	만약 now가 3이면
+		그위치는2
+		꼬리 어펜드
+		
+		
+백준식 input
+
+
+		
+from collections import deque
+n=int(input())
+an=int(input())
+applearray=[]
+for i in range(an):
+    a,b=map(int,input().split())
+    applearray+=[[a,b]]
+ln=int(input())
+
+array=[[0] * n for i in range(n)]
+array[0][0]=2
+locainputarray=[]
+for i in range(ln):
+    x,c=input().split()
+    locainputarray.append([int(x),c])
+
+
+
+
+
+for apple in applearray:
+    array[apple[0]-1][apple[1]-1]=3
+
+locaarray=[[0,1],[1,0],[0,-1],[-1,0]]
+locacount=0
+
+count=0
+headpo=[0,0]
+tailq=deque()
+del applearray
+while True:
+    count+=1
+
+     
+    if headpo[0]+locaarray[locacount%4][0]>=n or headpo[1]+locaarray[locacount%4][1]>=n :
+        break
+    if headpo[0]+locaarray[locacount%4][0]<0 or headpo[1]+locaarray[locacount%4][1]<0 :
+        break
+    now=[headpo[0]+locaarray[locacount%4][0],headpo[1]+locaarray[locacount%4][1]]
+    arraynow=array[now[0]][now[1]]
+    
+    if arraynow==1:
+        break
+    if arraynow==0:
+        array[now[0]][now[1]]=2
+        
+        tailq.append([headpo[0],headpo[1]])
+        tamin=tailq.popleft()
+        array[tamin[0]][tamin[1]]=0
+        
+        if len(tailq)>0:
+            array[headpo[0]][headpo[1]]=1
+    if arraynow==3:
+        array[now[0]][now[1]]=2
+        array[headpo[0]][headpo[1]]=1
+        tailq.append([headpo[0],headpo[1]])
+    headpo=[now[0],now[1]]
+    for loca in locainputarray:
+        if loca[0]==count:
+            if loca[1]=='D':
+                locacount+=1
+            else:locacount+=-1
+            break#중복있음뺴기    
+
+print(count)    

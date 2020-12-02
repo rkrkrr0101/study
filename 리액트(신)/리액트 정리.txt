@@ -98,10 +98,38 @@ propTypes.number.isRequired는 들어왔는지 안들어왔는지 체크 후 자
 클래스에서 비구조화할당은 랜더밑 리턴위에 하면되고
 proptypes는 똑같이 클래스밖에하면됨
 
+리액트에서는 얕은복사때문에 변수를쓸떄 값을 바꿀때 무조건 덮어씌우는식으로 해야해서 
+함수형은 usestate처럼 후크로하고
+클래스는 this.state={
+	number:1
+}
+this.setState({number:number+1})이런식으로 스테이트 에 바뀐값 덮어씌우는식으로 함
 
+단 
+this.setState({number:number+1})
+this.setState({number:number+1})
+이렇게 2번있다고 2가 올라가는게 아니라 동기화전이라 1만올라가기때문에
 
+this.setState((prevState,props)=>{
+	return{
+		업데이트내용
+		number:prevState.number+1 
+	}
 
+}
+이렇게 화살표함수를 인자로 넣어서 함수리턴값을 덮어씌우면됨
 
+함수형에서는 
+const[name,setname]=useState(초기값)
+이렇게하는데 이게
+array=[1,2]
+const[a,b]=array
+같은거라서 앞에거가 변수값 뒤에거가 상태변경으로 덮어씌우는식으로 동작함
+
+useState는 클래스처럼 막 저렇게할필요없고 한번하면 바로 동기화됨
+
+state는 얉은복사 막기위해서 쓰는거라 name=1이런거하면안되고 무조건 setname써야함
+배열이나 객체같은경우 복사본을 만들고 그걸 변경시킨다음에 그걸 set해서 보내줘야함
 
 
 

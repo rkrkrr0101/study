@@ -1,0 +1,107 @@
+리턴html은 무조건 하나로 나가야됨
+jsx내부에서 자바스크립트표현식 쓸려면 {}로 감싸면됨 {name}
+jsx내부에서 표현식써도 if를 쓸순없고
+a===b?( //맞을떄
+): ( //else
+
+)
+이렇게써야함
+뒤에 아무것도 안보여줄려면 :null하면됨
+jsx내부에서 인라인으로 css건드릴떄는 -사라지고 그다음자 대문자해서 주고 문자열이아닌 객체로 줘야함
+background-color은
+backgroundColor:'black' 이런식
+
+style은 밖에서 만들어가도되고 안에서 인라인으로 적어도되는데 인라인은
+<div style={{
+backgroundColor:'black'
+...
+}}
+>
+이런식으로 괄호2개치고 안에다적으면됨
+
+밖에 css파일을 사용할떄는 
+import'./a.css ' 하고나서
+css파일에서 .classname{}했을떄 저 클래스이름과 같은거를 따라감
+
+셀프클로저하고싶으면 <input/>
+
+jsx안에서 주석은 {/*abc*/}
+
+vscode 
+eslint:문법검사도구
+prettier:코드정렬도구
+
+기본적으로 함수형 클래스형중에 es6들어오고나서는 함수형이 표준으로됐음
+
+es6에서 화살표 함수가 생겼는데 화살표함수는 함수 자체의 this가 없기떄문에 스코프상 가장 가까운 생성자의 this를 가리키게됨
+일반함수는 자기자신의 this가 있으니까 자기자신걸 가르킴
+
+그래서 화살표함수는 메서드에 사용하면 안될거같음
+기본적으로 함수랑 메서드가 .가지고 구분하는데 거기서 this가 객체냐 인스턴스냐 나눠지니까 그냥 함수로 통일하는게맞을거같음
+(객체는 var tico=new car() 할떄 tico를 가르키고(선언시 객체) new car()해서 생성자로 할당되면 인스턴스)
+(객체를 선언하고 객체를 인스턴스화 시키는게 var tico=new car()임)
+(인스턴스는 객체에 포함되서 그냥보통 객체라고 부르는데 가끔 나눠불러야할떄가 있음 this나)
+
+props는 매개변수
+
+<mycompo name='abc'/>하면 name이 prop
+
+받을때는
+Mycompo=props =>{
+	return{
+			<div>
+				{props.name}
+			</div>
+
+	}	
+
+}
+mycompo.defaultProps={{/* 디폴트설정*/}
+	name:'default'
+
+}
+
+이렇게받고 쓰면됨
+
+컴포넌트 따로 빼뒀는데 <mycompo>abc</mycompo>
+저 중간값이 필요하면 props.children (예약어)쓰면됨
+
+그리고 맨날 props붙이기 귀찮으니까
+리턴 위에
+
+const{name,children}=props
+return(
+...
+)
+하면 그냥 name만 쳐도됨(비구조화할당)
+
+proptype 고정하려면 
+import PropTypes from 'prop-types' 임포트하고
+
+mycompo.propTypes={
+	name:propTypes.string
+
+}
+이런식으로 지정받아서 만약 틀리면 에러메세지 개발자도구 콘솔창에 띄울수있음
+
+mycompo.propTypes={
+	name:propTypes.string
+	a:propTypes.number.isRequired
+}
+isRequired하면 설정을 안했을때 (비어있을떄) 에러를띄움
+
+그러니까 
+propTypes.자료형은 들어오는지 안들어오는지는 체크안하지만 들어왔을때 자료형체크
+propTypes.number.isRequired는 들어왔는지 안들어왔는지 체크 후 자료형체크
+둘다 에러메세지만 띄우고 동작은됨 잘못넣어도
+
+클래스에서 비구조화할당은 랜더밑 리턴위에 하면되고
+proptypes는 똑같이 클래스밖에하면됨
+
+
+
+
+
+
+
+

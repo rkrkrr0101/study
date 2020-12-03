@@ -43,7 +43,7 @@ es6에서 화살표 함수가 생겼는데 화살표함수는 함수 자체의 t
 (인스턴스는 객체에 포함되서 그냥보통 객체라고 부르는데 가끔 나눠불러야할떄가 있음 this나)
 
 props는 매개변수
-
+2.프롭타입설명
 <mycompo name='abc'/>하면 name이 prop
 
 받을때는
@@ -97,7 +97,7 @@ propTypes.number.isRequired는 들어왔는지 안들어왔는지 체크 후 자
 
 클래스에서 비구조화할당은 랜더밑 리턴위에 하면되고
 proptypes는 똑같이 클래스밖에하면됨
-
+3.스테이트 깊은복사
 리액트에서는 얕은복사때문에 변수를쓸떄 값을 바꿀때 무조건 덮어씌우는식으로 해야해서 
 함수형은 usestate처럼 후크로하고
 클래스는 this.state={
@@ -130,6 +130,56 @@ useState는 클래스처럼 막 저렇게할필요없고 한번하면 바로 동
 
 state는 얉은복사 막기위해서 쓰는거라 name=1이런거하면안되고 무조건 setname써야함
 배열이나 객체같은경우 복사본을 만들고 그걸 변경시킨다음에 그걸 set해서 보내줘야함
+4.이벤트
+이벤트는 프롭에 onclick같은거에(예약어)함수형태객체집어넣으면됨
+이벤트는 버튼이나 인풋같은 원래있는거는 예약어설정이 되어있지만,직접만든컴포넌트에는 당연히 설정안됐으니까 받은거로 내부이벤트만들어서 돌리면됨
+
+onChange={
+	(e)=>{
+		console.log(e.target.value) 
+	}
+}
+e는 이벤트가 끝나면 사라지니까 오래들고있고싶으면
+e.persist()쓰면 고정되는듯
+
+클래스형에서 스테이트에 담을때도 
+onChange={
+	(e)=>{
+		this.setState({(name=e.target.value) })
+	}
+이렇게하면됨
+onChange=
+	(e)=>{
+		console.log(e.target.value) 
+		this.setState({(name=e.target.value) })
+	}
+당연히 이렇게도됨
+
+일반적으로 이렇게 인라인으로는 한두줄은 대충적고치우는데 
+길어지면 onClick={this.nameclick}이렇게 함수선언해두고 그거가져다씀 당연하지만
+단 이떄는 기본적으로는 생성자에 미리 바인드시켜둬야하는데
+그냥 nameclick=(e)=>{...}이렇게 화살표함수를쓰면 화살표함수는 스코프가없어서 바로 밖에거 가르키니까 바로처리가능해짐
+ 
+onkeypress는
+haKeyPress=
+	(e)=>{
+		if e.key==='Enter'{
+			this.haClick()//클릭이벤트함수
+		}
+		
+	}
+	이런식으로해서 프롭연결시켜주면됨
+	
+함수형에서는 
+const onChange=e=>{
+	const nextform={
+		...form,
+		[e.target.바꿀값]:e.target.value
+	};
+	setForm(nextForm)
+
+}
+함수형은 hook써야하니까 객체는 저렇게 바꾸고하면됨
 
 
 

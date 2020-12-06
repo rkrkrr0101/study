@@ -185,6 +185,55 @@ const onChange=e=>{
 레퍼런스를 사용하는 이유는 레퍼런스를 써야하는 특정작업(포커스넘겨준다던가)이 있음
 그거말고는 그냥 클래스네임에 if문쓰던가해서 css파일 불러오는식으로 처리할수있는데 저런거처리는 불가능함
 
+ref를 만드는법에는 2개가있는데
 
+콜백함수로 만드는법과 createRef로 만드는게 있는데 createRef로 보통 만듬
+
+콜백함수는 <아무거나 ref={(ref)=>{this.ref이름(뭘넣어도됨)=ref}}/>
+여기에 포커스옮길떄는 this.ref이름.focus();하면됨 이벤트에
+
+createRef는 
+abc=React.createRef();
+
+handleFocus=()=>{
+	this.abc.current.focus();
+
+}
+render(){
+<input ref={this.abc}/>
+
+}
+이렇게 함수로 만든다음에 거기다가 포커스같은거(ref쓸요소를 ref props로) 엮어주고 그거 ref에 연결하면됨
+
+그냥 레퍼런스가 어디든 레퍼런스에 포커스든 뭐든 준다고보면되는듯
+
+리액트에서는 dom말고 컴포넌트에도 ref를 달수있음
+
+사용방법은 
+
+<mycompo ref={(ref)=>{this.ref이름(뭘넣어도됨)=ref}}/>
+로 똑같음
+
+이렇게하면 컴포넌트 내부의 메서드랑 멤버변수,내부의 ref에도 접근할수있음
+
+<div> 
+	ref={(ref)=>{this.box=ref}}
+/div>
+해서 box만들고
+sc=()=>{
+	const {scrollHeight,clienyHeight}=this.box/*비구조화문법
+	const scrollHeight=this.box.scrollHeight
+	const clienyHeight=this.box.clienyHeight
+	랑 같은거임
+	
+	*/
+	this.box.scrollTop=scrollHeight-clienyHeight
+}
+이렇게 컴포넌트만들고
+메인에서
+<sc ref=ref={(ref)=>{this.sc=ref}}/>
+<button onClick={()=>this.sc.sc()}/>해서 불러올수가있음 ref에서의 메서드를
+
+근데 이렇게 막 주고받는건 권장하는방식은 아닌듯 전역변수같은건가봄
 
 

@@ -262,6 +262,46 @@ num.filter(x=>z!==1)하면 [2,3]만 나옴
 
 키가 필요한 이유는 리랜더링할때 리액트에선 바뀐거만 하고싶은데 그거확인을 키로잡고 하는데 없거나 중복이면 직접돌아야해서 성능떨어짐
 
+7.컴포넌트의 라이프사이클 매서드(클래스용) 함수는 hook
 
+컴포넌트는 4가지경우에 업데이트됨
+props가 바뀌거나,state가 바뀌거나 부모컴포넌트가 리렌더링되거나,강제로 렌더링트리거하거나
+
+getDerivedStateFromProps:마운트과정과 업데이트 시작하기전에 호출,
+props가 바뀔때 state에도 변화주고싶을때(동기화시키고싶을떄) 사용
+getDerivedStateFromProps(nextProps,prevState){
+	if(nextProps.value!==prevState.value){
+		return{value(/*밖에전역으로있는값*/):nextProps.value}
+	}
+}
+이런식으로사용
+
+shouldComponentUpdate:컴포넌트가 리렌더링할지말지 결정하는 메서드(True Flase리턴으로)
+만약 this.forceUpdate()(강제렌더링트리거)를 쓰면 이거 스킵하고 넘어감
+따로안건드리면 무조건 true나오고 
+현재prop랑 state는 this.props this.state로 접근할수있고 새로설정할값은 nextProps nextState로 접근할수있음
+
+render:컴포넌트 리렌더링
+
+getSnapshotBeforeUpdate:컴포넌트 변화 반영 직전에 호출하는메서드 전에 사용하던값 받아서 적용시킬때(스크롤바위치유지)사용
+
+componentDidMount:컴포넌트만들고 첫렌더링시 호출 여기다가 네트워크요청같은거 넣으면됨
+
+componentWillUnmount:컴포넌트를 dom에서 제거할떄 실행
+여기서 이벤트 타이머 직접생성한dom이 있으면 제거해줘야함
+
+componentDidUpdate:컴포넌트 업데이트 끝나고나서 호출하는메서드
+업데이트끝났으니까 dom관련처리해도됨
+
+constructor:컴포넌트 생성자로 초기state정할수있음
+
+componentDidCatch:렌더링도중 에러났을때 오류ui를 보여줌
+componentDidCatch(error,info){
+	this.setState({
+		error:true
+	}
+	console.log({error,info})
+}
+이렇게사용
 
 

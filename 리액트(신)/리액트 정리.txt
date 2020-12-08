@@ -304,4 +304,130 @@ componentDidCatch(error,info){
 }
 이렇게사용
 
+8.hook
+함수에서 상태관리하거나,렌더링후 작업(클래스의 라이프사이클)을 함수형에서 하는방법
+
+usestate:앞에서 맨날쓰던 상태관리(변수덮어쓰기)hook
+
+const [abc,setabc]=useState(기본값)
+abc가 읽기 setabc가 덮어쓰기
+
+만약 관리해야할 값이 여러개라면 그냥 useState여러개만들면됨
+
+useEffect:컴포넌트 렌더링될때마다 특정작업 수행하게 하는거
+componentDidMount+componentDidUpdate라고 보면됨
+
+useEffect(()=>{
+		console.log('abc')
+
+	}
+)
+return(
+
+
+)
+저렇게 리턴위에 쓰면됨
+
+만약 마운트될때(처음실행될때)만 실행하고싶으면
+useEffect(()=>{
+	console.log('abc')
+
+},[])
+이렇게 2번쨰인자로 빈배열 넣어주면 마운트할떄만 실행됨
+
+특정값이 업데이트될떄만 실행하고싶으면 
+useEffect(()=>{
+	console.log('abc')
+
+},[name])
+이렇게 검사할값을 배열안에 넣어주면됨(usestate나 prop나 아무거나)
+
+컴포넌트가 언마운트하기전이나 업데이트직전에 실행하고싶으면 useState에서 cleanup함수를 반환해줘야함
+useEffect(()=>{
+		console.log('abc')
+
+	}
+
+	return()=>{
+		
+	
+	}
+
+
+	
+)
+그냥 이렇게 useEffect속에서 함수리턴하면 그걸 클린업이라고 부르고 
+이건 업데이트직전이랑 언마운트되기전에 호출됨(함수만(따로쓸수있는거같음 그냥렌더링이랑 클린업이랑))
+언마운트떄만 호출하고싶으면 아까 마운트때처럼 뒤에 빈배열넣으면됨
+
+usereducer:useState랑 비슷한앤데 더 다양한상황에따라 다양하게 업데이트하고싶을떄 사용
+function reducer(state,action(케이스문처럼 그렇게 구분하는거) ){
+	return{...}
+}
+const [state,dispatch]=usereducer(reducer(사용할함수),{초기값})
+<button onClick={()=>dispatch({type:'inc'})}
+이게 기본형이고 보통 케이스문처럼 사용하고그럼
+function reducer(state,action ){
+	switch(action.type){
+	case 'inc':
+		return{...}
+	case 'dec':
+		return{...}
+	default:
+		return{...}
+	}
+}
+const [state,dispatch]=usereducer(reducer,{value:0})
+이런식으로 쓰는듯
+
+얘의 가장 큰 장점은 함수를 받으니까 업데이트 로직을 다른곳으로 뺄수있게됨
+함수를 딴데서 만든다음에 임포트해서 함수 인자에넣으면되니까
+
+그리고 useState 여러개쓸필요도없이 그냥 리듀서안에 다 넣어서 처리하고 리듀서 하나만가지고 써도됨
+
+onChange=e=>{
+	dispatch(e.target)
+
+}
+이렇게해서 타겟데이터 다긁어와서 처리
+
+usememo:컴포넌트 내부에서 발생하는 연산을 최적화할수있음
+보통때는 렌더링할때마다 계속 연산하는데 usememo를 쓰면 인풋내용이 바뀔때만 렌더링했을때 다시계산하고 그대로면 바로랜더링함
+const avg=useMemo(()=>연산함수(abc),[abc(인풋값)])
+abc가 바뀌면 다시연산하고(배열속에 든게 바뀌면)아니면 바로렌더링
+
+usecallback:useMemo랑 비슷하게 최적화할때 사용
+얘는 함수를 조건따라서 다시연산하게 하는애임
+usecallback(함수(),[체크할배열])
+배열속이 빈배열일경우([])처음 한번만 생성하고
+배열이 [name]이면 name이 바뀌면 다시생성함
+
+결국 useMemo로 함수반환하려면 좀 길어지니까
+정수,문자열,배열같은거 재사용은 useMemo
+함수 재사용은 usecallback
+근데 보통 극한상황아니고 함수까지 저렇게 쌀필요는없는거같긴함
+
+useref:함수형에서 ref를 쉽게 사용하게해줌
+const iref=useref(null)
+...
+a=function(e=>iref.current.focus())
+return(
+	<input ref={iref}/>
+	<button onClick={a}/>
+)
+이러면 iref를 만든다음에 리턴에서 ref를 묶고 a를 누르면 iref가 가리키고있는 ref를 찾아서 포커스를 넘겨줌
+
+이거도 그때 ref랑 똑같이 로컬변수 가져다쓸수있는데 
+const refsam=()=>{
+	const id=useref(1)
+	const setid=(n)=>{
+		id.current=n
+	}//내부 ref를 수정
+	const getid=()=>{
+		console.log(id.current)
+	}//내부ref 조회
+}
+이걸 가져다가 밖에서 메서드 호출하는식으로 써서 로컬변수를 조정,조회할수있음(클로저처럼 사용,아니 같은건가?)
+
+usereducer같은거 잘 조합해서 따로 밖으로 빼서 커스텀hook만들어서 쓸수도있음
 

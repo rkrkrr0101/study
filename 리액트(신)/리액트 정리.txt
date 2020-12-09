@@ -431,3 +431,135 @@ const refsam=()=>{
 
 usereducer같은거 잘 조합해서 따로 밖으로 빼서 커스텀hook만들어서 쓸수도있음
 
+9.컴포넌트스타일링
+
+일반css:그냥 일반적으로 css쓰는방식
+이름은 기본규칙은 .컴포넌트의클래스네임{}인데(.app,.)
+보통 .app-header이런식으로 컴포넌트의 어떤부분에 한정시켜서사용
+
+아니면 css selector을 쓰는데 css클래스가 특정 클래스 내부에 있을때만 적용할수있음
+앱안의 로고클래스네임에 적용하려면 .app .logo{}이런식으로 쓰면됨
+jsx에서는 <img className='logo'/>에 적용됨
+말고 그태그전체에 적용하려면 .app a{}이런식으로 점떼고 붙이면됨
+
+sass:css전처리기로 보통 scss를 사용 sass랑 문법이 좀 다름
+$a->변수 $red:#fa5252 빨간색변수생성
+@mixin a(인자){...} 함수
+.app{ 특정컴포넌트에서
+	.abc{  특정 클래스네임에
+		background:red
+		cursor:pointer;
+		transition:all 0.3s ease
+		&.ac{ ac와 abc가 동시사용되었을때(abc랑 ac가 있을때) ex <div className='abc ac'/>
+			#include a(1) 함수사용할때
+		
+		}
+		&.ad{ ad와 abc가 동시사용되었을때
+			
+		
+		}
+		&:hover{ abc에 마우스를 올렸을떄
+		
+		}
+		
+	}
+}
+이것도 변수랑 함수 모듈화시켜서 불러올수있는데
+@import './abc' 이렇게불러오면됨
+저거 깊이 너무깊어지면 줄일수도있는데 그건 필요할떄찾아보자
+
+@import '~abc'는 node_modules에 있는 abc찾기
+
+css module:이건 css를 불러와서 쓸때 클래스이름에 해시값붙여서 이름중첩을 막아줌
+사용법은 a.module.css 이렇게 .module를 붙여주면됨
+scss도 똑같이 a.module.scss하면알아서인식함
+
+.head{...} 이렇게 대충적어도 알아서 고유값됨
+
+글로벌로 하고싶으면 :global .a{} 하면됨
+jsx에서는 
+<div className={임포트이름.head}/> .head사용법
+<div className=a/> 글로벌사용법
+그냥 함수불러오는거처럼 가져다쓰면되는듯 글로벌은 전역이고
+만약 2개이상 가져다쓰려면
+<div className=`${styles.head} ${styles.tail}`/>
+이런식으로 붙이면됨 양쪽에 어퍼스트로피붙이고 앞에 $붙이고 
+
+`abc${name}dcd`이러면 abc이름변수dcd 이렇게나오는데
+문자열속에 자바스크립트내용넣을때 'abc'+name+'dcd'랑 같은데 좀 줄일수있음
+
+classnames:클래스네임은 css를 조건부로 줄때 유용한 라이브러리
+import cn from 'classnames'
+임포트해준다음
+
+classNames(a:true,b:false)// a
+classNames(a:true,b:true)// ab
+이런식으로 사용
+const a='qwe'
+classNames('s',a)//sqwe
+
+<div className={classNames('abc',a)}/>이런식으로사용
+
+그리고 cssmodule쓸때는 미리 변수에 바인드를 시켜두면 매번 styles.클래스이름 칠필요없이
+const cx=classNames.bind(css파일)
+<div className={cx('abc','ac')}/>이런식으로 css파일에있는거 가져올수있음
+
+그리고 cssmodule이 아닌파일에서도 
+:local .a{}
+:local{
+	.q{}
+	.w{}
+}
+이런식으로 모듈로쓸수있음
+
+styled-components:js안에서 인라인으로 cs쓸떄 사용하는 라이브러리
+import styled,{css} from 'styled-components'  
+임포트해주고
+const box=styled.div`
+	background:${props=>props.color||'blue'}//파란색이나 props로 받아온색
+`
+const Button= styled.button`
+	&:hover{//자기자신에 마우스올렸을때
+	}
+	&를써서 자기자신선택가능
+
+	${props=>props.abc&&css` props로 abc가 true인 애들만 적용
+		background='blue'
+	`
+	&+button{자기자신이 버튼이면
+		margin-left:1rem
+	}
+`
+tagged 템플릿 리터럴:``을 사용해서 만든 문자열에 스타일정보 넣어주는것
+이렇게쓰면 템플릿안에 js객체나 함수를 전달할때 온전히 추출됨
+
+`hello ${{abc:'qwe'}} ${()=>'ewew'}`바로 이렇게하면
+hello [object Object] ()=>'ewew'
+이렇게나오는데 
+
+function tagged(...args){
+	console.log(args);
+}
+tagged`hello ${{abc:'qwe'}} ${()=>'ewew'}`
+이렇게하면 
+1 hello
+2 {abc:'qwe'}
+3 ()=>'ewew'
+이렇게 내용만 제대로 추출됨
+
+사용하는방법은 
+const mycom=styled('태그타입(div같은거)')`
+	background:gray
+`
+이건 태그타입 보내주는거고
+
+const mycom=styled(컴포넌트)`
+	background:gray
+`
+이건 아예 컴포넌트를 넣어줌
+
+이걸로 내부props값에 따라 다르게 스타일을 적용할수있음(조건따라서 이거넣을지 저거넣을지해서 prop값 존재여부,tf여부로)
+
+이거로 @media를 써서 사이즈따라 반응형웹 만들기도 편함(365페이지 코드넘길다)
+미리 함수빼둔다음에 불러다가 사이즈확인하고 다르게 적용하는식
+

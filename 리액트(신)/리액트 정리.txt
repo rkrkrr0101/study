@@ -592,6 +592,9 @@ import{아이콘이름(mdadd같은 정해진이름)} from 'react-icons/md'
 
 객체는 그냥 객체통째로 보내는게 성능면에서 유리
 
+e.preventDefault() 사용하면 새로고침 막을수있음
+
+onsummit와 onClick의 차이는 onsummit은 엔터로도 발생함
 
 
 

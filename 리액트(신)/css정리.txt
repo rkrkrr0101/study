@@ -1,0 +1,83 @@
+flex:하나의 아이템이 차지하는 공간을 설정하는옵션
+flex:1하면 다른애들 쓰고 남은자리 전부차지함
+
+align-items:상하 정렬기준
+	flex-start 제일위로 정렬
+	
+	flex-end 제일아래로 정렬
+	
+	center 세로축중앙으로 정렬(좌우는권한밖임)
+	
+	baseline 컨테이너 시작위치에 정렬
+			 폰트크기 늘리는거랑 상관없이 같은위치줌
+			 
+	stretch 컨테이너에 맞게 늘림
+			밑에 공간있으면 최대한 채움
+
+justify-content:좌우 정렬기준
+	flex-start 왼쪽으로 정렬
+	
+	flex-end 오른쪽으로 정렬
+	
+	center 가로축 중앙으로 정렬
+	
+	space-between 요소 사이에 같은간격줌
+				  요소들 사이에만 주고 처음왼쪽 마지막오른쪽에는 간격안줌
+	
+	space-arround 요소주위에 같은간격줌
+				  처음왼쪽 마지막오른쪽에도 간격줌
+				  
+flex-direction:정해진값들 모아서 가로나 세로로 정렬시켜줌
+				이거쓰면 요소들 start end 순서도 바뀜(row-reverse하면 왼쪽이 end되고 오른쪽이 start되는식)
+				만약 column써서 세로로두면 justify-content가 세로되고 align-items가 가로됨
+				flex-wrap이런거도 세로로되고 flex쓰는거 다영향받음 가로세로바뀌는거
+
+	row: 요소들을 텍스트의 방향과 동일하게 정렬합니다.
+
+	row-reverse: 요소들을 텍스트의 반대 방향으로 정렬합니다.
+
+	column: 요소들을 위에서 아래로 정렬합니다.
+
+	column-reverse: 요소들을 아래에서 위로 정렬합니다.
+
+order:직접적으로 해당되는거의 순서를 +-해서 바꿀수있음
+	  빨초노일떄 초록 order+1하면 빨노초 되는식
+	  
+align-self:align-items의 값을 무시하고 해당되는거의 값을 그거만 수정할수있음
+
+flex-wrap:안에 들어있는애들 한줄로 우겨넣을건지 범위넘어가면 다음줄로 줄건지 선택가능
+
+	nowrap: 모든 요소들을 한 줄에 정렬합니다.
+	wrap: 요소들을 여러 줄에 걸쳐 정렬합니다.
+	wrap-reverse: 요소들을 여러 줄에 걸쳐 반대로 정렬합니다.
+
+				  
+flex-flow:flex-wrap와 flex-direction을 그냥합쳐둔거
+값도 그냥 row wrap 이런식으로 둘다적어주면됨
+
+align-content:여러줄 사이에 간격을 지정할수있음,
+align-items은 컨테이너안에서 요소정렬 관여하는거고 이건 줄들 사이사이임 그래서 한줄만있을땐 아무효과없음
+	flex-start: 여러 줄들을 컨테이너의 꼭대기에 정렬합니다.
+	flex-end: 여러 줄들을 컨테이너의 바닥에 정렬합니다.
+	center: 여러 줄들을 세로선 상의 가운데에 정렬합니다.
+	space-between: 여러 줄들 사이에 동일한 간격을 둡니다.
+	space-around: 여러 줄들 주위에 동일한 간격을 둡니다.
+	stretch: 여러 줄들을 컨테이너에 맞도록 늘립니다.
+	
+cursor:마우스커서가 올라갔을떄 모양
+
+transition:애니메이션이 바뀔때까지 점진적으로 바꿔줌 흰색->검은색일때 0.1
+			transition: 1.1s background ease-in
+			transition: 시간 바꿀요소 속성값(ease-in은 애니메이션 천천히시작)
+
+overflow:안에들어있는게 너무많아서 범위 벗어났을때 어떻게할거냐 처리
+		overflow-x overflow-y로 다르게처리할수도있음 가로세로
+
+&:자기자신을 말함 여기에 붙여서 &:hover하면 자기위에 마우스올라왔을때 &.checked하면 체크됐을때
+&+&하면 자기자신 2번이상불렸을떄 그사이에 뭘 할수있음
+
+&:nth-child(n):자기자신의 n번째 자식들만, 안에 even하면 짝수만 되고 숫자넣으면 순서로 그순서인 애만 적용됨
+	
+svg{}:아이콘을 말함 	
+
+text-decoration:텍스트에 밑줄치기나 그런 장식할수있음

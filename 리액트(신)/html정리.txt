@@ -1,0 +1,8 @@
+<input placeholder='텍스트박스뒤에 흐릿한값'>
+<form>입력양식(인풋) 전체를 감싸는태그
+	<form>
+		<input value={value}>
+		<button type="summit">
+	<form/>
+	이면 form은 input의 value를 자기자신처럼 쓸수있고(form의 value와 input의 value는 같음)
+	form에 onsummit이벤트를 달면 button이 눌렸을때 onsummit가 발생함(기본적으로 타입서밋이면 그게 서버로전송됨)

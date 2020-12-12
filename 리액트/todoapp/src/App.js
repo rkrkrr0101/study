@@ -1,40 +1,41 @@
 
-import { useCallback, useState,useRef } from 'react';
+import { useCallback, useState,useRef, useReducer } from 'react';
 import './App.css';
 import Todoinsert from './compo/Todoinsert';
 import TodoList from './compo/TodoList';
 import Todotem from './compo/Todotem';
 
+function createbulk() {
+  const array=[];
+  for(let i=1;i<=2500;i++){
+    array.push({
+      id:i,
+      text:`할일${i}`,
+      checked:false,
+    });
+  }
+  return array;
+}
+function todoReducers(Todos,action) {
+  switch(action.type){
+      case 'insert':
+        return Todos.concat(action.Todo)
+      case 'remove':
+        return Todos.filter(todo=>todo.id!==action.id)
+      case 'toggle':
+        return Todos.map(todo=>todo.id===action.id?{...todo,checked:!todo.checked}:todo,)
+      default:
+        return Todos
+
+  }
+  
+}
+
 
 function App() {
-  const [Todos,setTodos]=useState([
-    {
-      id:1,
-      text:'리액트기초',
-      checked:true,
+  const [Todos,dispatch]=useReducer(todoReducers,undefined,createbulk);
 
-    },
-    {
-      id:2,
-      text:'dlfwjd',
-      checked:false,
-
-    },
-    {
-      id:3,
-      text:'zjaxh',
-      checked:true,
-
-    },
-    {
-      id:4,
-      text:'adadzjaxh',
-      checked:false,
-
-    },
-  ])
-
-  const nextid=useRef(5);
+  const nextid=useRef(2501);
   const onInsert=useCallback(
     text => {
       const todo={
@@ -42,26 +43,22 @@ function App() {
         text,
         checked:false,
       };
-      setTodos(Todos.concat(todo));
+      dispatch({type:'insert',todo});
       nextid.current+=1;
     },
-    [Todos],
+    [],
   );
   const onRemove=useCallback(
     id => {
-      setTodos(Todos.filter(todo=>todo.id!==id))
+      dispatch({type:'remove',id})
     },
-    [Todos],
+    [],
   )
   const onToggle=useCallback(
     id => {
-      setTodos(
-        Todos.map(todo=>
-            todo.id===id?{...todo,checked:!todo.checked}:todo,
-          )
-      )
+      dispatch({type:'toggle',id})
     },
-    [Todos],
+    [],
   )
   return (
     <Todotem>

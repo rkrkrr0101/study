@@ -596,5 +596,9 @@ e.preventDefault() 사용하면 새로고침 막을수있음
 
 onsummit와 onClick의 차이는 onsummit은 엔터로도 발생함
 
+11.컴포넌트 최적화
+
+매번 리렌더링하는건 비효율적 
+
 
 

@@ -661,8 +661,32 @@ import {list} from react-virtualized 하고
 ...
 </div>
 
+12.immer써서 불변성유지하기
 
+immer는 불변성 유지할때 편하게해주는 라이브러리 
 
+import produce from 'immer' 임포트해주고
+const nextstate=produce(원래값,상태업데이트함수) 이렇게 쓰면됨
+예시로 
 
+const nextstate=produce(state,draft=>{draft.somwhere.deep.inside=5})
+
+const nextstate=produce(state,draft=>{
+	const todo=draft.find(t=>t.id===2); todo에 state에서 id 2인값 찾아서 
+	todo.checked=true 그거 수정
+	
+	draft.push({ 드래프트에 추가 
+		id:1
+		text:'3sfs'
+		checked:false
+	})
+	
+	draft.splice(draft.findindex(t=>t.id===1),1) 1인거 삭제
+}
+이런식으로 사용
+a=draft.find하면 그값인거 찾아서 주고 a를 수정하면 리턴에도 수정됨 
+draft.push하면 그값을 추가함
+draft.splice하면 그값을 제거
+draft.findindex하면 그인덱스를 찾아서 위치잡아줌
 
 

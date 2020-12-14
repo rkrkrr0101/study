@@ -689,4 +689,13 @@ draft.push하면 그값을 추가함
 draft.splice하면 그값을 제거
 draft.findindex하면 그인덱스를 찾아서 위치잡아줌
 
+12.라우터
+
+
+
+
+
+
+
+
 

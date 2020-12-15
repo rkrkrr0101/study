@@ -690,6 +690,148 @@ draft.splice하면 그값을 제거
 draft.findindex하면 그인덱스를 찾아서 위치잡아줌
 
 12.라우터
+라우터는 일단 미리 무슨페이지가 있는지 자바스크립트에 다 적어둔다음에(싱글 페이지 어플리케이션 SPA)
+ 그 페이지로 넘어가면 필요한부분만 업데이트해줌(클라이언트단에서 업데이트)
+ 그래서 바꿀부분만 리렌더링하면서 다른곳 인터페이스 그대로 고정시킬려고 뭐할필요도없고 편함
+필요하면 서버를 호출해서 데이터 불러와서 쓸수도 있음
+이렇게 서버 부담을 처음1회와 가끔가다 한두번 호출로 줄일수있음
+단점은 코드크기가 커지고 js가 실행되기전에 페이지가 비어보일수있다는건데 서버사이드렌더링써서 해결가능
+
+사용법은
+react-router-dom 프로젝트에 추가하고
+
+import {BrowserRouter} from 'react-router-dom' 임포트해주고
+index.js에 <app/>를 <BrowserRouter>로 감싸줘야함 이러면 app 기본으로 spa로 동작함
+
+보통  임포트에서 {}안에 있는건 키워드임 
+
+그리고 app.js에 
+
+import {Route} from 'react-router-dom'; 임포트해주고 
+
+<Route path='주소규칙' component={보여줄 컨포넌트} exact(정확히 일치해야하는지)=true/> 해서 넣으면됨
+컴포넌트 대신 render={()=><div></div>}해서 대충적고치울수도 있음 오류페이지같은거
+ex 
+  <Route path='/' component={Home} exact/>
+
+그리고 라우터를쓸때는 a태그 쓰면안되고 
+<Link to='주소'>내용</Link> 이거써야함
+ex
+  <Link to='/About'>소개</Link> http://localhost:3002/About를 가리킴 
+ 
+라우터 하나에 주소를 여러개쓸수도 있는데(이름은 여러개고 사용컴포넌트는 같을때) 그냥 패스안에 {[ '/a','/b']}이렇게 배열로넣어주면됨
+ex
+	<Route path={['/About','/info']} component={About}/>
+
+라우터에서 뭐 값을 받아봐야할때는 파라미터랑 쿼리를 쓰는데  
+파라미터는 /abc/rkrk 이런식으로 쓰고 
+쿼리는 /abc?details=true 이런식으로 씀
+근데 쿼리는 숫자를보내든 True false를 보내든 다 문자열로 보내지니까 받을때 문자열을 tf나 그런걸로 알아서바꿔야함
+
+파라미터는 match로 받아서 match.params를 변수에 넣어서 사용
+ex
+	const data={
+		rkrk:{
+			name:'rr',
+			desc:'abcd'
+		},
+		qwer:{
+			name:'lol',
+			desc:'wow'
+		},    
+	}
+	const Profile = ({match}) => {     match는 키워드
+		const {username}=match.params; profile를 부른거중에 파라미터랑 변수명이랑 같은걸찾음									   
+									   이부분은 Route path의 /:변수명이랑 일치해야함  	
+										
+		const profi=data[username]     그걸 data에서 확인해서 일치하는 객체값를 가져옴 
+	}
+	
+<Route path="/profile/:username" component={Profile}></Route>
+localhost:3000/profile/rkrk(이부분)
+
+쿼리는 location으로 받아서 location.search에서 조회할수있음
+쿼리는 문자열형태로 주는데 이걸 객체로 바꿔야 쓰기편하니까 qs라이브러리를 설치하고
+import qs from 'qs' 임포트해서 사용
+
+사용법은const query= qs.parse(location.search,{
+		ignoreQueryPrefix:true  맨앞의 물음표 제거
+	});
+이렇게 query에 객체로 넣고
+query.찾을변수이름 으로 사용 
+  ex
+    const showDetail=query.detail==='true'; detail이 true면 true리턴
+  
+서브 라우트는 라우트안에 라우트를 넣는거	
+그냥 사용하고있는 컴포넌트 속에 라우트를 넣어서 쓰면됨
+ex
+	profiles.js
+		         <li>
+                    <Link to='/profiles/rkrk'>rkrk</Link>
+                </li>
+                <li>
+                    <Link to='/profiles/qwer'>qwer</Link>  링크 걸어두고 
+                </li> 
+				<Route path="/profiles/:username" component={Profile}></Route>
+				이렇게 컴포넌트 속에서 라우트써서 더 작은 부위만 리렌더링하는거
+				
+history는 match랑 location같은 props인데(라우트로 사용된 컴포넌트가 받는 props)
+이 객체로 라우터 api(뒤로가기나 어디 정해진곳으로 가기,알림띄우기)를 호출할수있음
+
+사용법은 
+  버튼이벤트나 마운트이벤트 함수에 
+	뒤로가기 this.props.history.goBack();
+	특정위치로 가기 this.props.history.push('/about')
+	알림 띄우기(그동작 할건지 안할건지 확인) this.unblock=this.props.history.block('적을텍스트');
+								        if (this.unblock){ 알림 해제
+											this.unblock();
+										}
+										
+withRouter은 라우트로 사용된 컴포넌트가 아니라도 match랑 location history를 사용할수 있게 해줌 
+
+사용법은 
+import {withRouter} from 'react-router-dom' 임포트하고 
+...
+export default withRouter(withRouterSam); 그냥 내보낼때 withRouter로 감싸주면됨
+
+그런데 withRouter를 쓰면 현재 라우트 되고있는곳을 기준으로 파라메터를 받아오기때문에 
+서브라우트가 되어있으면 자기가 데이터 받아올 최하단에 가서 데이터를 받아야함
+
+스위치는 여러 라우트를 감싸서 그중 일치하는 단 하나만 렌더링시켜줌
+오류페이지같은거 만들어둘떄 편함
+사용법은 그냥 라우트 감싸두면됨
+  ex 
+	import {Route,Link,Switch} from 'react-router-dom';임포트해주고
+	<Switch>
+      <Route path='/' component={Home} exact/>
+      <Route path='/history' component={HistorySam}/>
+      <Route render={({location})=>( 오류페이지
+        <div>
+          <h2>이페이지는 없습니다</h2>
+          <p>{location.pathname}</p>
+        </div>
+      )}
+      />
+    </Switch>	
+
+navlink는 link에 css를 적용시킬수있는 컴포넌트
+링크가 활성화 되어있을때 스타일을 적용하려면(인라인) activeStyle값을 넣어주면되고
+css로 받아올때는 activeClassName값을 props로 넣어주면 됨
+  ex 
+	import {NavLink,Route} from 'react-router-dom' 임포트해주고
+	
+	<NavLink to='/profiles/rkrk' activeStyle={activeStyle}>rkrk</NavLink> 
+	그냥 link랑 그대로쓰고 액티브스타일,클래스명만 넣어주면됨
+	
+
+
+
+
+
+
+
+
+
 
 
 

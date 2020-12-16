@@ -1,19 +1,17 @@
 import Axios from 'axios';
-import React,{useState} from 'react';
+import React,{useCallback, useState} from 'react';
+import Categories from './compo/Categories';
 import NewsList from './compo/NewsList'
 
 const App = () => {
-  const [data,setData]=useState(null);
-  const onClick=async()=>{
-    try{
-      const response= await Axios.get('http://newsapi.org/v2/top-headlines?country=kr&apiKey=3753f0a28bad4968a8532d43dafc7b33')
-      setData(response.data)
-    }catch(e){
-      console.log(e)
-    }
-  }
+  const [category,setCategory]=useState('all');
+  const onSelect=useCallback(category=>setCategory(category),[])
+
   return (
-    <NewsList></NewsList>
+    <div>
+      <Categories category={category} onSelect={onSelect}></Categories>
+      <NewsList category={category}></NewsList>
+    </div>
   );
 };
 

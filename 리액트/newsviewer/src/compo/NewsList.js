@@ -21,14 +21,15 @@ const NewsListBlock=styled.div`
 
 
 
-const NewsList = () => {
+const NewsList = ({category}) => {
     const [articles,setArticles]= useState(null);
     const [loading,setLoading]= useState(false);
     useEffect(() => {
         const fetchData= async()=>{
             setLoading(true)
             try{
-                const response= await Axios.get('http://newsapi.org/v2/top-headlines?country=kr&apiKey=3753f0a28bad4968a8532d43dafc7b33')
+                const query=category==='all'?"":`&category=${category}`;
+                const response= await Axios.get(`http://newsapi.org/v2/top-headlines?country=kr${query}&apiKey=3753f0a28bad4968a8532d43dafc7b33`)
                 setArticles(response.data.articles)
                 
             } catch(e){
@@ -37,7 +38,7 @@ const NewsList = () => {
             setLoading(false)
         }
         fetchData();
-    }, [])
+    }, [category])
 
     if (loading){
         return<NewsListBlock>대기중</NewsListBlock>

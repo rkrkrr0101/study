@@ -715,7 +715,7 @@ ex
   <Route path='/' component={Home} exact/>
 
 그리고 라우터를쓸때는 a태그 쓰면안되고 
-<Link to='주소'>내용</Link> 이거써야함
+<Link to='주소' (이뒤는옵션) activeClassName='css적용할이름' exact=(정확히 일치) >내용</Link> 이거써야함
 ex
   <Link to='/About'>소개</Link> http://localhost:3002/About를 가리킴 
  

@@ -1,17 +1,15 @@
 import Axios from 'axios';
 import React,{useCallback, useState} from 'react';
+import { Route } from 'react-router-dom';
 import Categories from './compo/Categories';
 import NewsList from './compo/NewsList'
+import newsPage from './newsPage';
 
 const App = () => {
-  const [category,setCategory]=useState('all');
-  const onSelect=useCallback(category=>setCategory(category),[])
+
 
   return (
-    <div>
-      <Categories category={category} onSelect={onSelect}></Categories>
-      <NewsList category={category}></NewsList>
-    </div>
+    <Route path="/:category?" component={newsPage}></Route>
   );
 };
 

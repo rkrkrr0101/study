@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import NewsItem from './NewsItem'
 import Axios from 'axios'
 import { useState } from 'react/cjs/react.development';
+import usePromise from '../lib/usePromise';
 
 const NewsListBlock=styled.div`
     box-sizing:border-box;
@@ -22,31 +23,25 @@ const NewsListBlock=styled.div`
 
 
 const NewsList = ({category}) => {
-    const [articles,setArticles]= useState(null);
-    const [loading,setLoading]= useState(false);
-    useEffect(() => {
-        const fetchData= async()=>{
-            setLoading(true)
-            try{
+    
+    const [loading,response,error]=usePromise(() => {
+
+            
                 const query=category==='all'?"":`&category=${category}`;
-                const response= await Axios.get(`http://newsapi.org/v2/top-headlines?country=kr${query}&apiKey=3753f0a28bad4968a8532d43dafc7b33`)
-                setArticles(response.data.articles)
+                return Axios.get(`http://newsapi.org/v2/top-headlines?country=kr${query}&apiKey=3753f0a28bad4968a8532d43dafc7b33`)
                 
-            } catch(e){
-                console.log(e)
-            }
-            setLoading(false)
-        }
-        fetchData();
     }, [category])
 
     if (loading){
         return<NewsListBlock>대기중</NewsListBlock>
     }
-    if(!articles){
+    if(!response){
         return null
     }
-
+    if(error){
+        return <NewsListBlock>에러발생</NewsListBlock>
+    }
+    const {articles}=response.data;
     return (
         <NewsListBlock>
             {articles.map(article=>(

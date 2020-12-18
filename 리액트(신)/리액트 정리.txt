@@ -951,7 +951,7 @@ const category=match.params.category||'all' 이렇게 카테고리없으면 all�
 위에 useEffect안에 비동기함수같은거 커스텀hook만들어다가 가져다쓰면 간결해짐
 그냥 useEffect를하고 비동기처리만 책임지고  동작함수는 가져다쓰는곳에서 콜백으로 넣어주는식으로만해도 간결해짐
 
-
+15.context api
 
 
 

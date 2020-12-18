@@ -41,6 +41,8 @@ const NewsList = ({category}) => {
     if(error){
         return <NewsListBlock>에러발생</NewsListBlock>
     }
+    console.log(response)
+    console.log(response.data)
     const {articles}=response.data;
     return (
         <NewsListBlock>

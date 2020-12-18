@@ -823,19 +823,133 @@ css로 받아올때는 activeClassName값을 props로 넣어주면 됨
 	<NavLink to='/profiles/rkrk' activeStyle={activeStyle}>rkrk</NavLink> 
 	그냥 link랑 그대로쓰고 액티브스타일,클래스명만 넣어주면됨
 	
+14.외부api연동 뉴스뷰어
+웹을 만들다보면 서버에서 시간이 걸리는작업을 할때 비동기로 처리해야할때가있음(로그인같은거)
 
+베이직한 비동기콜백함수로는 n초뒤에 함수를 실행하는 setTimeout(()=>{...},1000(시간)}이 있음
 
+기본적으로는 콜백함수를 만들어서 하는데 그러면 콜백함수를 여러번콜해야하면 콜백이 겹쳐지면서 개판나게됨
+callbackinc(0,result=>
+	callbackinc(0,result=>
+		callbackinc(0,result=>
+		...
 
+그래서 보통 promise를 사용하거나 async/await	를 사용하는데
+promise는
+function inc(num){
+	const promise=new Promise((resolve(성공),reject(실패)=>{
+		setTimeout(()=>{ 그냥 비동기라는거 보여주려고 setTimeout썼음
+			const result=num+10 처리내용
+			if (result>50){ 어디까지처리할건지 50넘기면 에러발생
+				const e= new Error('에러명')
+				return reject(e) 실패에 에러명넣고 리턴
+			}
+			resolve(result) 성공에 값넣으면 기본적으로 이거리턴함
+		},1000(타임아웃시간))
+		return promise; promise실행
+	}
+}					
+프로미스 이렇게작용한다음에 받을때는 inc(매개변수).then 해서 받아올수있고,then을 여러번해서 반복처리도 가능
+inc(0).then(number=>{
+	console.log(number)
+	return (inc(num)) 리턴을하면 이값을 줘서 다시돌려서 then을 여러번처리가능
+})
+.then(number=>{
+	console.log(number)
+	return (inc(num)) 리턴을하면 then을 여러번처리가능
+})
+...
+.catch(e=>{   도중에 에러발생하면 여기로 넘어와서 에러받아볼수있음
+	console.log(e) 
+}
 
+async/await는 promise를 더 편하게 사용하는 문법
 
+콜백함수는 그대로 쓰고 밑에 then하는 부분을 편하게쓸수있음
+함수앞에 async를 붙이고 promise를 사용하는 부분에 await를 붙이면됨
 
+function inc(num){
+...
+}
 
+async function runTasks(){
+	try{
+		let result= await inc(0)  이렇게 await붙이고 함수콜하면 비동기로 실행한다음에 비동기끼리 동기적으로 순서대로실행
+		result= await inc(result)
+		result= await inc(result)
+		result= await inc(result)
+		result= await inc(result)
+		result= await inc(result)
+	}catch(e){
+		console.log(e)
+	}
 
+}
 
+axios는 http클라이언트 라이브러리로 url을 줘서 json데이터 받을수있음
 
+사용법은
+const [data,setData]=useState(null)데이터담을그릇
+axios.get('url').then(response=>setData(response.data))
+이렇게 get뒤에 then에 익명함수로 데이터 넣으면됨
+이걸 비동기로 고치면
 
+onClick=async()=>{
+	try{
+		const response= await axios.get('url').then(response=>setData(response.data))
+		setData(response.data)
+	}
+}
+그냥 async 익명함수앞에 붙이고 내부 비동기처리할곳에서 await붙이면됨
 
+보통 데이터 받으면 json에 필드명:{텍스트 or 객체} 이렇게있는데 
+const 컴포넌트=({데이터props})=>{
+	const{필드명1,필드명2,필드명3,필드명4}=데이터props  
+}
+이렇게하면 필요한 필드만 가져다쓸수있음
 
+컴포넌트가 화면에 보이는시점에서 api콜하려면 useEffect사용하면 되는데,useEffect에 등록하는함수에 바로 async를 붙이면안됨
+useEffect가 반환해야하는값은 클린업함수기 때문
+그래서 
+useEffect(()=>{ 이게 클린업함수 여기다가 async붙이면안됨
+	[loading,setloading]=useState(false)
+	[articles,setarticles]=useState(null)
+	const 내부함수=async(){
+		setloading(true) 로딩키고
+		const response= await axios.get('url')
+		setarticles(response.data.articles) 변수명.data.내부데이터명
+		setloading(false) 로딩끄고
+	}
+	
+	내부함수();
+	
+},[]) 마운트할때만 할거라 빈배열넣어줌
+
+그리고 밑에
+
+if (loading){ 로딩중일떄 이거띄우고 로딩값이 비동기로 false로 바뀌면 넘어감
+	return <div>로딩중</div>
+}
+if (!articles){ 비동기쓸때 map쓸거면 중간에 null인상태가 있기떄문에 map이 null먹으면 에러뜨니까 거기못가게 앞에서막아줘야함
+	return null
+}
+return(
+div
+	articles.map(article=> (<newsitem key={url같은키} article(보내줄prop)={데이터}/>   )
+div
+)
+
+카테고리따라 바꾸고싶으면 ``이거써서 url문자열중간에 동적으로처리해주면됨 라우트로 파라미터받아서 적어주는식으로
+
+라우트안쓸거면 상위컴포넌트에서 함수만들어서 그거 하위에서 실행시켜서 위쪽usestate에 들고간다음에 그거 다시 다른하위로 보내줘서 그거넣어서
+실행
+
+<Route path="/:props명?">이러면prop이 있을수도있고 없을수도 있다는거
+하위에서도
+const category=match.params.category||'all' 이렇게 카테고리없으면 all선택하게 쓸수있음(둘다true면 앞에거선택)
+
+위에 useEffect안에 비동기함수같은거 커스텀hook만들어다가 가져다쓰면 간결해짐
+그냥 useEffect를하고 비동기처리만 책임지고  동작함수는 가져다쓰는곳에서 콜백으로 넣어주는식으로만해도 간결해짐
 
 
 

@@ -952,6 +952,97 @@ const category=match.params.category||'all' 이렇게 카테고리없으면 all�
 그냥 useEffect를하고 비동기처리만 책임지고  동작함수는 가져다쓰는곳에서 콜백으로 넣어주는식으로만해도 간결해짐
 
 15.context api
+context api는 예전엔 usestate로 계속 내려가면서 귀찮게 계속 props로 주면서 끌어올려야 되는걸 전역변수처럼 관리할수있게해줌
+context가 업데이트되면 그걸 가지고있는 모든곳에서 리렌더링이 일어남
+
+따로 전역변수용 js파일만든다음에
+import {createContext} from 'react';해주고
+const varContext(변수명아무거나)=createContext({abc:'black'})
+
+export default varContext
+
+하면 만들어짐
+
+사용할때는 렌더링할때에 
+<varContext.Consumer(context자체컴포넌트)>
+	{value=>(   이런식으로 사이에 함수를넣어서 사용
+		<div
+		style={{
+			background:value.abc 화살표함수의 첫매개변수에 context가 등록되니까 거기서 필요한변수 가져다쓰면됨
+	)
+	}
+</varContext.Consumer>
+원래 js에서는 render props라고 컴포넌트 사이에 함수를넣어서 쓰기도함
+
+값을 context를 건드리지않고 지금쓸때만 바꿀때는  
+<varContext.Provider value={{abc:'red'}}> value안넣으면 에러남 안쓸거면 그냥 지우자<varContext.Provider>이러면에러
+</varContext.Provider>
+이렇게 Provider를 써서 value프롭에 바꿀필드명에 바꿀값 넣어주면 됨
+기존에 크리에이트했을때 적은 value값은 provider를 안썼을떄 뱉는 디폴트값임
+
+그러니까 값을 그대로쓰고싶으면 consumer쓰면되고 값을 여기서만 바꾸고싶으면 provider쓰면됨
+
+context의 디폴트값을 바꾸고싶으면(전역변수를 바꾸고싶으면)
+context js파일에 usestate로 상태랑 바꾸는액션 선언한다음에 setstate 콜하는방식으로 바꾸면됨
+
+const ColorCOntext=createContext({ 스테이트 액션 선언해주고 
+	state:{color:'red'},
+	action:{
+		setColor:()=>{}
+	}
+
+})
+provider 생성
+const ColorProvider=({children})=>{ 사잇값받아서
+	const[color,setColor]=useState('red')
+	const value={  value에 스테이트액션넣어주고
+		state:{color},   
+		action:{setColor}
+	}
+	return(
+		<ColorContext.Provider value={value}>{children}</ColorCOntext.provider>
+	)원래 provider사용하는식으로 만들어서 보내주고
+
+
+}
+
+const{Consumer:ColorConsumer}=ColorContext ColorConsumer에 Counsumer 같은거라고 처리해주고
+											(안해도됨 그냥통일성때문 그냥 consumer써도됨)
+
+export{ColorProvider,ColorConsumer} 함수2개 내보내주고
+export default ColorCOntext   값도 보내주고
+
+consumer는 그대로
+<ColorConsumer>
+	<div background:{value.state.color}/>이런식으로 똑같이가져다쓰면되고
+<ColorConsumer>
+provider도 그대로 쓰고 (대신 value안적어줘도 안에서 적어줬기떄문에 에러안남)
+
+값을 바꾸고싶으면
+<ColorConsumer>
+	<button onClick={()=>action.setColor('white')  />이렇게 그냥 setcolor콜하면됨
+<ColorConsumer>
+
+근데 함수형이나 클래스에서 저거너무귀찮으니까 함수형은 useContext hook쓰면 엄청편함
+
+import React,{useContext} from 'react'
+import 컨텍스트변수명 from './컨텍스트파일주소'
+
+const {state}=useContext(컨택스트변수명)  이렇게 받아와서
+
+<div background= {state.color}/> 그냥바로 이렇게쓰면됨 수정도 setColor불러와서 바로하면됨
+
+클래스에선 
+class sc extends component{
+	static contextType(키워드)=컨텍스트변수명
+	해주고 밑에서 바로
+	background= {color} 이렇게 받아쓰면되는데
+
+클래스는 하나당 하나씩밖에 못받아서 보통 함수형으로 다 씀 권장되는게 함수형이기도하고
+
+
+
+
 
 
 

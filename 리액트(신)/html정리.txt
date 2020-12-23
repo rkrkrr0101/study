@@ -6,3 +6,11 @@
 	<form/>
 	이면 form은 input의 value를 자기자신처럼 쓸수있고(form의 value와 input의 value는 같음)
 	form에 onsummit이벤트를 달면 button이 눌렸을때 onsummit가 발생함(기본적으로 타입서밋이면 그게 서버로전송됨)
+
+태그의 type는 기본적으로 내장된 형태를 불러오는거임
+<input type="button">하면 버튼과 텍스트
+<input type="checkbox">체크박스와 텍스트
+이런식으로 html에서 미리 제공되어진 형태를 이름불러서 데려오는식
+따로 css로 만들어줘야하는게아님
+
+return {}는 안에 js넣는거고 return()는 안에 html넣는거임

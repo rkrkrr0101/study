@@ -1111,8 +1111,177 @@ const store=createStore(reducer)
 
 17.리액트리덕스
 
+리액트에서 리덕스를 사용할떄 자주사용되는 패턴은 컨테이너와 프레젠테이션을 분리하고  
+컨테이너에 프레젠테이션과 스토어(리덕스)가 연결된식을 많이씀(mvc패턴 m 리덕스 v프레젠테이션 c컨테이너)
+
+이러면 v를 보고 v에 이어진c로 인풋을 넣은다음 m에서 반응해서 아웃풋을 v로 넘기는식
+
+보통 리덕스 코드 나누는건 두방식이 있는데
+액션,액션타입,리듀서를 각각 폴더만든다음에 하나씩 넣는방식이고
+액션 액션타입 리듀서를 각각 컴포넌트같은 기능하나단위로 한파일에 넣는방식 두개가 일반적으로 쓰임
+
+액션타입을 정의할때 increase같은건 중복날수있으니까 
+const INCREASE='모듈명/increase'이런식으로적어두는게 좋음
+
+액션생성함수는 export const increase=()=>({type:INCREASE})
+이렇게 만들어주면 import {increase} from './counter'이렇게 함수로 불러올수있음
+
+리듀서는 기본적으로 똑같이 switch-case문으로 적는게 기본임
+
+function cou(state=기본값,action){
+	switch(action.type){
+		case INCREASE:
+			return{
+				함수처리할거
+			}
+	}
+}
+이런식
+
+만약 액션에서 파라미터가 필요하면 액션생성함수에서
+export const increase=text=>(
+	{
+		type:INCREASE,
+		text
+	})
+이런식으로 가져다쓰면됨
+
+여기도 객체에 한개이상의 값이 들어가면 불변성유지를 해줘야함
+function cou(state=기본값,action){
+	switch(action.type){
+		case INCREASE:
+			return{
+				...state,
+				input:action.input
+			}
+	}
+}
+이렇게 안깊으면 ...으로 처리가능
+
+이렇게 리듀서파일이 여러개라도 스토어는 하나만 등록가능하니까 combineReducers를 써서 리듀서를 합친다음에 스토어등록을 해야함
+모듈디렉터리에 index.js를 만들면 불러올떄 디렉터리까지만 적으면 바로 인덱스를 읽기때문에 줄 줄일수있음
+
+import {combineReducers} from 'redux'
+import 사용할모듈1
+import 사용할모듈2
+
+const rootreducer=combineReducers({
+	모듈1,모듈2
+})
+
+export default rootreducer
+
+그다음엔 스토어를 만들어줘야하는데 
+src/index/js에 스토어를 만든뒤 react-redux에서 주는 provider에 스토어를넣고 <app/>를 감싸주면됨
+
+const store=createStore(rootreducer)
+
+reactdom.render(
+<provider store={store}>
+<app/>
+</provider>,
+도큐어쩌구저쩌구관심없음)
+
+그리고 리덕스데브툴을 쓰면 스토어값이랑 액션호출을 바로 볼수있으니까 그거도 적용하면좋음
+yarn으로 설치하고 
+import {composeWithDevTool} from 'redux-devtools-extension'
+
+const store=createStore(rootreducer,composeWithDevTool())
+이거만해주면됨
+
+컨테이너를 스토어에 연동하려면 export default 컨테이너 를 
+export default connect(스테이트프롭,디스패치프롭)(컨테이너) 이렇게 바꿔주면됨
 
 
+위에 사용할 스테이트랑 액션들
+import {사용할액션} 모듈에서 불러오고
+
+const container=({넘버,액션1,액션2})=>{
+ return(
+	<div 넘버={넘버} 온클릭={액션1}
+ )
+}
+export default connect(
+	스테이트=>{
+		넘버:스테이트.사용할리듀서.사용할값
+	}
+	, dispatch=>({ 액션1:()=>dispatch(사용할액션() ),액션2:()=>dispatch(사용할액션2() ) })(컨테이너)
+
+이렇게 스테이트값이랑 액션이랑 리듀서와 뷰를 연결시켜주면됨
+
+그리고 그냥 dispatch도 귀찮으니까 
+export default connect(
+	스테이트=>{
+		넘버:state.사용할리듀서.사용할값
+	}
+	, { 사용할액션,사용할액션2}, )(컨테이너)
+	
+이렇게하면 connect가 자동적으로 사용할액션이라는 글자로 액션을 만들어줌
+(저기쓴함수명이랑(사용할액션) 위에 container=({넘버,액션1,액션2})  여기의 함수명이랑(액션1) 같아야 저기에 커넥트됨)
+
+reduce-action을 쓰면 좀 편하게 쓸수있음
+
+export const increase=()=>({type:INCREASE})이거를
+export const increase=createAction(INCREASE)이렇게 넣어서 만들수있음
+
+그리고 리듀서 함수는
+
+const 리듀서=handleActions(
+	{
+		[INCREASE]:(state,action)=>({number:state.number+1 }),
+		[DECREASE]:(state,action)=>({number:state.number-1 })
+	}
+)
+이런식으로 switch-case문을 빼버리고 줄일수있음
+그리고 여기서 추가적인 매개변수가 필요할경우 
+액션생성함수에서 
+export const increase=createAction(INCREASE,text=>text) 이런식으로 준다음에
+action.payload를 받으면 준값이 나옴
+
+handleActions(
+	{
+		[INCREASE]:(state,action)=>({text:action.payload }),
+		
+	}
+)
+근데 이러면헷갈리니까 
+[INCREASE]:(state,{payload:input})=>({text:input }),
+이런식으로 이름붙여서 명명할수있음
+
+여기도 모듈이 복잡해지면 ...으로 해결이 안되니까 immer를 써야하는데 불변성유지떄문에
+
+[INCREASE]:(state,{payload:input})=>produce(state,draft=>{draft.input:input+1 })
+이런식으로 함수 받을때 produce써서 immer 평상시쓰는거처럼 쓰면됨
+
+connect너무 귀찮다싶으면 useSelector이랑 useDispatch써서 커넥트시킬수도있는데
+
+그냥 const 컨테이너 =()=>{
+	const number=useSelector(state=>state.모듈명.사용할값)
+	const dispatchaa=useDispatch();
+	const change=usecallback({()=>dispatchaa(사용할함수받아온거)},[dispatchaa])
+	
+	return<counter number={number} onChange={change} />
+}
+export default 컨테이너
+이렇게 그냥 내부에서 처리해버릴수도있음
+useDispatch는 숫자가 바뀌어서 리렌더링할때마다 함수가 렌더링되기떄문에 반드시 usecallback을써서 묶는 습관들여야함
+
+https://react-redux.js.org/next/api/hooks#recipe-useactions 여기가면 useActions있는데
+원래 react-redux에 넣을라다 만건데 저거 가져와서 가져다쓰면
+
+그냥 const 컨테이너 =()=>{
+	const number=useSelector(state=>state.모듈명.사용할값)
+	const [a,b,c,d]=useActions([모듈a,모듈b,모듈c,모듈d],[])
+	
+	return<counter number={number} ona={a} onb={b} ona={b} ona={b}/>
+}
+이렇게 배열로 한번에 커넥트시켜줄수있음
+
+ connect를 사용해서 만들었을때는 컨테이너의 부모컴포넌트가 리렌더링될떄 바뀐게없으면 렌더링이 자동으로 안되는데
+useSelector나 useDispatch를 사용했으면 렌더링될때마다 같이렌더링되니 react.memo()를 써서 렌더링막아야함
+
+export default react.memo(컨테이너)
+이렇게
 
 
 

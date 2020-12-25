@@ -1283,5 +1283,5 @@ useSelector나 useDispatch를 사용했으면 렌더링될때마다 같이렌더
 export default react.memo(컨테이너)
 이렇게
 
-
+18.리덕스 미들웨어
 

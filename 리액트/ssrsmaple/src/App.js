@@ -1,5 +1,4 @@
-import logo from './logo.svg';
-import './App.css';
+import React from 'react'
 import Menu from './compo/menu'
 import RedPage from './pages/RedPage'
 import BluePage from './pages/BluePage'

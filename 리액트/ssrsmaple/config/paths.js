@@ -1,4 +1,4 @@
-'use strict';
+
 
 const path = require('path');
 const fs = require('fs');
@@ -64,7 +64,8 @@ module.exports = {
   testsSetup: resolveModule(resolveApp, 'src/setupTests'),
   proxySetup: resolveApp('src/setupProxy.js'),
   appNodeModules: resolveApp('node_modules'),
-  swSrc: resolveModule(resolveApp, 'src/service-worker'),
+  ssrIndexJs: resolveApp('src/index.server.js'),
+  ssrBuild: resolveApp('dist'),
   publicUrlOrPath,
 };
 

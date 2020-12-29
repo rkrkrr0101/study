@@ -1,7 +1,28 @@
 import React from 'react';
-import ReactDomServer from 'react-dom/server'
-const html= ReactDomServer.renderToString(
-    <div>Hello SSR</div>
-)
+import ReactDOMServer from 'react-dom/server';
+import express from 'express'
+import {StaticRouter} from 'react-router-dom'
+import App from './App'
+import path from 'path'
 
-console.log(html)
+const app=express()
+
+const serverRender=(req,res,next)=>{
+  const context={}
+  const jsx=(
+      <StaticRouter location={req.url} context={context}>
+        <App/>
+      </StaticRouter>
+    )
+    const root=ReactDOMServer.renderToString(jsx)
+    res.send(root)
+
+}
+const serve=express.static(path.resolve('./build'),{index:false})
+
+app.use(serve)
+app.use(serverRender)
+
+app.listen(5000,()=>{
+  console.log('run http://localhost:5000/')
+})

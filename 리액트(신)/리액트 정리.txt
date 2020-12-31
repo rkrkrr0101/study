@@ -1528,7 +1528,7 @@ await Promiseall(preloadContext.promises)프로미스 끝나기 기다려준뒤�
 
 근데 이거 언제 다하고있어 싶으면 next.js나 razzle쓰자 요즘세상에 누가 하나하나 저거다하고있어
 
-
+21.nodejs koa
 
 
 

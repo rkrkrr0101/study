@@ -1690,6 +1690,8 @@ posts.get('/',postsCtrl.list)이런식으로 내부메서드 불러오는식으�
 
 22.mongo db
 
+mongodb는 nosql
+
 
 
 

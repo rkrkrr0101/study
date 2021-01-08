@@ -1822,5 +1822,87 @@ ctx.body=posts.map(post=>post.toJSON())
 
 23.jwt로 인증시스템 구현 
 
+인증시스템에는 토큰과 세션이 있는데 
+세션은 서버에서 데이터를 가지고있고,id를 클라이언트에 준다음에 id가지고 조회하는식(서버부담)
+	단점은 서버확장하기가 번거로워짐
+	인스턴스가 여러개되면 모든서버에서 세션을 공유해야하기때문
+토큰은 서버에서 토큰을 발급해준다음 클라이언트에서 그 토큰과 같이 요청(클라이언트부담)
+서버에서 만들어준토큰은 해시값이 있기때문에 무결성이 보장됨
+
+토큰을 하려면 해시를 사용하는 라이브러리를 추가해야함
+yarn add bcrypt
+
+await bcrypt.hash(password,10)하면 해쉬입력
+
+체크는
+await bcrypt.compoare(password,hashedpassword)하면 TF로 뱉음
+
+스키마에서 스키마.findOne({유저네임})하면 유저네임으로 검색
+
+로그인체크같은 자주쓰는것들은 따로 빼두면 편함
+
+토큰을 만들려면 jsonwebtoken을 추가해야함
+
+비밀키를 만든다음에(비밀키 넣어둔파일은 gitignore로 차단해야함 그전에 캐시남아있으면 계속 가져가니 캐시도 지우고)
+
+토큰 만드는법은
+
+const token=jwt.sign(
+	{
+		토큰에 넣을데이터
+	},
+	비밀키값,
+	{
+		유효기간
+	}
+return  token
+하면됨
+
+토큰 넘겨주는법은
+const token=user.위에만든토큰생성메서드()
+ctx.cookies.set('토큰명',token,{
+	maxAge:유효기간
+	httpOnly:true  //토큰탈취막기
+}
+이렇게 넣어주면 됨
+
+토큰 검증은
+const token=ctx.cookies.get('토큰명')
+if (!token) return next()  토큰없음
+try{
+	const decoded=jwt.verify(token,비밀키)
+	return next()
+}
+catch(e){
+	검증실패하면 여기로옴
+	return next()
+}
+한다음에 라우터적용전에 use시켜주면됨
+
+토큰이 일정시간이하면(유효기간)재발급할수있는데
+
+미들웨어 있는지없는지 체크한다음에 무결성검사하고
+그밑에 토큰 유효기간확인한후에 다시 토큰생성해서 set해주면됨
+
+토큰을 지우고싶으면(로그아웃)
+ctx.cookies.set('토큰명')하면 토큰이 날아감
+
+const query={
+	...(username?{'user.username':username}:{})
+이건 유저네임이 있으면 user.username에 유저네임을 적고 없으면 무시하라는 것을 의미함
+
+koa로 백엔드개발할떄는 계속 미들웨어 만들어가면서 개발하는게 가독성,재사용성 높아져서 유지보수쉬워짐
+
+
+
+
+
+
+
+
+
+
+
+
 
 

@@ -412,6 +412,82 @@
 		보통 그래서 사이킷런으로 만들때는 pipeline를 써서 여러 변환기를 연결한다음 마지막에 추정기를 배치하는식으로 쉽게만들수있고,
 		사이킷런은 대부분의 매개변수에 기본값이 있어서 어지간하면 동작함
 	
+	2.텍스트와 범주형특성
+		범주형 특성들은 그냥 숫자로 변환시켜서 사용하는게 좋음 
+		대부분 머신러닝 알고리즘은 숫자를 다루기때문
+		
+		숫자로 바꾸려면
+		
+		from sklearn.preprocessing import OrdinalEncoder
+		ord=OrdinalEncoder()
+		데이터2=ord.fit_transform(데이터)
+		
+		이러면 모든 범주형 특성들이 같은거끼리 1,2,3,4,5등으로 표시되고
+		범주형특성들의 카테코리 목록은 ord.categories_를 하면 리스트가 반환됨
+		
+		근데 이렇게하면 알고리즘이 붙어있는거끼리 가깝다고 생각하기때문에,
+		실제로 그렇지않다면 카테고리별 이진특성을 만들어 해결함(특성을 전부 만들어 두고 하나가 1이면 나머지가 다 0이되는식)
+		이걸 원-핫 인코딩이라고 부름
+		
+		하는방법은
+		
+		from sklearn.preprocessing import OneHotEncoder
+		
+		OHenco=OneHotEncoder()
+		데이터원핫=OHenco.fit_transform(데이터)
+		
+		이러면 원핫식으로 변환된게 나옴
+	3.나만의 변환기
+		변환기를 만들려면 사이킷런은 덕타이핑을 지원하므로
+			fit() self를 반환
+			transform()
+			fit_transform()
+		메서드를 구현한 클래스를 만들면 됨 
+		마지막 fit_transform는 TransformerMixin을 상속하면 자동으로 생성되고
+		BaseEstimator을 상속하고 생성자에 *args나 **kargs를 사용하지 않으면 하이퍼파라미터 튜닝에 필요한
+			get_params()
+			set_params()
+		를 추가로 얻을수있음 
+		
+		예시로
+		from sklearn.base import BaseEstimator,TransformerMixin
+
+		rooms_ix,bedrooms_ix,population_ix,households_ix=3,4,5,6
+
+		class CombinedAttributesAdder(BaseEstimator,TransformerMixin):
+			def __init__(self,add_bedrooms_per_room=True): #생성자
+				self.add_bedrooms_per_room=add_bedrooms_per_room
+			def fit(self,X,y=None):
+				return self
+			def transform(self,X):
+				rooms_per_household=X[:,rooms_ix]/X[:,households_ix]
+				population_per_household=X[:,population_ix]/X[:,households_ix]
+				if self.add_bedrooms_per_room:
+					bedrooms_per_room=X[:,bedrooms_ix]/X[:,rooms_ix]
+					return np.c_[X,rooms_per_household,population_per_household,bedrooms_per_room]
+				else:
+					return np.c_[X,rooms_per_household,population_per_household]
+				
+				
+		
+		
+		위에서 특성 조합하는거 자동화한 함수
+		init에서 베드퍼룸특성을 만들어주고 
+		fit은 자기자신을 보내주는거만 하고
+		트랜스폼에서 특성을 만들어서 리턴해줌
+		그리고 get_params과 set_params은 파이프라인과 그리드탐색에 꼭 필요한 메소드라서 무조건 BaseEstimator를 상속해야함
+		
+	4.특성 스케일링
+		몇가지 알고리즘을 빼면 머신러닝은 입력 숫자들의 스케일이 다르면 잘 작동하지 않음
+		그래서 숫자들의 스케일링을 맞춰줘야하는데
+		대표적으로
+			min-max스케일링(정규화)
+			표준화
+		가 있음
+		
+			
+	
+	
 			
 			
 			

@@ -2948,7 +2948,270 @@
 
 
 13.텐서플로 데이터적재와 전처리
-	e
+	텐서플로에서 데이터 로드와 전처리는 텐서플로데이터를 사용하면 됨
+	데이터api는 텍스트파일(csv)고정길이 이진파일,TFRecord포맷등을 읽을수있음
+	
+1.데이터api
+	데이터api의 중심엔 데이터셋 개념이있는데,데이터셋은 연속된 데이터샘플
+	1.연쇄변환
+		데이터셋은 변환메서드를 쓰면 리턴이 다시 변환된 데이터셋이기때문에 메서드를 이어붙여서 변환메서드를 연결할수있음
+			dataset=dataset.repeat(3).batch(7)
+			
+			repeat는 n번반복(123이면 123123123으로만들고)
+			batch는 n만큼 자름(3이면 [1,2,3],[1,2,3],[1,2,3])
+		
+		map을 써서 람다식으로 내부 전체를 변환할수도있음
+			dataset=dataset.map(lambda x:x*2)
+		map은 각 아이템을 수정함
+		
+		만약 데이터셋에 변환을 해야한다면(배치를 다시 푼다던가)apply쓰면됨
+			dataset=dataset.apply(tf.data.experimental.unbatch())
+			
+		filter로 데이터셋을 필터링할수도있음
+		
+			dataset=dataset.filter(lambda x:x<10)
+		
+		데이터셋에서 몇개아이템만(위에서부터)보고싶으면 take(n)하면됨
+			dataset=dataset.take(3)
+	2.데이터 셔플링
+		경사하강법은 훈련세트에 있는 샘플이 독립적이고 동일한분포일때 최고의 성능을 발휘함
+		그래서 데이터를 섞어서 독립적으로 만들어줘야함
+		가장쉬운방법은 shuffle()로 섞는것
+		
+		이걸쓰면 buffer_size만큼 추출해서 버퍼에 채우고,새로운 아이템이 요청되면 이 버퍼에서 랜덤하게 하나를 꺼내서 반환후,
+		원본데이터셋에서 새 아이템을 추출해서 비워진버퍼를 채우고,원본이 0이될때까지 반복
+		
+		이걸할땐 버퍼크기를 크게잡아주는게좋고,단 메모리크기를 넘으면안되고 원본데이터셋보다 크게할필요는없음
+		
+			dataset=dataset.shuffle(buffer_size=5).batch(7)
+		
+		만약 메모리용량보다 큰 데이터셋은 이렇게 간단히 섞으면 충분한 효과가 나오지않아서,원본데이터를 섞는거임
+		그러기위한 가장 쉬운방법은 파일을 여러개로 나눈다음에,훈련동안 무작위로 읽는것
+		파일을 여러개로 나누고 그중몇개를 선택한뒤 그중몇개에서 한줄씩 랜덤으로 읽으면됨
+			
+			파일이 나눠져있으면
+			filepathdataset=tf.data.Dataset.list_files(파일주소)
+			
+			dataset=filepathdataset.interleave(
+				lambda filepath:tf.data.TextLineDataset(filepath).skip(1), 첫줄은 데이터필드니까 스킵
+				cycle_length=한번에읽을갯수
+			)
+		
+	3.데이터전처리
+		csv파일을 파싱할땐 
+			filed=tf.io.decode_csv(파싱할라인,record_defaults=각열에대한기본값)
+		저기서 없는값이나오면 예외발생
+		열마다 하나씩 스칼라텐서의 리스트를 반환함
+		마지막에 레이블이 들어가있으니까 레이블을 제외한 필드 묶어야하는데 
+			x=tf.stack(field[:-1])
+			y=tf.stack(field[-1:])
+			return x전처리값,y
+		이렇게 보내면됨
+
+	4.데이터적재와 전처리합치기
+		로드와 전처리를 한번에 한함수에 넣고 돌리면 편한데 여기서도 볼게있음
+			def 데이터처리(파일주소...):
+				로드
+				전처리
+				return dataset.batch(batch_size).prefetch(1)
+		prefetch는 미리 프리로드 1개해둬서,gpu가동율을 100퍼센트로 만드는거
+		
+	5.tf.keras와 데이터셋사용
+		데이터처리함수로 훈련세트로 사용할 데이터셋을 만들수있음
+			train=데이터처리(트레인파일위치)
+			valid=데이터처리(검증파일위치)
+			test=데이터처리(테스트파일위치)
+		사용할떄도 그냥 fit에 훈련데이터셋,검증데이터셋 넣으면됨
+			model.fit(train,epochs=10,validation_data=valid)
+		evaluate와 predict에도 똑같이 쓰는데
+		이경우엔 레이블이 필요하지않고,있더라도 무시함
+
+2.TFRecord포맷
+	TFRecord는 텐서플로가 대용량데이터를 저장하고 효율적으로 읽기위해 선호하는 포맷
+	TFRecord는 크기가 다른 연속된 이진 레코드를 저장하는 단순이진포맷(각레코드는 레코드길이,길이체크섬,실제데이터,데이터체크섬으로 구성)
+	
+	tf.io.TFRecordWriter로 만들수있음
+		with tf.io.TFRecordWriter(데이터.tfrecord)as f:
+			f.write(b'1번적을말') b는 바이트로 적는다는소리(바이트캐스트)
+			f.write(b'2번적을말')
+	읽을때는
+		dataset=tf.data.TFRecordDataset(['데이터.tfrecord'])
+	하면 됨
+	
+	1.압축
+		네트워크를 통해 읽어야할떄나 이럴땐 파일을 압축할필요가 있음
+		
+			option=tf.io.TFRecordOptions(compression_type='GZIP'압축종류)
+			with tf.io.TFRecordWriter(데이터.tfrecord,option)as f:
+			...
+		이렇게 압축파일을 만들수있고
+		읽을때는
+			dataset=tf.data.TFRecordDataset(['데이터.tfrecord'],compression_type='GZIP')
+		이렇게읽을수있음
+	
+	2.프로토콜 버퍼
+		일반적으로 TFRecord는 프로토콜버퍼를 사용함
+		
+		텐서플로에서 쓰는건
+			from tensorflow.train import BytesList,FloatList,Int64List
+			from tensorflow.train import Feature,Features,Example
+			
+			예제=Example(
+				특성들=Features(
+					특성={
+						'name':Feature(bytelist=BytesList(value=[b'aaa'])),
+						'id':Feature(Int64List(value=[123])),
+						'emails':Feature(bytelist=BytesList(value=[b'a@a.com'],[b'b@b.com']))
+					}
+				)
+			)
+			with tf.io.TFRecordWriter('데이터.tfrecord')as f:
+				f.write(예제.SerializeToString())
+				
+	3.프로토콜 버퍼일고 파싱
+		tf.io.parse_single_example()로 파싱할수있음
+		이건 텐서플로연산이라서 TF함수에 포함할수있음
+		
+		파싱할때는 설명딕셔너리(필드설명)를 만든다음에 그거주고 파싱하면됨
+			feature_des={
+				'name':tf.io.FixedLenFeature([]특성크기,tf.string데이터타입,default_value=''기본값),고정길이
+				'id':tf.io.FixedLenFeature([],tf.int64,default_value=0),고정길이
+				'emails':tf.io.VarLenFeature([tf.string) 가변길이
+			}
+			for x in tf.data.TFRecordDataset(['데이터.tfrecord']):
+				파싱예제=tf.io.parse_single_example(x,feature_des)
+		고정길이는 보통텐서로 파싱되지만,가변길이는 희소텐서로 파싱됨
+		참조할떈
+			
+			파싱예제['emails'].values
+		하면나옴
+		
+		BytesList는 직렬화된 객체를 포함해 어떤 이진데이터도 포함할수 있음
+		tf.io.encode_jpeg()로 jpg를 인코딩한다음 BytesList에 넣을수있음
+		이걸 읽을때는 tf.io.decode_jpeg()를 호출하면됨
+		
+		tf.io.parse_example()로 배치단위로 파싱할수있음
+			for x in tf.data.TFRecordDataset(['데이터.tfrecord']):
+				파싱예제=tf.io.parse_example(x,feature_des)		
+		
+		
+	4.리스트의리스트
+		리스트의리스트를 다룰떄는 SequenceExample가 있음
+		필요해지면 찾아보자
+		사용법은 비슷함
+
+
+3.입력특성전처리
+	신경망에서 데이터를 준비하려면,모든특성이 수치특성이어야하고,정규화해야함
+	특히 범주형이나 텍스트특성이 있으면 숫자로 바꿔야됨
+	
+	가장 간단한방법은 lambda로 건드리는것
+		model=keras.models.Sequential([
+			keras.layers.Lambda(lambda input:(input-mean))
+		])
+		or
+		model.add(keras.layers.Lambda(lambda input:(input-mean)))
+	
+	아예 층을 하나 만들고싶으면 그럴수도있음
+		class 새층(keras.laters.Layer):
+			def adapt(self,data_sample):
+				self.means_=np.mean(...)
+			def call(self,inputs):
+				retrun(inputs-self.means_)
+	이런식
+	이걸 모델에 추가하기전에 adapt를 호출해서 미리 값을 넣어주고 써야함
+		std=새층()
+		std.adapt(데이터샘플)
+	샘플은 전체데이터셋을 대표할만큼 커야하지만,전체훈련세트일 필요는없고,적당히 수백개정도면됨
+	그다음엔 다른층이랑똑같이 model.add해서쓰면됨
+	
+	keras에서 노말라이제이션하려면 그냥 keras.laters.Normalization쓰면됨
+	얘도 층을만들고 adapt에 샘플데이터던져주고 보통층처럼 쓰면됨
+	
+	
+	1.원핫벡터로 범주형인코딩
+		
+		원핫인코딩을 할때,
+		먼저 사전을 만들고 그 범주크기만큼 인덱스텐서를 만들고,
+		범주리스트와 인덱스로 초기화객체를 만든다음 
+		oov갯수(사전에없는거 몇개까지 처리할건지)주고 룩업테이블 만들면됨
+		
+			vocab=[사전 '사막','섬','해안']
+			indices=tf.range(len(vocab),dtype=tf.int64)
+			tableinit=tf.lookup.KeyValueTensorInitializer(vocab,indices)
+			numoov=2
+			table=tf.lookup.StaticVocabularyTable(tableinit,numoov)
+			
+		만약 oov갯수를 넘는 알려지지않은 범주가 나오면 충돌이 발생해서,범주들끼리 겹칠수있으니까 좀 크게잡아주는게좋을듯
+		
+		테이블만들고 쓸떄는
+			catindices=table.lookup(데이터)
+			catonehot=tf.one_hot(catindices,depth=len(vocab)+numoov)
+		하면됨
+		
+		근데 keras.layers.TextVectorization쓰면 됨
+		이거도 adapt가 어휘사전을 추출하고 call이 각 범주를 어휘사전의 인덱스로 바꿈
+		인덱스를 원핫벡터로 바꾸고싶으면 이층을 모델의 시작부분에 추가하고,
+		뒤이어 tf.one_hot()함수가 적용된 람다층을 두면됨
+		
+		(범주갯수가 10개이하면 원핫인코딩,10~50이면 상황따라, 50이상이면 임베딩사용)
+	2.임베딩으로 범주형인코딩
+		임베딩은 범주를 표현하는 훈련가능한 밀집벡터
+		
+		처음엔 인베딩이 랜덤하게 초기화되어있는데,이건 훈련이 되니까 점점 향상됨
+		(대충 king-man+woman 하면 queen과 비슷한위치에 있다 이런식임)
+		
+		임베딩을 케라스에서 하려면    keras.layers.Embedding을 쓰면됨
+			model.add(keras.layers.Embedding(input_dim=len(vocab)+numoov 입력차원,
+											 output_dim=2 출력차원))
+											 
+		
+		
+		(원핫인코딩다음에 뒤따르는 dense가 임베딩과 같은역할을 하는데,임베딩이 좀 더 적은연산을 사용함
+		길이가 20인 원핫벡터와 10개의 유닛을가진 dense를 쓰는건,input_dim이20이고 output_dim이 10인 임베딩쓰는거랑같음)
+		
+	3.케라스전처리층
+		keras.layers.Normalization은 특성표준화를 하고
+		keras.layers.TextVectorization은 각 단어를 어휘사전에 있는 인덱서를 인코딩함
+		
+		둘다 층을만들고 샘플데이터로 adapt를 호출한다음 일반적인층처럼 모델에 사용할수있음 
+		다른 전처리층도 동일한 패턴을 따름
+		
+		예를들어 keras.layers.Discretization은 연속적인 데이터를 몇개의 구간으로 나누고,원핫벡터로 인코딩함
+		즉 연속데이터를 범주형으로(낮음중간높음 [0,0,0])바꿈
+		또한 preprocessingStage로 여러 전처리층을 연결할수 있음 
+			pipeline=keras.layers.preprocessingStage([전처리1,전처리2])
+			pipeline.adapt(샘플데이터)
+			
+		그리고 TextVectorization은 단어인덱스 대신 단어 카운트벡터를 출력하는 옵션이 있음
+		and가 3번나오면 3출력하고 그런식
+		그래서 tf-idf를 쓸수있음
+		
+
+
+4.TF변환
+	전처리는 계산비용이 커서 훈련과 동시에 하는거보다,사전에 처리하면 속도를 크게 올릴수있음
+	즉 데이터가 훈련하는동안 에포크마다 전처리하는게 아니라,훈련하기전에 샘플마다 한번씩만 전처리
+	만약 데이터셋이 작으면 cashe로 메모리에 넣어서 할수있고,크면 아파치빔이나 스파크같은 외부도구써야함
+	
+	근데 모델전처리랑 외부도구랑 크게보면 2묶음인데,같이묶으면 유지보수 어려워지니까 전처리랑 외부도구를 2개로 나눠야되는데,이걸합치려면
+	TF변환을 해야함
+	TF변환을 하려면 TFX를 설치해야됨
+	
+	TFX로 전처리함수를 한번만 정의하고,그다음 아파치빔으로 그 함수를 전체훈련세트에 적용할수있음
+	이과정에서 전체훈련세트에 대한 모든 통계를 계산함
+	
+	tf변환은 배포할모델에 추가할수있도록,동일한 역할을 수행하는 텐서플로함수를 생성한다는게 중요함
+	이 tf함수는 아파치빔에서 계산한 모든 통계에 해당하는 상수를 가지고있음
+	
+5.TFDS프로젝트
+	https://tensorflow.org/datasets 에 가면 데이터셋이 많음
+	tensorflow-datasets라이브러리를 설치하고 tfds임포트하고 load하면 데이터셋이 많으니까 필요한거있으면 찾아보자
+
+
+
+
+
 
 
 

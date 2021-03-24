@@ -3722,10 +3722,73 @@
 		
 		
 2.감성분석
+	imdb리뷰데이터셋받아다가 리뷰분석할수있음
 	
+	그리고 문자단위가 아닌 단어단위로 인덱싱할때는 기본값으로 구두점 탭 줄바꿈 공백등으로 자르는데,
+	문제는 그러면 이상하게 잘리는 언어도 있고 그럼
+	그래서 비지도학습으로 단어를 부분단어(서브워드)로 잘라서 토큰화하는방식도 있음
+	tf.Text에 이런게 들어있음(바이트페어인코딩같은거)
+	
+	그리고 모델을 모바일기기나 웹브라우저에 배포하고싶을때,매번 다른 전처리함수를 적기싫고,텐서플로연산만을 사용해 전처리하고싶을땐
+	전처리를 모델자체에 포함시킬수있음
+		import tensorflow_datasets as tfds
+		
+		dataset,info=tfds.load(읽을데이터,as_supervised=True,with_info=True)
+		trainsize=info.splits['train'].num_examples
+		
+		def preprocess(xbatch,ybatch):
+		전처리 ...
+	그리고 어휘사전구축
+		from collections import Counter
+		voca=Counter()
+		for xbatch,ybatch in dataset["train"].batch(32).map(preprocess):
+			for review in xbatch:
+				voca.update(list(review.numpy))
+	그리고 어휘사전중에서 만개쯤남기고 삭제(자주안나오는건 알필요없음 일반화못함)
+		vocasize=10000
+		trucatedvoca=[word for word,count in voca.most_common()[:vocasize]]
+	그리고 각 단어를 인덱스로 바꿈
+		word=tf.constant(trucatedvoca)
+		wordid=tf.range(len(trucatedvoca),dtype=tf.int64)
+		vocainit=tf.lookup.KeyValueTensorInitializer(word,wordid)
+		numoov=1000
+		table=tf.lookup.StaticVocabularyTable(vocainit,numoov)
+	리뷰를 배치로 묶고 preprocess를 써서 단어를 짧은시퀸스로 바꾸고 테이블을써서 인코딩후 배치 프리패치
+		def encode(xbatch,ybatch):
+			return table.lookup(xbatch),ybatch
+		trainset=dataset.['train'].batch(32).map(preprocess)
+		trainset=trainset.map(encode).prefetch(1)
+	그리고 모델 제일위에 임베딩층 추가
+		embedsize=128
+		model=keras.models.Sequential([
+			keras.layers.Embedding(vocasize+numoov,embedsize,input_shape=[None])
+			...gru dense
+		])
+	1.마스킹
+		임베딩층이 패딩토큰을 무시하게 학습되어야하는데,뭘무시해야할지 아니까 embeding층에 mask_zero=True매개변수 켜주면됨
+		그러면 모든층에서 id가 0인 패딩토큰을 무시함
+		
+		근데 lstm과 gru는 cudnn을쓰는데(gpu구현)이건 마스킹을 지원안함 그래서 속도느려짐(기본구현으로동작함)
+		
+		마스킹을 받는 모든 층은 마스킹을 지원해야함(모든순환층과 TimeDistributed과 dense등 몇개)
+		마스킹층과 마스크 자동전파는 Sequential에 가장 적합하고,복잡한모델에서는 항상작동하지않음
+		
+	2.사전훈련된임베딩 재사용
+		텐서플로허브에선 이미 사전훈련된 모델컴포넌트들이 많음
+		쓰려면 
+			import tensorflow_hub as hub
+			
+			model=keras.Sequential([
+				hub.KerasLayer('모델주소',dtype=타입,input_shape=[],output_shape=[출력크기])
+				dense층 relu
+				dense층 softmax나 sigmoid(출력)
+			])
+		이렇게 가져다쓴다음에 위에 층몇개올려서 출력하면됨
+		기본적으로 허브층은 훈련되지않는데 trainable=True주면 훈련할수도있음(미세조정할때사용)
 		
 		
-		
+3.신경망 기계번역을 위한 인코더-디코더네트워크
+	
 		
 		
 		

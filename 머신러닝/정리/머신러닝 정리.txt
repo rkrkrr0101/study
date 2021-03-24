@@ -3623,16 +3623,129 @@
 1.charrnn
 	1.훈련데이터셋 만들기
 		keras.utils.get_file로 파일불러올수있음(인터넷에잇는거나 로컬에잇는거)
-		불러
+		
+		그리고 텍스트형이나 범주형은 그대로 쓸수없고,사전에넣어서 쓰던가 하는식으로 정수로 인코딩해야함(tfidf처럼)
+		하는법은
+			토큰=keras.preprocessing.text.Tokenizer(char_level=True단어단위인지 문자단위인지)
+			토큰.fit_on_texts(텍스트)
+		charlevel로 단어단위인지 글자단위인지 체크하고
+		단어나 문자의 전체 글자 갯수를 적어둠
+		
+	2.데이터셋나누기
+		시계열데이터(순서가있는데이터)나 텍스트는 그냥 셔플하면안됨
+		그래서 보통 앞에서부터 90퍼센트는 훈련데이터,5퍼센트 검증 5퍼센트 테스트로 나누는식으로 순차적으로 나눔
+		
+		시계열의경우 시간으로 나눔 앞에서부터 몇년치 가져오는식으로
+		나누는법은
+			데이터셋=tf.data.Dataset.from_tensor_slices(데이터[:훈련세트])
 	
+	3.순차데이터를 윈도여러개로 자르기
+		훈련세트를 그대로 쓸순없으니까(그냥넣으면 엄청긴 한줄의 시퀸스임)이걸 잘라서 배치처럼 써야함
+		자르는법은
+			nstep=100
+			windowlength=nstep+1
+			dataset=dataset.window(windowlength,shift=1 가장큰훈련세트만들려면 1,
+									drop_remainder=True 마지막버릴지체크)
+									
+		윈도는 nstep보다 큰 패턴을 학습할수 없음
+		nstep이 짧을수록 쉽지만 너무짧게만들어서도 안됨
+		
+		그리고 윈도는 리스트의 리스트같은 중첩데이터셋인데,모델은 플랫데이터셋을 기대하기떄문에 플랫데이터셋으로 바꿔줘야함
+			dataset=dataset.flat_map(lambda window:window.batch(windowlength))
+		윈도마다 batch를 불러서 윈도우랭스만큼의 크기의 윈도를 텐서하나가담긴 데이터셋에 넣음
+		
+		그리고 윈도를 배치로 만들면됨
+			batchsize=32
+			dataset=dataset.shuffle(10000).batch(batchsize)
+			dataset=dataset.map(lambda windows:(windows[:,:-1],windows[:,1:]))
+		윈도를 섞은다음 32씩묶어서 배치로만들고,거기서 31만큼이 데이터고 마지막한자리가 레이블(마지막한자리를 예측)
+		
+		그리고 텍스트나 범주형은 원핫벡터나 임베딩으로 인코딩 되어야함(50개이상이면 임베딩쓰는편)
+			dataset=dataset.map(lambda xbatch,ybatch:
+										(tf.one_hot(xbatch,depth=글자수(범주수)),ybatch))
+			dataset=dataset.prefetch(1)
+		데이터를 원핫인코딩하고(깊이는 범주갯수())
+		프리패치설정해주면됨
+	4.훈련
+		훈련은 그냥 gru쓰고 드롭아웃0.2 recurrent_dropout(은닉상태드롭아웃) 0.2세팅하고
+		출력에 TimeDistributed쓴 Dense(범주갯수,소프트맥스)
+		쓰면됨
+	5.예측
+		모델사용하려면(새텍스트 넣으려면)앞에서처럼 전처리를 해야함
+			def preprocess(text):
+				x=np.array(tokenizer.text_to_sequences(text))-1
+				retrun tf.one_hot(x,maxid)
 	
+		이걸로 텍스트감싸서 model.predict_classes에 넣으면됨
 	
+	6.가짜텍스트 생성
+		charrnn으로 새로운텍스트를 생성하려면,
+		초기텍스트를 넣은다음 모델이 가장 가능성있는 다음글자를 예측하고 그걸 다시넣어서 반복해서 텍스트를 만들어내는식임
+		근데 이러면 같은단어 반복될확률이 높아서,
+		추정확률기반에 무작위좀섞어서 쓰는식인 tf.random.categorical을 사용함
+		여기서 매개변수 temperature가 높을수록 확률이 비슷해짐(추정확률의 중요도가 낮아짐)
 	
+	7.상태가있는rnn
+		상태가없는 rnn은 매우긴 시퀸스를 다룰수없고,nstep보다 긴 패턴을 학습할수없음(크게할순있지만 훈련이어려워짐)
+		상태가없는 rnn은 훈련반복마다 모델의 은닉상태를 0으로 초기화하고 타임스탭마다 이상태를 업데이트한뒤 마지막타임스탭 후엔 버림
+		즉,훈련배치마다 연결되지않음 
+		
+		상태가있는rnn은 훈련배치가 끝나고 마지막상태를 다음훈련배치의 초기상태로 사용함
+		이러면 역전파는 배치마다 일어나지만,모델이 장기간패턴을 학습할수있음
+		
+		상태가 있는 rnn은 배치의 각 입력시퀸스가 이전배치의 시퀸스가 끝난 지점에서 시작해야함
+		즉 상태가있는 rnn을 만들기위해 처음할일은 순차적이고 겹치지않는 입력시퀸스를 만드는것(상태없는rnn은 섞은뒤 겹쳐진시퀸스임)
+		근데 그냥 batch(32)하면 32개의 연속적인 윈도가 배치속에 들어가버려서,가장 간단한방법은 하나의 윈도를 가진 배치를 만드는것
+		만드는법은
+			dataset=tf.data.Dataset.from_tensor_slices(텍스트[:훈련세트])
+			dataset=dataset.window(windowlength,shift=nstep,drop_remainder=True)
+			dataset=dataset.flat_map(lambda window:window.batch(windowlength))
+			dataset=dataset.batch(1)
+			dataset=dataset.map(lambda windows:windows[:,:-1],windows[:,1:])
+			dataset=dataset.map(lambda xbatch,ybatch:
+										(tf.one_hot(xbatch,depth=글자수(범주수)),ybatch))
+			dataset=dataset.prefetch(1)
+		
+		여러개의 배치를 만드는것도 귀찮기는한데 복잡한건 아님(필요할때책참고)
+		
+		이거 모델만드는거도 상태없는거랑 비슷한데,batch_input_shape[batchsize,None,max_id]를 넣어줘야함 gru입력에
+		
+		그리고 에포크끝마다 텍스트다시시작전에 상태리셋해줘야함(훈련마다는 리셋해야하니까)
+		콜백함수로 처리하면됨
+			class ResetState(keras.callbacks.Callback):
+				def on_epoch_begin(self,epoch,logs):
+					self.model.reset_states()
+		그리고 fit에서 콜백에 넣어주면됨
+		
+		그리고 모델을 훈련한뒤에 예측할떄엔 동일한크기의 배치로만 예측을 만들수있는데,이제약을 없애려면 동일한구조의 상태없는모델을 만들고
+		상태가있는모델의 가중치를 복사하면됨
+		
+		
+2.감성분석
 	
-	
-	
-	
-	
-	
-	
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 

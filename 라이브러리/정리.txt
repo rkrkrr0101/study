@@ -217,7 +217,7 @@
 		이미지열거면 import Image로 열면됨
 	
 	
-	
+5.numpy
 	
 	
 	

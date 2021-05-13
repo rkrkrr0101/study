@@ -899,7 +899,10 @@
 			pd.melt(data1,id_vars=['key'],value_vars=['val1',val2])
 		이렇게 정할수있음
 	
-	
+
+
+
+9.데이터시각화(matplot)	
 	
 	
 	

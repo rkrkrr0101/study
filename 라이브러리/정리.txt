@@ -902,19 +902,205 @@
 
 
 
-9.데이터시각화(matplot)	
+9.데이터시각화(matplot)
+	매트랩 쓰려면
+		import matplotlib.pyplot as plt
+	기본적으로
+		plt.plot(데이터)
+	하면 데이터로 그래프를 그림
+1.매트랩api	
+	1.figure와 서브플롯
+		기본적으로 매트랩에서 그래프는 피규어객체안에 존재함
+			fig=plt.figure()
+		피규어 안에 서브플롯을 추가하는것으로 안에 그래프가 하나씩 늘어남
+			ax1=fig.add_subplot(가로크기,세로크기,가로x세로중 몇번째선택할지)
+		
+		여러개넣을떈
+			ax1=fig.add_subplot(2,2,1)
+			ax2=fig.add_subplot(2,2,2)
+			ax3=fig.add_subplot(2,2,3)
+			ax4=fig.add_subplot(2,2,4)
+		이렇게 추가하면됨
+		
+		그리고 정확히는,전체크기를 가로랑 세로로 나누고,그중에서 어디선택할지를 고르는거라서
+			ax1=fig.add_subplot(2,2,1)
+			ax2=fig.add_subplot(2,2,2)
+			ax3=fig.add_subplot(2,2,3)
+			ax4=fig.add_subplot(2,2,4)
+			ax5=fig.add_subplot(4,3,5)
+		이거도 동작은하는데,ax5는 이상한데 들어감
+		
+		그리고 주피터노트북에선 셀마다 그래프가 리셋되기때문에,같은셀안에 다넣어야함
+		
+		그리고 plt.plot(data)를 하면 가장 가까운 서브플롯에 그리기떄문에
+		여러그래프에 추가하고싶으면 
+			ax1=fig.add_subplot(2,2,1)
+			ax2=fig.add_subplot(2,2,2)
+			ax3=fig.add_subplot(2,2,3)
+			plt.plot(data)
+			ax4=fig.add_subplot(2,2,4)
+			plt.plot(data1)
+			ax5=fig.add_subplot(4,3,5)
+			plt.plot(data2)			
+		이렇게하거나
+			ax1=fig.add_subplot(2,2,1)
+			ax2=fig.add_subplot(2,2,2)
+			ax3=fig.add_subplot(2,2,3)
+			ax4=fig.add_subplot(2,2,4)
+			ax5=fig.add_subplot(4,3,5)
+			ax1.plot(data)
+			ax2.plot(data2)
+		이런식으로 지정해서 넣으면됨
+		
+		그리고 색이나 점선처럼 선을 바꾸고싶으면
+		plt.plot(data,'k--') 이런식으로 두번쨰칸에 색+모양을 문자열로 주거나(자세한사항은 검색)
+		
+			plt.hist(color='black') 히스토그램(막대그래프)
+			plt.scatter()산점도
+		등으로 그래프스타일선택가능
+		안에 막대크기나 점크기같은거도 선택가능함
+		
+		
+		서브플롯간의 간격이나 여백조절하려면
+		figure객체의
+			fig객체.subplots_adjust(left=None,bottom=None,right=None,top=None,wspace=0,hspace=0)
+		메서드를 사용해서 설정을 바꿀수있음
 	
+	2.색상,마커,선스타일
+		ax1.plot()는 x값과 y값,스타일문자열을 기본적으로 받음
+			ax1.plot(x,y,'g--')
+		이걸 명시적으로 주고싶으면
+			ax1.plot(x,y,linestyle='--',color='g',marker='o')
+		이렇게주면됨
+		색은 rgb값을 직접줄수도있음(#CECECE)
+		
+		선스타일은 선말고 꼭지점에 마커를 달수도있는데,그러려면 'go--'이런식으로 적으면됨
+		색,마커,라인스타일 순임
+		
+		범례를 달려면
+			ax1.plot(x,y,'g--',label='범례달거')
+			ax1.legend(loc='best')
+		이렇게 라벨추가하고 레전드실행시키면됨
+		만약 plt.plot하면
+			plt.plot(data,label='ff')
+			plt.legend(loc='best')
+		하면됨
+		
+		
+	3.눈금,라벨,범례
+		그래프를 꾸밀땐 pyplot로 순차적으로 꾸미던가,api써서 객체지향적으로 꾸미던가 두가지방법이있음
+		
+		x축의 눈금을 변경하는 방법은
+			tick=ax1.set_xticks([0,100,200,300])이렇게 하고
+		눈금이름을 바꾸고싶으면
+			labels=ax.set_xticklabels(['a','b','c','d'],rotation=30,fontsize='small')
+		이렇게하면됨(눈금이름 0,100,200,300에 abcd들어감)
+		그리고 전체 x축이름 정하고싶으면
+			as1.set_xlabel('이름')
+		하면 눈금밑에 라벨적힘
+		
+		y축은 x대신 y넣으면됨
+		
+		
+		범례를 추가하는건 각 그래프에 데이터를 그릴때 라벨파라미터를 같이주면 자동으로 그 선에맞는 범례를 추가하고,
+		거기다 레전드쓰면 자동으로 생성됨
+		그리고 범례위치는 loc='best'쓰면 어지간하면 괜찮게나옴
+		만약 범례에서 제외하고싶은게있으면 그냥 라벨안쓰면됨
 	
+	4.주석과 그림
+		그래프내의 주석은
+			ax.annotate(라벨,xy=(x값,y값),arrowprop=dict(컬러랑 길이등 설정가능))
+		기본적으로 이렇게 달수있음
+		
+		그리고 그래프의 특정구역을 확대하려면
+			ax1.set_xlim(시작값,끝값)
+			ax1.set_ylim(시작값,끝값)
+		하면됨
+		
+		그리고 그림추가하려면
+			ax1.add_patch(plt.Circle((0.7,0.2),0.15 color='b',alpha=0.3))
+		이런식으로 추가함
+		
+	5.그래프 저장하기	
+		그래프 저장하려면
+			ax1.savefig('abc.svg')
+		이렇게 저장할수있음 
+		파일종류는 확장자로 결정되니까 pdf하면 pdf저장하고 그럼
+		
+	6.기본설정
+		매트랩의 기본설정을 바꿀수있는데(값을안줬을때의 기본값)
+			plt.rc('바꿀컴포넌트',**바꿀값사전)
+		ex) plt.rc('font',**fontdic)
+		이렇게 바꿀수있음
+		
+		
+2.판다스에서 씨본으로 그래프그리기
+	판다스에서 시리즈나 데이터프레임으로 바로 그림그릴수있음
 	
+	그리고 씨본임포트하면 매트랩의 기본컬러와 스타일이 임포트만 해도 바뀜(오버라이드)
 	
-	
-	
-	
-	
-	
-	
-	
-	
+	1.선그래프
+		시리즈로 그래프그리려면
+			s=pd.series(...)
+			s.plot()
+		하면 그래프그림
+		시리즈의 인덱스는 x축으로 해석하고 밸류가 y축으로 해석함
+		use_index=False를 해서 색인을 x축으로쓰는걸 막을수있음
+		눈금과 확대는 xticks와 xlim으로 조절할수있음 (y는 y)
+		
+		데이터프레임의 plot는 하나의 서브플롯안에 각 컬럼별로 선그래프를 그리고 범례를 생성함
+		여기서 각 컬럼마다 따로 그래프를 그릴건지,어떤컬럼만 그릴건지등도 인자줘서 선택가능함
+		
+		그리고 ax매개변수에 피규어를 대입하면,거기에 그림그림
+		
+		
+	2.막대그래프
+		막대그래프를 그리려면
+			data.plot.bar() 수직그래프
+			data.plot.barh()수평그래프
+			
+		데이터프레임에서 막대그래프는,각 로우의 값을 함께 묶어서 하나의 그륩마다 각각의 막대를 보여줌
+		
+		누적 막대그래프는 stacked=True로 생성할수있음
+		누적막대그래프는 각 로우의값이 막대에 누적되어,색으로 구분되어 표시됨
+		
+		여기서 seaborn쓰면 좀 전처리 편해진다는데 나중에 쓸일있으면보자
+		
+		
+	3.히스토그램과 밀도그래프
+		히스토그램은 값들의 빈도를 분리해서 보여주는 막대그래프
+		데이터 포인트가 분리되어 고른간격의 막대로 표현되고,데이터의 숫자가 높이로 표현됨
+		
+			data.plot.hist()
+		로 그릴수있음
+		
+		밀도그래프는 추정되는 연속된 확률분포를 그린 그래프임
+			data.plot.kde()
+		로 만들수있음
+		
+		seaborn의 distplot를 쓰면 두개를 같이 볼수있음
+			seaborn.distplot(시리즈,bins=100)
+		
+	4.산포도
+		산포도는 각 데이터끼리의 관계를 나타낼때 쓰는 그래프임
+			seaborn.regplot(data=데이터)
+		로 그릴수있음 산포도와 선형회귀가 같이그려짐
+		
+		그리고 전체 데이터프레임끼리의 관계를 알아보려고 산포도그릴떄 전체한번에그리려면
+			seaborn.pairplot(data,diag_kind='kde(자기자신비교할떄)',plot_kws={'alpha':0.2 개별설정값 전달})
+
+	5.패싯그리드와 범주형데이터
+		범주형데이터를 시각화할땐 패싯그리드를 사용함
+			seaborn.factorplot(x=x값라벨,y=y값라벨,hue='',col='',kind='bar',data=데이터)
+		
+		
+		
+		
+		
+		
+		
+		
+		
 	
 	
 	

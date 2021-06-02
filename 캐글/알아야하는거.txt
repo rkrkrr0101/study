@@ -1,0 +1,14 @@
+범주형에서 범주를 숫자로 바꿀때
+	xtrain['Sex']=xtrain['Sex'].astype('category').cat.codes 
+cut에서도 똑같이쓸수있음
+	xtrain['agecut']=pd.cut(xtrain['Age'],6).cat.codes	
+	
+	
+	data.isnull().sum() 
+널값있는거 개수보기 각 컬럼별로
+
+이미지의 y값(정답)은 당연히 카테고리화 해놓아야함
+
+
+만약 각 로우별 인덱스값 필요하면 (csv컬럼에)
+	res=pd.concat([pd.Series(range(1,28001), name="ImageId"),res],axis=1)

@@ -1,7 +1,14 @@
+캐글 번역할떄 iframe긁어와서 style="overflow:scroll; height:950px;"로 스크롤바추가
+
+
 범주형에서 범주를 숫자로 바꿀때
 	xtrain['Sex']=xtrain['Sex'].astype('category').cat.codes 
 cut에서도 똑같이쓸수있음
 	xtrain['agecut']=pd.cut(xtrain['Age'],6).cat.codes	
+
+숫자를 범주로 바꿀떈
+	ytain=keras.utils.to_categorical(ytain,갯수) 
+쓰면됨
 	
 	
 	data.isnull().sum() 

@@ -1,5 +1,10 @@
 캐글 번역할떄 iframe긁어와서 style="overflow:scroll; height:950px;"로 스크롤바추가
 
+캐글에서나 할때 미리 테스트데이터 갯수만 적어둔다음에 합쳐서 전처리끝내고 다시 나누는게 편한듯
+그리고 카테고리는 그냥 다 원핫인코딩하는게 편하고 
+pd객체는 그냥 사이킷런 standardscaler로 스케일조정하는게 편함
+그리고 모델인풋크기는 그냥 pd객체[1]주면 그크기만큼 알아서 하니까 중간에 바뀌어도 자동으로 조정되고 편함
+
 
 범주형에서 범주를 숫자로 바꿀때
 	xtrain['Sex']=xtrain['Sex'].astype('category').cat.codes 

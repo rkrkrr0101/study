@@ -1,0 +1,82 @@
+GCS_DS_Path = KaggleDatasets().get_gcs_path('tpu-getting-started')
+IMAGE_SIZE = [512, 512]
+GCS_PATH = GCS_DS_PATH + '/tfrecords-jpeg-512x512'
+AUTO = tf.data.experimental.AUTOTUNE
+
+TRAINING_FILENAMES = tf.io.gfile.glob(GCS_PATH + '/train/*.tfrec')
+VALIDATION_FILENAMES = tf.io.gfile.glob(GCS_PATH + '/val/*.tfrec')
+TEST_FILENAMES = tf.io.gfile.glob(GCS_PATH + '/test/*.tfrec') 
+
+CLASSES = ['pink primrose',    'hard-leaved pocket orchid', 'canterbury bells', 'sweet pea',     'wild geranium',     'tiger lily',           'moon orchid',              'bird of paradise', 'monkshood',        'globe thistle',         # 00 - 09
+           'snapdragon',       "colt's foot",               'king protea',      'spear thistle', 'yellow iris',       'globe-flower',         'purple coneflower',        'peruvian lily',    'balloon flower',   'giant white arum lily', # 10 - 19
+           'fire lily',        'pincushion flower',         'fritillary',       'red ginger',    'grape hyacinth',    'corn poppy',           'prince of wales feathers', 'stemless gentian', 'artichoke',        'sweet william',         # 20 - 29
+           'carnation',        'garden phlox',              'love in the mist', 'cosmos',        'alpine sea holly',  'ruby-lipped cattleya', 'cape flower',              'great masterwort', 'siam tulip',       'lenten rose',           # 30 - 39
+           'barberton daisy',  'daffodil',                  'sword lily',       'poinsettia',    'bolero deep blue',  'wallflower',           'marigold',                 'buttercup',        'daisy',            'common dandelion',      # 40 - 49
+           'petunia',          'wild pansy',                'primula',          'sunflower',     'lilac hibiscus',    'bishop of llandaff',   'gaura',                    'geranium',         'orange dahlia',    'pink-yellow dahlia',    # 50 - 59
+           'cautleya spicata', 'japanese anemone',          'black-eyed susan', 'silverbush',    'californian poppy', 'osteospermum',         'spring crocus',            'iris',             'windflower',       'tree poppy',            # 60 - 69
+           'gazania',          'azalea',                    'water lily',       'rose',          'thorn apple',       'morning glory',        'passion flower',           'lotus',            'toad lily',        'anthurium',             # 70 - 79
+           'frangipani',       'clematis',                  'hibiscus',         'columbine',     'desert-rose',       'tree mallow',          'magnolia',                 'cyclamen ',        'watercress',       'canna lily',            # 80 - 89
+           'hippeastrum ',     'bee balm',                  'pink quill',       'foxglove',      'bougainvillea',     'camellia',             'mallow',                   'mexican petunia',  'bromelia',         'blanket flower',        # 90 - 99
+           'trumpet creeper',  'blackberry lily',           'common tulip',     'wild rose']                                                                                                                                               # 100 - 102
+
+
+def decode_image(image_data):
+    image = tf.image.decode_jpeg(image_data, channels=3)
+    image = tf.cast(image, tf.float32) / 255.0  # convert image to floats in [0, 1] range
+    image = tf.reshape(image, [*IMAGE_SIZE, 3]) # explicit size needed for TPU
+    return image
+
+def read_labeled_tfrecord(example):
+    LABELED_TFREC_FORMAT = {
+        "image": tf.io.FixedLenFeature([], tf.string), # tf.string means bytestring
+        "class": tf.io.FixedLenFeature([], tf.int64),  # shape [] means single element
+    }
+    example = tf.io.parse_single_example(example, LABELED_TFREC_FORMAT)
+    image = decode_image(example['image'])
+    label = tf.cast(example['class'], tf.int32)
+    return image, label # returns a dataset of (image, label) pairs
+
+def read_unlabeled_tfrecord(example):
+    UNLABELED_TFREC_FORMAT = {
+        "image": tf.io.FixedLenFeature([], tf.string), # tf.string means bytestring
+        "id": tf.io.FixedLenFeature([], tf.string),  # shape [] means single element
+        # class is missing, this competitions's challenge is to predict flower classes for the test dataset
+    }
+    example = tf.io.parse_single_example(example, UNLABELED_TFREC_FORMAT)
+    image = decode_image(example['image'])
+    idnum = example['id']
+    return image, idnum # returns a dataset of image(s)
+
+def load_dataset(filenames, labeled=True, ordered=False):
+    # Read from TFRecords. For optimal performance, reading from multiple files at once and
+    # disregarding data order. Order does not matter since we will be shuffling the data anyway.
+
+    ignore_order = tf.data.Options()
+    if not ordered:
+        ignore_order.experimental_deterministic = False # disable order, increase speed
+
+    dataset = tf.data.TFRecordDataset(filenames, num_parallel_reads=AUTO) # automatically interleaves reads from multiple files
+    dataset = dataset.with_options(ignore_order) # uses data as soon as it streams in, rather than in its original order
+    dataset = dataset.map(read_labeled_tfrecord if labeled else read_unlabeled_tfrecord, num_parallel_calls=AUTO)
+    # returns a dataset of (image, label) pairs if labeled=True or (image, id) pairs if labeled=False
+    return dataset
+	
+	
+	
+def get_training_dataset():
+    dataset = load_dataset(training_file, labeled=True)
+    dataset = dataset.repeat() # the training dataset must repeat for several epochs
+    dataset = dataset.shuffle(2048)
+    dataset = dataset.batch(BATCH_SIZE)
+    return dataset
+
+def get_validation_dataset(ordered=False):
+    dataset = load_dataset(valid_file, labeled=True, ordered=ordered)
+    dataset = dataset.batch(BATCH_SIZE)
+    dataset = dataset.cache()
+    return dataset
+
+def get_test_dataset(ordered=False):
+    dataset = load_dataset(test_file, labeled=False, ordered=ordered)
+    dataset = dataset.batch(BATCH_SIZE)
+    return dataset

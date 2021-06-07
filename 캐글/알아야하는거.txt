@@ -6,6 +6,7 @@ pd객체는 그냥 사이킷런 standardscaler로 스케일조정하는게 편�
 그리고 모델인풋크기는 그냥 pd객체[1]주면 그크기만큼 알아서 하니까 중간에 바뀌어도 자동으로 조정되고 편함
 
 
+
 범주형에서 범주를 숫자로 바꿀때
 	xtrain['Sex']=xtrain['Sex'].astype('category').cat.codes 
 cut에서도 똑같이쓸수있음
@@ -24,3 +25,6 @@ cut에서도 똑같이쓸수있음
 
 만약 각 로우별 인덱스값 필요하면 (csv컬럼에)
 	res=pd.concat([pd.Series(range(1,28001), name="ImageId"),res],axis=1)
+
+
+tfrecord 안에 이진데이터읽기나 tpu연결코드는 그냥 있는거쓰자

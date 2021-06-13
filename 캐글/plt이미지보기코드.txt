@@ -1,0 +1,20 @@
+def batch_visualization(path, n_images, is_random=True, figsize=(16, 16)):
+    plt.figure(figsize=figsize)
+    
+    w = int(n_images ** .5)
+    h = math.ceil(n_images / w)
+    
+    all_names = os.listdir(path)
+    
+    image_names = all_names[:n_images]
+    if is_random:
+        image_names = random.sample(all_names, n_images)
+    
+    for ind, image_name in enumerate(image_names):
+        img = cv2.imread(os.path.join(path, image_name))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) 
+        plt.subplot(h, w, ind + 1)
+        plt.imshow(img)
+        plt.axis('off')
+    
+    plt.show()

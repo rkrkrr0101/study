@@ -20,13 +20,13 @@ CLASSES = ['pink primrose',    'hard-leaved pocket orchid', 'canterbury bells', 
            'trumpet creeper',  'blackberry lily',           'common tulip',     'wild rose']                                                                                                                                               # 100 - 102
 
 
-def decode_image(image_data):
+def decode_image(image_data): #거의고정 이미지크기정도만 바뀜
     image = tf.image.decode_jpeg(image_data, channels=3)
     image = tf.cast(image, tf.float32) / 255.0  # convert image to floats in [0, 1] range
     image = tf.reshape(image, [*IMAGE_SIZE, 3]) # explicit size needed for TPU
     return image
 
-def read_labeled_tfrecord(example):
+def read_labeled_tfrecord(example): # 안에 컬럼있으면 컬럼따라 fixedlenfeature늘어남
     LABELED_TFREC_FORMAT = {
         "image": tf.io.FixedLenFeature([], tf.string), # tf.string means bytestring
         "class": tf.io.FixedLenFeature([], tf.int64),  # shape [] means single element
@@ -79,4 +79,29 @@ def get_validation_dataset(ordered=False):
 def get_test_dataset(ordered=False):
     dataset = load_dataset(test_file, labeled=False, ordered=ordered)
     dataset = dataset.batch(BATCH_SIZE)
+    return dataset
+	
+	
+	
+gan에서 (예제2)
+def prepare_image(img, dim = 256):    
+    img = tf.image.decode_jpeg(img, channels = 3)
+    img = (tf.cast(img, tf.float32) / 255.0) - 1
+    img = tf.reshape(img, [dim, dim, 3])
+    return img
+
+def read_tfrecord(example):
+    tfrec_format = {
+        'image' : tf.io.FixedLenFeature([], tf.string),
+        'image_name' : tf.io.FixedLenFeature([], tf.string),
+        "target": tf.io.FixedLenFeature([], tf.string)
+    }   
+    
+    example = tf.io.parse_single_example(example, tfrec_format)
+    image = prepare_image(example['image'])
+    return image
+
+def load_dataset(filenames, labeled=True, ordered=False):
+    dataset = tf.data.TFRecordDataset(filenames)
+    dataset = dataset.map(read_tfrecord, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     return dataset

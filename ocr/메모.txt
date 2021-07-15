@@ -14,6 +14,8 @@ ctc에서 인풋랭스는 최대예측수(최대문자수) 라벨랭스는 라�
 그냥 이미지 크롭을 하자 json파싱하는김에
 잘린거 이름그대로 넣고쓰자
 
+크롭이미지id,레이블(특수문자제거,lowcase(알파벳숫자아닌거 제거하고 리스트길이0이면 컨티뉴)),(bbox로 크롭해서 저장,크롭id명으로 저장)
+판다스 데이터프레임에 넣고 csv로 내보내자(원핫인코딩은 나중에 뺄때하고)
 
 abcdefghizklnmopqrstubwxyz
 ABCDEFGHIZKLMNOPQRSTUBWXYZ

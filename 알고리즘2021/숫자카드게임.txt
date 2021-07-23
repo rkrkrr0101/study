@@ -1,0 +1,14 @@
+각 행마다 정렬치고 거기서 0이 가장큰거 선택
+
+
+input=[[3,1,2],[4,1,4],[2,2,2]]
+abc=[]
+res=0
+for i in input:
+    i.sort()
+for i in input:
+    if i[0]>res:
+        res=i[0]
+		
+		
+그냥 min썼으면될듯 정렬안치고

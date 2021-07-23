@@ -1,0 +1,32 @@
+정렬한다음에 제일큰거 k번더하고 그다음수 한번더하고 k번더하고 m번까지 반복
+for문을 m번까지 돌리면서 변수하나 둬서 그거모니터하면서 돌리면될듯
+
+
+
+
+
+input=[2,4,5,4,6]
+n=5
+m=8
+k=3
+input.sort(reverse=True)
+res=0
+mok=0
+for i in range(m):
+    if mok==k:
+        mok=0
+        res+=input[1]
+    else:
+        mok+=1
+        res+=input[0]
+		
+		
+
+단순반복말곤
+input=[2,4,5,4,6]
+n=5
+m=8
+k=3
+a=m//k
+b=m-a
+print(a*5+6*b) 5,6은 소트해서찾으면됨

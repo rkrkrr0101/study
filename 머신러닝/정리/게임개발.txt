@@ -1,0 +1,48 @@
+왼쪽부터 dxdy값 좌표 만들어두고,
+현재 캐릭터 보고있는방향 모니터한뒤에 바다랑 안간칸 간칸 3개로 나누고 
+현재좌표랑 4카운터 둔다음에 4카운터달성하면 뒤에 바다인지 확인하고 바다면 종료,아니면 뒤로가서 반복
+
+
+
+array=[[1,1,1,1,1],[1,0,0,1,1],[1,1,0,0,1],[1,1,1,1,1]]
+x=1
+y=1
+cshow=0
+showstack=0
+array[x][y]=1
+dxdy=[(-1,0),(0,1),(1,0),(0,-1)]
+res=1
+while True:
+    for i in range(4):
+        showstack+=1
+        if cshow==4:cshow=0
+        dx=x+dxdy[cshow][0]
+        dy=y+dxdy[cshow][1]
+        
+        cshow+=1
+        if array[dx][dy]==0:
+            x=dx
+            y=dy
+            res+=1
+            array[dx][dy]=1
+            showstack=0
+            break;
+    if showstack==4:
+        if cshow+1==4:showback=0
+        else:showback=cshow+1
+        dx=x+dxdy[showback][0]
+        dy=y+dxdy[showback][1]
+        if array[dx][dy]==1:
+            break;
+        else:
+            x=dx
+            y=dy
+        
+        
+            
+            
+            
+        
+    
+    
+    

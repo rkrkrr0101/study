@@ -1,0 +1,18 @@
+시분초 루프 3개돌리면서 3플래그 세워져있으면 +1
+
+
+n=5
+
+flag=0
+res=0
+for i in range(n+1):
+    if i==3:flag=1
+    for j in range(59):
+        if str(j) in '3':
+            flag=1
+        for k in range(59):
+            if str(k) in '3':
+                flag=1
+            if flag==1:res+=1
+    
+    flag=0

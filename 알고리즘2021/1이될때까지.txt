@@ -1,0 +1,17 @@
+mod가 0이면 나누고 아니면 1빼고 1될떄까지 반복
+
+
+input=17
+k=4
+res=0
+
+while True:
+    if input % k==0:
+        input=input/k
+        res+=1
+    else:
+        input-=1
+        res+=1
+    
+    if input==1:
+        break;

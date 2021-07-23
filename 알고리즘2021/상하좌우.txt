@@ -1,0 +1,20 @@
+n받고 좌표가 1보다 작아지거나 n보다 커지기전까지만 반복
+
+
+
+n=5
+arr=['r','r','r','u','d','d']
+x,y=1,1
+for i in arr:
+    if i=='r':
+        if x<n:
+            x+=1
+    if i=='l':
+        if x>1:
+            x-=1
+    if i=='u':
+        if y>1:
+            y-=1
+    if i=='d':
+        if y<n:
+            y+=1

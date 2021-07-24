@@ -1,0 +1,27 @@
+기본dfs문제
+
+
+
+array=[[0,0,1,1,0],[0,0,0,1,1],[1,1,1,1,1],[0,0,0,0,0]]
+n=4
+m=5
+res=0
+def dfs(array,x,y):
+    if x<n and y<m and array[x][y]!=1:
+        array[x][y]=1
+        if x+1<n:
+            dfs(array,x+1,y)
+        if x-1>=0:
+            dfs(array,x-1,y)
+        if y+1<m:
+            dfs(array,x,y+1)
+        if y-1>=0:
+            dfs(array,x,y-1)
+        return 1
+    else:return 0
+            
+for i in range(n):
+    for j in range(m):
+       res+=dfs(array,i,j) 
+#res+=dfs(array,1,1)
+        

@@ -1,0 +1,42 @@
+기본 bfs문제
+
+근데 답지처럼 좀더 깔끔하게짜는게 쉬울듯 다시해보자
+dxdy배열만들어두고 거기서 for루프
+
+array=[[1,0,1,0,1,0],[1,1,1,1,1,1],[0,0,0,0,0,1],[1,1,1,1,1,1],[1,1,1,1,1,1], ]
+n=5
+m=6
+res=0
+
+import collections
+
+#que=collections.deque()
+
+#que.append(1)
+#que.append(3)
+#que.popleft()
+
+def bfs(array,x,y):
+    que=collections.deque()
+    que.append([0,0])
+    array[0][0]=1
+    res=0
+    while que:
+        quepop=que.popleft()
+        #if quepop[0]<n and quepop[0]>=0 and quepop[1]<m and quepop[1]>=0:
+        if quepop[0]+1<n and array[quepop[0]+1][quepop[1]]==1 :
+            que.append([quepop[0]+1,quepop[1]])
+            array[quepop[0]+1][quepop[1]]=array[quepop[0]][quepop[1]]+1
+        if quepop[0]-1>=0 and array[quepop[0]-1][quepop[1]]==1:
+            que.append([quepop[0]-1,quepop[1]])
+            array[quepop[0]-1][quepop[1]]=array[quepop[0]][quepop[1]]+1
+        if quepop[1]+1<m and array[quepop[0]][quepop[1]+1]==1:
+            que.append([quepop[0],quepop[1]+1])
+            array[quepop[0]][quepop[1]+1]=array[quepop[0]][quepop[1]]+1
+        if quepop[1]-1>=0 and array[quepop[0]][quepop[1]-1]==1:
+            que.append([quepop[0],quepop[1]-1])
+            array[quepop[0]][quepop[1]-1]=array[quepop[0]][quepop[1]]+1
+        
+
+bfs(array,0,0)
+        

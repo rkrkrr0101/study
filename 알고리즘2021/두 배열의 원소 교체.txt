@@ -1,0 +1,13 @@
+배열두개 정렬해두고 b에서 a로 큰거몰아주기
+
+a=[1,2,5,4,3]
+b=[5,5,6,6,5]
+k=3
+a.sort()
+b.sort(reverse=True)
+
+for i in range(k):
+    if a[i]<b[i]:
+        a[i]=b[i]
+
+print(sum(a))

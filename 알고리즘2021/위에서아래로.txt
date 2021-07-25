@@ -1,0 +1,5 @@
+그냥정렬쓰자
+
+array=[15,27,12]
+
+array.sort(reverse=True)

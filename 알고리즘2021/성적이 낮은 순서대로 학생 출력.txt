@@ -1,0 +1,6 @@
+2차원배열에서 소트할수있나 물어보는거
+
+
+array=[('ab',95),('yy',77)]
+
+array.sort(key=lambda x:x[1])

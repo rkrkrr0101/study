@@ -1,0 +1,24 @@
+그냥 배열받고 반복문으로 타겟잡아서 이진탐색돌리기
+
+
+def bs(array,start,end,target):
+    if start>=end:
+        return None
+    mid=(start+end)//2
+    
+    if array[mid]==target:
+        return mid
+    elif array[mid]>target:
+        return bs(array,start,mid-1,target)
+    else:
+       return bs(array,mid+1,end,target)
+
+
+array=[8,3,7,9,2]
+array.sort()
+ta=[5,7,9]
+target=4
+res=[]
+for t in ta:
+    
+    res.append(  bs(array,0,len(array),t))

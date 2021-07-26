@@ -1,0 +1,21 @@
+그냥 bs로 최적화 결정문제로 풀기
+
+
+
+def bs(array,start,end,target):
+    if start>=end:
+        return None
+    mid=(start+end)//2
+    res=0
+    for i in array:
+        res+=max(i-mid,0)
+    
+    if target==res:
+        return mid
+    elif res<target:
+        return bs(array,start,mid-1,target)
+    else:
+       return bs(array,mid+1,end,target)
+
+a=[19,15,10,17]
+aaa=bs(a,0,max(a),6)

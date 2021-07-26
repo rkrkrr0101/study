@@ -1,0 +1,25 @@
+시작 끝 배열 타겟 받아서
+서로 역전하면 none리턴
+시작끝절반이 타겟이면 그거리턴
+작으면 시작이랑 시작끝나누기 절반
+크면 시작끝절반이랑 끝
+
+def bs(array,start,end,target):
+    if start>=end:
+        return None
+    mid=(start+end)//2
+    
+    if array[mid]==target:
+        return mid
+    elif array[mid]<target:
+        return bs(array,start,mid-1,target)
+    else:
+       return bs(array,mid+1,end,target)
+
+
+array=[1,2,3,4,5]
+target=4
+
+bs(array,1,len(array),target)
+
+기본bs

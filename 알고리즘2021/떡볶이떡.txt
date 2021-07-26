@@ -1,5 +1,6 @@
 그냥 bs로 최적화 결정문제로 풀기
-
+파라메트릭은 반복문이 더 낫대
+그리고 딱 안맞아도 되고 최대니까 start>=end부분에서 전 최대값 계속 갱신해가면서해야할듯
 
 
 def bs(array,start,end,target):
@@ -13,9 +14,10 @@ def bs(array,start,end,target):
     if target==res:
         return mid
     elif res<target:
-        return bs(array,start,mid-1,target)
+        return  min(bs(array,start,mid-1,target),mid)
     else:
-       return bs(array,mid+1,end,target)
+       return bs(array,mid+1,end,target) 
 
 a=[19,15,10,17]
 aaa=bs(a,0,max(a),6)
+

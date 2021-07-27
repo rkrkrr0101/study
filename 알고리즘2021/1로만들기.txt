@@ -1,0 +1,30 @@
+1부터 n까지 최적화 배열 채워나가기
+1이면 0 2면 1 3이면 1 4면 2 5는 1 까지 해두고
+4개 다돌리면서 결과값이 가장 작은거 선택
+
+
+
+array=[0 for _ in range(30)]
+target=26
+array[1]=0
+array[2]=1
+array[3]=1
+array[4]=2
+array[5]=1
+
+for i,x in enumerate (array[6:]):
+    num=i+5
+    retarr=[]
+    if x==0:
+        if num%5==0:
+            retarr.append(array[num//5])
+        if num%3==0:
+            retarr.append(array[num//3])
+        if num%2==0:
+            retarr.append(array[num//2])
+        
+        retarr.append(array[num-1])
+        
+        array[num]=min(retarr)+1
+        
+    

@@ -1,0 +1,27 @@
+처음부터 10000까지 모든 화폐를 다 더해가면서 작으면 갱신하는식으로 한다음 그수 리턴
+
+d=[999 for i in range(30)]
+ran=30
+
+array=[2,3]
+from collections import deque
+res=deque([])
+
+for i in array:
+    d[i]=1
+    res.append(i)
+
+while res:
+    popcount=res.popleft()
+    
+    for i in array:
+        if ran<=popcount+i:
+            break;
+        if d[popcount+i]>d[popcount]+1:
+            d[popcount+i]=d[popcount]+1
+            res.append(popcount+i)
+        
+        
+    
+    
+

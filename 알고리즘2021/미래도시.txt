@@ -1,3 +1,24 @@
 플로위드 워셜쓰라는문제
 1번에서 k번간다음에 x가면됨
 즉 1k+kx
+
+
+
+graph=[[999]*6 for _ in range(6)]
+
+for i in range(5):
+    graph[i][i]=0
+    
+graph[1][2]=1
+graph[1][3]=1
+graph[1][4]=1
+graph[2][4]=1
+graph[3][4]=1
+graph[3][5]=1
+graph[4][5]=1
+
+
+for i in range(5+1):
+    for j in range(5+1):
+        for k in range(5+1):
+            graph[j][k]=min(graph[j][k],graph[j][i]+graph[i][k])

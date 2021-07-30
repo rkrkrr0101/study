@@ -1,1 +1,28 @@
-c에서의 플루이드위셜로 값이 inf가 아니고 값이 제일 큰거랑 inf가 아닌값 개수 리턴
+c에서의 다익스트라로 값이 inf가 아니고 값이 제일 큰거랑 inf가 아닌값 개수 리턴
+
+
+array=[[999,999,999,999],
+        [999,0,4,2],[999,999,999,999],[999,999,999,999]]
+
+dis=[999 for i in range(5)]
+
+import heapq
+
+
+def dijk(start):
+    que=[]
+    heapq.heappush(que,(0,start))
+    dis[start]=0
+    
+    while que:
+        dist,now=heapq.heappop(que)
+        if dis[now]<dist:
+            continue
+        for i,x in enumerate( array[now]):
+            cost=dist+x
+            
+            if cost<dis[i]:
+                dis[i]=cost
+                heapq.heappush(que,(cost,i))
+                
+dijk(1)

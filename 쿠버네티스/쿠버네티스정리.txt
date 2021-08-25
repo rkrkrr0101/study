@@ -4,4 +4,15 @@
 	
 	
 2.설치
-	버추얼박스 베이그런트 설치
+	버추얼박스 베이그런트 푸티 수퍼푸티 설치
+	
+	베이그런트 명령
+		vagrant init:기본파일생성(vagrantfile 생성)
+		vagrant up:vagrantfile를 읽고 프로비저닝(서버 설정하고 파일넣어서 가동시키는것) 실행
+		vagrant halt:가상머신 종료
+		vagrant destroy:가상머신 삭제
+		vagrant ssh:가상머신에 ssh로 접속,만약 여러개일경우 이름을 뒤에 적어야함
+		vagrant provision:설정변경시 그걸 적용(켜진상태에서 바꾸는거)
+		
+	루비작성할때 vb.customise 같은거 뒤에 뛰워야 매개변수로 인식안함(vb.customise[...]이러면안되고 vb.customise [...]이래야함)
+	

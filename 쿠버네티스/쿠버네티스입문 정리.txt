@@ -1303,12 +1303,146 @@
 	
 
 
+11.시크릿
+1.시크릿 만들기
+	시크릿은 비밀번호나 개인키같은 민감한정보를 저장하는 용도로 사용함,
+	이런건 컨테이너안에 저장하지 않고 별도로 보관했다가 실제 파드를 실행할때의 템플릿으로 컨테이너에 제공함
+	
+	시크릿은 내장시크릿과 사용자정의 시크릿이 있음
+	내장시크릿은 클러스터안에서 쿠버네티스 api에 접근할때 사용함
+	클러스터 안에서 사용하는 serviceAccount라는 계정을 생성하면 자동으로 관련 시크릿을 만듬
+	이 시크릿으로 서비스 어카운트가 사용권한을 갖는 api에 접근할수 있음
+	
+	사용자 정의 시크릿은 사용자가 만든 시크릿임
+	
+	시크릿을 만드는 방법은 2개가있는데
+	
+		kubectl create secret generic 시크릿이름 --from-file=./파일경로 --from-file=./파일경로 --from-file=./파일경로
+	저렇게 만들수도있고,
+	템플릿으로 만들수도 있음
+		apiversion:api버전
+		kind:Secret
+		metadata:
+			name:시크릿이름
+		type:Opaque
+		data:
+			키1:값1
+			키2:값2
+	
+	여기서 type는 4개가있는데
+		Opaque는 기본값으로 키값형식으로 임의의 데이터를 설정할수 있고
+		kibernetes.io/service-account-token은 쿠버네티스 인증 토큰을 저장하고
+		kubernetes.io/dockerconfigjson은 도커 저장소 인증정보를 저장하고
+		kubernetes.io/tls는 tls인증서를 저장함
+		
+	그리고 시크릿을 확인하는건 똑같이
+		kubectl get secret 이름 -o yaml
+	로확인하면됨
+	
+	그리고 필드값은 base64인코딩방식으로 인코딩되어서 나옴
 
 
+2.시크릿 사용하기
+	시크릿은 파드의 환경변수나 볼륨을 이용한 파일형식으로 사용할수 있음
+	1.환경변수로 시크릿사용
+		디플로이먼트에선
+			.spec.template.spec.container[].env 단에
+			
+			env:
+				-name:붙일환경변수이름
+				 valuefrom:
+					secretKeyRef:
+						name:연결할시크릿이름
+						key:원하는키값
+	
+		이렇게 env하단에 저런식으로 연결하면됨
+		
+		그리고 사용할 시크릿은 미리 만들어져 있어야 함,
+		만약 오타등으로 없는시크릿을 참조하거나 시크릿이 없으면 에러가 발생해 파드가 실행되지못함
+		
+		kube-apiserver에선 문제없다고 생각해서 스케줄링하는데,
+		kubelet에서 불러올때 에러가 발생함,
+		그리고 kubelet는 계속 불러오려고 재시도하니까 조심
+		
+		
+	2.볼륨형식으로 파드에 시크릿 제공
+		볼륨형식으로 파드에 시크릿넣을땐 그 컨피그맵때 했던거랑 똑같이 volumeMounts와 volumes로 하면됨
+		
+		디플로이먼트에서
+			.spec.template.spec.container[].volumeMounts[]와 .spec.template.spec.container[].volumes[]
+			
+			volumeMounts:
+				-name:볼륨이름1
+				 mountPath:'경로'
+				 readonly:true
+			volumes:
+				-name:볼륨이름1
+				 secret:
+					secretName:연결할시크릿이름
+					
+		이러면 볼륨마운트로 볼륨을 생성하고 경로를 지정하고 볼륨에서 볼륨이름에 시크릿을 연결해서 파일로 저장함
+		
+		제대로됐나 확인하려면 
+			http://localhost:30900/volume-config?path=/etc/volume-secret/username
+		이런식으로 경로에 접근해서 파일을 켜서 확인할수 있음
+		
+		그리고 kubectl get pods로 시크릿 설정이 된 파드이름을 확인하고,
+		kubectl exec -it 파드이름 sh 로 컨테이너에 직접 접근해서 파일위치에 가서 확인할수도있음
+		
+	
+	3.프라이빗 컨테이너 이미지를 가져올때 시크릿 사용
+		보통 컨테이너 이미지를 가져올땐 공개된 이미지를 사용하지만,프라이빗이미지를 사용할땐 인증정보가 필요함
+		로컬서버를 사용하면 인증정보를 저장해서 사용할수 있지만,그러면 보안상의 위험이 있어서 그렇게 설정하지 않음
+		인증정보를 시크릿에 설정해 저장한 후 사용함
+		
+		쿠버네티스에는 kubectl create secret의 하위명령으로 도커 컨테이너 이미지저장소용 시크릿을 만드는 docker-registry가 있음
+			kubectl create secret docker-registry dockersecret 
+			--docker-username:이름 --docker-password:패스워드 --docker-email=이메일 --docker-server=url주소
+			
+		이런식으로 시크릿을 만들수있음 
+		저기서 이름 패스워드 url을 넣어서 거기로 연결하면됨
+		
+		저걸 kubectl get secrets dockersecret -o yaml로 확인하면
+		data아래에 dockerconfigjson이 있는데 그게 도커인증정보값임
+		그리고 type는 kubernetes.io/dockerconfigjson으로 자동으로 되어있고
+		
+		이걸 디플로이먼트에서 사용할땐
+			컨테이너 밑에 이미지를 불러오고
+			containers:
+				...
+				imagePullSecrets:
+					-name:dockersecret
+		이렇게 시크릿을 연결해주면됨
+		
+		만약 시크릿이 틀리거나 설정을 안하면 errimagepull에러가 나게 됨
+		
+		
+	4.시크릿으로 tls 인증서를 저장해 사용하기
+		https 인증서를 저장하는 용도로 시크릿을 사용할수 있음
+		인증서파일(tls.key tls.crt)를 받고
+			kubectl create secret tls 시크릿이름 --key tls.key --cert tls.crt
+			
+		로 시크릿을 생성하고
+			kubectl get secrets 시크릿이름 -o yaml
+		으로 확인하면
+		
+		data 밑에 tls.crt tls.key가 있고,type는 kubernetes.io/tls로 설정되어있음
+		이걸 인그레스와 연결해서 사용할수 있음
+						
 
-
-
-
+3.시크릿 데이터 용량 제한
+	시크릿데이터는 etcd에 암호화 하지 않은 텍스트로 저장됨
+	이때 시크릿 데이터의 용량이 너무 크면 쿠버네티스의 apiserver나 kubelet의 메모리 용량을 많이 차지함
+	그래서 개별시크릿 데이터의 최대용량은 1메가고,작은거도 많이있으면 같은문제생기니까 총용량제한도 있음
+	
+	그리고 만약 누가 etcd에 직접 접근하면 시크릿데이터의 내용을 확인할수 있음
+	etcd에는 이외에도 중요한 데이터가 많이 있으므로 중요한 서비스에 쿠버네티스를 사용중이라면 etcd의 접근을 제한해야함
+	
+	기본적으로 etcd를 실행할때 etcd 관련 명령을 사용하는 api통신에 tls인증이 적용되어있으므로 인증서가 있는 사용자만 etcd에 접근해 관련 명령을
+	사용할수 있음
+	
+	그외에 etcd가 실행중인 마스터 자체에 접속해서 데이터 접근하는걸 막기위해 마스터에 접근을 계정단위로 막거나,
+	etcd에 저장되는 시크릿데이터를 암호화할수 있음,이때는 별도로 암호화옵션을 지정해야함
 
 
 

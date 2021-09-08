@@ -1315,6 +1315,13 @@
 	
 	사용자 정의 시크릿은 사용자가 만든 시크릿임
 	
+	서비스어카운트 생성방법은
+			apiversion:api버전
+			kind:ServiceAccount
+			metadata:
+				name:이름
+				namespace:네임스페이스이름
+	
 	시크릿을 만드는 방법은 2개가있는데
 	
 		kubectl create secret generic 시크릿이름 --from-file=./파일경로 --from-file=./파일경로 --from-file=./파일경로
@@ -1704,11 +1711,207 @@
 		
 	
 
+13.인증과 권한 관리
+1.인증
+	apiserver는 테스트목적으로 로컬호스트:8080에 http서버를 실행함
+	그리고 일반적인 https인증은 접근하는 클라이언트에 인증서를 요구하지 않음
+	
+	하지만 사용자가 쿠버네티스의 api에 접근하려면 인증을 거쳐야함
+	외부에서 쿠버네티스 api에 접근할수 있는 기본포트는 6443이고,tls인증이 적용되어 있음
+	6443포트에 접근해 통신하려면 apiserver에 있는 인증서와 클라이언트의 인증서 사이의 검증을 통과해야함,
+	인증되지않은 클라이언트가 api서버에 접근하는걸 막는것
+	
+	쿠버네티스는 일반적인 사용자계정과 서비스계정으로 인증을 요청함
+	일반적인 사용자계정은 구글계정이나 그런 외부의 인증시스템을 연결해 사용하는거고,서비스계정은 쿠버네티스가 직접 관리하는 사용자계정임,
+	시크릿을 할당해서 비밀번호역할을 하는것
+	
+	1.kubectl의 config파일에 있는 tsl인증정보구조 확인하기
+		쿠버네티스는 apiserver와 통신할때의 기본 인증방법으로 tls(트랜스포트 레이어 시큐리티)를 사용함
+		tls인증은 통신할떄 오가는 패킷을 암호화함
+		보통 https웹서버를 설정할때는 서버에만 인증서를 설정하면되지만,tls는 클라이언트가 유효한지도 체크함
+		그래서 kube-apiserver의 인증서와 연결되는 클라이언트 인증서를 이용해 접속함
+		
+		기본적으로 설치하면 디폴트값에 tsl인증정보가 포함되어있고,이걸 바꿔서 계정에 제한을 걸수있음
+		
+		kube/config파일을 열면됨
+		이 안에
+			cluster.insecure-skip-tls-verify는 true로주면 공인기관의 인증서인지 체크하지않고,false면 검증을 함
+			보통은 프라이빗인증서를 쓰기떄문에(외부공개를안하니까) 기본값은 true임
+			cluster.server는 외부에서 쿠버네티스api에 접속할 주소를 설정함
+			외부에있는 쿠버네티스에 접근하려면 외부쿠버네티스의 kube-apiserver접근주소로 변경하면됨
+			name은 클러스터의 이름을 설정함
+			
+			contexts필드는 사용자나 네임스페이스를 연결하는 설정임,상황에따라 여러컨텍스트설정이 있을수 있음
+			
+			context.cluster는 접근할 클러스터를 설정함
+			context.user는 클러스터에 접근할 사용자 그룹이 누구인지를 설정함,users.name에 만들거 연결시키면됨
+			context.namespace는 default네임스페이스가 아닌 특정 네임스페이스를 설정할수있음
+			name는 컨텍스트의 이름
+			
+			current-context필드는 contexts필드가 여러개있을때 무엇을 선택해서 클러스터에 접근할지 결정함
+			보통 접근할떄 kubectl config set-context 컨텍스트이름 으로 컨텍스트를 변경해서 다양한클러스터에 다양한 사용자로 접근할수있음
 
-
-
-
-
+			users필드는 클러스터를 사용할 사용자 그룹을 명시함
+			
+			name은 사용자 그룹의 이름을 설정함
+			name.client-certificate-data:클라이언트인증에 필요한 해시값을 설정함(tsl인증기반의 해시값쓰면됨)
+			name.client-key-data:클라이언트의 키 해시값을 설정함(tsl인증기반의 해시값쓰면됨)
+			
+	2.서비스계정 토큰으로 인증하기
+		config파일의 iser필드를 tls인증이 아닌 서비스계정을 사용하도록 변경할수도 있음
+		
+		kubectl get serviceaccount로 서비스계정을 확인하고
+		kubectl get serviceaccount 서비스계정이름 -o yaml 로 전체출력한후
+		시크릿의 name로 시크릿이름을 따고
+		그거로 시크릿검색해서 토큰을 딸수있음
+		
+		그리고 config에
+			.contexts[].context.user을 서비스계정이름으로 바꾸고
+			.users[].name필드값으로 서비스계정이름으로 바꾸고
+			.users[].user.token에 시크릿에서 딴 토큰 넣어주면됨
+		
+2.권한 관리
+	쿠버네티스 클러스터의 api에 접근하려면 먼저 접근할수 있는 사용자인지부터 인증을 받아야함
+	인증후엔 사용자가 접근하려는 api를 사용할 권한이 있는지 확인한 후에 api를 사용할수 있음
+	
+	클러스터 하나를 여러명이 사용할때는 api나 네임스페이스별로 권한을구분해서 권한이 있는곳에만 접근하게 할수있고,
+	특정자원의 읽기권한만 추가해서 읽기만 할수있게 할수있음
+	
+	보통은 역할기반권한관리를 사용함
+	사용자와 역할을 별개로 선언한후,사용자에 역할을 매핑시켜서 권한을 부여하는식
+	
+	1.롤
+		롤은 특정 api나 자원사용권한들을 명시해둔 규칙집합임
+		롤은 일반롤과 클러스터롤 두가지가 있음
+		
+		일반롤은 해당 롤이 속한 네임스페이스에만 적용됨
+		추가로 네임스페이스에 한정되지 않은 자원과 api들의 사용권한을 설정할수있음
+		노드사용권한이나 헬스체크용 url인 '/healthz'같은 엔드포인트사용권한도 관리함
+		
+		롤 yaml은
+			kind:Role
+			apiversion:api버전 rbac.authorization.k8s.io/v1
+			metadata:
+				namespace:네임스페이스이름
+				name:롤이름
+			rules:
+				-apiGroups:['사용api'] 비어있으면 전체사용
+				 resources:['사용자원(pod같은)']
+				 verbs:['get','list'같은 사용가능한 동작지정]
+				 
+		metadata.namespace는 이 롤이 속한 네임스페이스를 적고(여기만적용됨)
+		metadata.name은 이 롤의 이름
+		rules는 구체적으로 규칙을 적는곳
+			apiGroups는 롤이 사용할 api그룹을 설정함
+			resources는 어떤 자원에 접근할수있는지 명시함
+			verbs는 어떤 동작을 할수 있는지 설정함
+			
+			여기서 verv에서 설정할수있는값은
+				Create:자원생성
+				Get:개별자원조회
+				List:여러자원조회
+				Update:기존자원내용 전체 업데이트
+				Patch:기존자원중 일부내용 변경
+				Delete:개별자원 삭제
+				deletecollection:여러자원삭제
+			가 있음
+			
+		이거도 똑같이 apply로 적용하면됨
+		
+		그리고 전체파드가 아니라 특정파드에만 규칙을 설정할수도있는데
+			rules:
+				resourceNames:['파드이름']
+		을 하면 개별값(겟,델리트,업데이트,패치)를 건드리는건 저 파드만 할수있고,
+		전체값(리스트,크리에이트,딜리트컬렉션)을 건드리는건 저 옵션에 영향을받지않고 할수있음
+		
+	2.클러스터롤
+		이건 특정 네임스페이스권한이 아닌 클러스터 전체 사용권한을 관리함
+		사용법은 똑같은데,메타데이터에 네임스페이스지정이 없다는거정도만 다름
+		
+		그외 특이점은,
+		.aggregationRule로 다른 클러스터롤을 조합해 사용할수 있음
+		
+			kind:ClusterRole
+			apiversion:api버전
+			metadata:
+				name:이름
+			aggregationRule:
+				clusterRoleSelectors:
+					-matchLabels:
+						레이블키:레이블밸류
+			rules:[]
+			
+		이렇게 aggregationRule로 레이블로 서치하고 가져와서 거기있는 룰을 적용시킬수있음
+		그래서 룰은 비워둬도 되고 추가설정해도됨
+		
+		그리고 클러스터롤은 자원이 아니라 url식으로도 규칙을 설정할수 있음
+		rules[]의 하위필드로 .nonResourceURLs을 설정하는것
+			nonResourceURLs:['/healthcheck','/metrics/*']
+		이런식으로 할수있음
+		그리고 이렇게설정하면 verbs필드값은 get과 post만 설정할수있음
+		
+		
+	3.롤바인딩
+		롤바인딩은 롤과 사용자를 바인딩하는 역할임
+		사용자가 어떤 롤을 사용할지설정함
+		이거도 롤바인딩과 클러스터롤바인딩으로 구분되고,롤바인딩은 네임스페이스에,클러스터롤바인딩은 클러스터 전체에 적용된다는거도 같음
+		
+		롤바인딩의 yaml은
+			kind:RoleBinding
+			apiversion:api버전
+			metadata:
+				name:이름1
+				namespace:네임스페이스이름1
+			subjects:
+				-kind:ServiceAccount
+				 name:서비스어카운트이름1
+				 apiGroup:''
+			roleRef:
+				kind:Role
+				name:롤이름
+				apiGroup:rbac.authorization.k8s.io
+				
+		메타데이터 연결하는건똑같고
+		subjects필드는 어떤 유형의 계정과 연결하는지 설정함
+		여기선 만들어둔 서비스어카운트와 연결하고,
+		apiGroup가 ''인건 코어api그룹으로 설정했다는것,v1과 같음
+		
+		roleref는 이미 만들어둔 롤에 연결하는것
+		카인드와 네임으로 만들어둔거에 연결하고
+		여기서 apiGroup은 rbac api를뜻하는 rbac.authorization.k8s.io를 설정
+		
+	4.클러스터롤바인딩
+		이거도 거의 똑같이 쓰면됨
+		클러스터롤바인딩의 yaml은
+			kind:ClusterRoleBinding
+			apiversion:api버전
+			metadata:
+				name:이름1
+				
+			subjects:
+				-kind:ServiceAccount
+				 name:서비스어카운트이름1
+				 namespace:네임스페이스이름1
+				 apiGroup:''
+			roleRef:
+				kind:Role
+				name:롤이름
+				apiGroup:rbac.authorization.k8s.io
+		거의 똑같은데,알아둬야할건 subjects의 kind에서 선택할수있는건 User,Group,ServiceAccount3개가 있는데,
+		여기서 user과 serviceAccount는 네임스페이스 정보가 필요하고
+		(롤바인딩은 어짜피 네임스페이스하나적용이니까 위에있는거 가져다쓰면되는데 클러스터롤바인딩은 위에 없으니까 여기적어줘야함),
+		group는 클러스터전체에 사용할수있어서 필요없음
+		클러스터 관련설정이니까 메타데이터밑에 네임스페이스가없고 서브젝트하위에 있음
+		서비스계정은 네임스페이스에 한정되어있으므로 서브젝트의 네임스페이스필드값으로는 어떤 네임스페이스에 속한계정인지 명시함
+		
+				
+	5.정리
+		롤바인딩은 사용자와 롤을 묶어서 특정네임스페이스에 권한을 할당하고
+		클러스터롤바인딩은 사용자와 클러스터롤을 묶어서 클러스터에 권한을 할당함
+		
+		kubectl config 로 사용자관련정보를 설정할수도있음(파일에서 직접바꾸는거랑 같음) 
+		
+		그리고 룰에 '*'하면 모든권한 다 여는거임
 
 
 

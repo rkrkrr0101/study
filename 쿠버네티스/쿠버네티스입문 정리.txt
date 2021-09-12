@@ -2466,6 +2466,259 @@
 				 
 		
 		
+17.로깅과 모니터링
+1.로깅
+	클러스터환경에서 앱컨테이너를 운영할때 주의해야할것중 하나가 로그처리임
+	컨테이너오케스트레이터 상황에서 로그를 수집할때 로그를 로컬디스크에 저장하는방식은 하면안되기때문
+	
+	보통 일반적인상황에서야 컴퓨터한대가 전체를 통괄하지만,쿠버네티스같은상황에선 파드들이 노드들을 옮겨다니기때문에 그런식으로하면 로그에 구멍이 나게됨
+	그렇다고 모든노드를 확인하는것도 비합리적임
+	그래서 모든 노드의 로그를 통합해서 뷰하는 식으로 데몬셋같은걸 써서 모니터링함
+	
+	1.파드로그 확인
+		쿠버네티스의 kubectl은 개별 노드에 접근하지 않고 직접 파드의 로그를 확인할수 있음
+		이때 kubectl logs -f 파드이름 을 사용함
+		
+		여기서 -f옵션은 실행중인 로그를 지속적으로 수집하는 테일링을 실햄함
+		
+	2.일래스틱서치로 로그를 수집한 후 모아서 보기
+		로컬디스크에 로그를 저장하면 용량문제로 삭제한 예전 로그를 확인할수 없음
+		트래픽이 많은서버는 로그양도 많으므로 엄청 빨리 사라져서 문제를 인식하고 로그확인하려고 서버에 접속했는데 로그가 삭제된 후일지도 모름
+		그래서 이런 문제를 개선하려고 장비 각각에 저장한 로그를 한곳에 모아서 살펴보도록 서버를 구축함
+		이럴때 사용하는 도구가 일래스틱서치나 키바나같은거임
+		
+		물론 퍼블릭클라우드(아마존같은)라면 서비스 각각에서 로그수집도구를 제공하지만,사용하지못한다면 직접 로그수집시스템을 구축해야함
+		로그 수집기에서 수집할 로그를 저장하는건 일래트릭서치고,로그를 조회하는건 키바나임
+		
+		일래스틱서치 디플로이먼트 yaml은
+			kind:deployment
+			...
+			spec:
+				replicas:1
+				...
+				template:
+					...
+					spec:
+						containers:
+							-name:이름
+							 image:elastic/elasticsearch:6.4.0
+							 env:
+								-name:discovery.type
+								 value:'single-node'
+							ports:
+								-containerPort:9200 포트1
+								-containerPort:9300 포트2
+			kind:service
+			...
+			spec:
+				ports:
+					-name:elasticsearch-rest
+					 nodePort:30920
+					 port:9200 포트1
+				 	 protocol:TCP
+					 targetPort:9200 포트1
+					-name:elasticsearch-nodecom
+					 nodePort:30930
+					 port:9300 포트2
+					 protocol:TCP
+					 targetPort:9300 포트2
+				...
+				
+		이렇게 작성하면되는데
+		
+		노드 하나로만 구성할거기떄문에 replicas는 1로줬고
+		디플로이먼트의 컨테이너이미지에서 일레스틱서치를 가져왔고
+		env하위필드로 싱글노드로 설정해서 노드가 하나인 일래스틱서치를 실행하게 했고
+		디플로이먼트의 포트 2개는 일래스틱서치가 사용할 포트 2개임
+		
+		서비스는 디플로이먼트에서 설정했던 포트2개를 각각 서비스포트로 매핑해서 연결할수있게 해둠
+		
+		그러면 서비스에서 노드포트로 설정해둔 포트중 rest포트로 접근하면(30920)일래스틱서치에 접근할수 있음
+		
+		이거만 가지고도 확인은 할수있는데,보기힘드니까 일래스틱서치전용 대시보드인 키바나를 사용함
+		키바나의 디플로이먼트는
+			kind:deployment
+			...
+			spec:
+				replicas:1
+				...
+				template:
+					spec:
+						containers:
+							-name:kibana
+							 image:elastic/kibana:6.4.0
+							 env:
+								-name:SERVER_NAME
+								 value:"서버이름.com"
+								-name:ELASTICSEARCH_URL
+								 value:'http://elasticsearch-svc.default.svc.cluster.local:9200'일래스틱서치포트
+							ports:
+								-containerPort:5601
+			kind:service
+			...
+			spec:
+				ports:
+					-nodePort:30561
+					 port:5601  키바나디플로이먼트포트
+					 protocol:TCP
+					 targetPort:5601 키바나디플로이먼트포트
+				selector:
+					app:kibana 키바나디플로이먼트이름
+				type:NodePort
+		이런식으로 작성하는데
+		키바나는 일래스틱서치의 데이터를 검색하므로 env의 ELASTICSEARCH_URL에 일래스틱서치의 도메인을 지정해주고
+		우리는 서비스포트인 로컬호스트:30561로 접근하면됨
+					 
+	3.클러스터레벨 로깅
+		컨테이너가 비정상종료되거나 노드에 장애가 있어도 앱 컨테이너의 로그를 확인할수 있어야함
+		그래서 컨테이너,파드,노드의 생명주기와 분리된 스토리지를 구축해야함
+		
+		이렇게 생명주기와 분리된 스토리지를 구축하는 아키텍쳐를 클러스터레벨로깅이라고 함
+		쿠버네티스 자체에서는 클러스터레벨 로깅 도구를 제공하지는 않으므로,외부도구로 구축해야함
+		
+		로그가 어떻게 생성/관리되냐면
+		
+			컨테이너로그:
+				컨테이너의 로그수집은 도커가 담당함
+				앱 컨테이너가 표준입출력으로 로그를 출력한다면 도커는 표준스트림2개를 특정 로그 드라이버로 리다이렉트함
+				도커는 다양한 로그드라이버를 지원하며,기본으로 json-file을 사용함
+				docker ps로 생성되어있는 컨테이너의 id를 확인하고,docker inspect 컨테이너id로 런타임이 로그를 어떻게 다루는지 확인할수있음
+				
+				거기를 보면 logPath는 컨테이너관련 메타데이터를 저장한곳의 위치고,메타데이터도 포함됨
+				(var/lib/docker/containers/컨테이너ID/컨테이너ID-json.log)
+				logconfog는 최대파일갯수와 최대사이즈를 지정할수있음
+				
+				kubelet은 logpath에 있는 파일에 관해 링크를 생성하고 로그를 관리함
+				로그수집기는 앞 링크들을 테일링해 로그내용을 수집하고,이름으로부터 필요한 메타데이터(파드,컨테이너,네임스페이스이름)를 얻음
+				
+				로그를 보면
+				로그내용,표준스트림종류,시간정보를 json형식으로 출력함
+				여기까지가 도커의 역할임
+					
+				그리고 로그가 노드의 스토리지를 과도하게 사용하는 문제가 있으면
+				도커런타임에서 로그로테이트 관견설정을 확인해야함
+				ps -ef|grep dockerd를 실행하고
+				--log-opt max-size,--log-opt max-file을 확인하고 조정하면됨
+			
+			시스템컴포넌트로그:
+				쿠버네티스의 시스템 구성요소중 일부(kubelet,docker등)는 컨테이너기반으로 동작하지 않음
+				
+				예를들어 systemd는 기본설정인 systemd-journald로 로그를 관리함
+				그렇지 않은 상황에서는 /var/log/디렉터리에 로그를 남김
+				이때 반드시 노드에 로그로테이트 관련 설정이 있어야함
+				
+				시스템 구성요소들의 로그관련동작은 컴포넌트별로 차이가 있음
+				예를들어 kubelet이라면
+				systemctl status kubelet.service 명령으로 확인할수 있음
+				--logtostderr은 systemd-journald가 로그를 표준스트림인 stderr로 출력할것인지 나타내고
+				--log-dir은 로그디렉토리를 지정함
+				--v는 로그레벨을 나타냄(얼마나 빡빡하게저장할것인가)
+	4.플루언트디를 이용한 로그수집
+		플루언트디를 이용해서 쿠버네티스에서 발생한 로그를 일래스틱서치에 저장하면 좋음
+		일래스틱서치용 플루언트디 yaml은
+			apiversion:api버전
+			kind:DaemonSet
+			metadata:
+				name:fluentd 플루언트디
+				namespace:kube-system
+				labels:
+					k8s-app:fluentd-logging
+					version:v1
+					kubernetes.io/cluster-service:'true'
+			spec:
+				template:
+					metadata:
+						labels:
+							k8s-app:fluentd-logging
+							version:v1
+							kubernetes.io/cluster-service:'true'
+					spec:
+					tolerations:
+						-key:node-role.kubernetes.io/master
+						 effect:NoSchedule
+					containers:
+						-name:fluentd
+						 image:fluent/fluentd-kubernetes-daemonset:elasticsearch
+						 env:
+							-name:FLUENT_ELASTICSEARCH_HOST
+							 value:'elasticsearch-svc.default.svc.cluster.local'
+							-name:FLUENT_ELASTICSEARCH_PORT
+							 value:'9200'
+							-name:FLUENT_ELASTICSEARCH_SCHEME
+							 value:'http'
+							-name:FLUENT_UID
+							 value:'0'
+						resources:
+							limits:
+								memory:200mi
+							requests:
+								cpu:100m
+								memory:200mi
+						volumeMounts:
+							-name:varlog 
+							 mountPath:/var/log
+							-name:varlibdockercontainers
+							 mountPath:/var/lib/docker/containers
+							 readOnly:true
+						terminationGracePeriodSeconds:30
+						volumes:
+							-name:varlog
+							 hostpath:
+								path:/var/log
+							-name:varlibdockercontainers
+							 hostpath:
+								path:/var/lib/docker/containers
+		이렇게 작성하면됨
+		얘는 노드 하나마다 하나씩 있어야하니까 데몬셋으로 실행해서 로그를 수집하고
+		namespace는 시스템으로줘서 직접실행한 앱컨테이너와 분리하고
+		컨테이너이미지는 플루언트디를 가져오고
+		env하위값은
+			host는 일래스틱서치디플로이먼트에 로그를 보낼때 일래스틱서치의 도메인
+			port는 일래스틱서치 포트
+			scheme는 http와 https 설정
+			fluent_uid는 플루언트디를 사용하는 사용자 아이디,저거랑 같으면 접근권한이 있는것
+		첫번째와 두번쨰 볼륨마운트의 path값은 실제 로그를 저장하는 경로를 설정해 볼륨으로 마운트함
+			/var/log는 쿠버네티스의 시스템프로세스의 로그가 저장되고
+			/var/lib/docker/containers에는 쿠버네티스의 파드의 로그가 저장됨
+			
+		이걸 적용하면 일래스틱서치에 로그를 저장함
+		
+		이렇게 저장한 로그를 키바나에서 조회할땐
+		키바나에서 일래스틱서치의 특정 인덱스들 데이터를 조회하는 인덱스 패턴을 만들어야함
+		인덱스패턴에서 logstash-*을 하면 logstash-가 붙은 모든걸 조회하는(와일드카드)인덱스패턴임
+		
+		보통 일래스틱서치와 키바나를 함께 쓸때는 날짜별로 인덱스를 조회하는 인덱스 패턴을 만듬
+		일래스틱서치에 날짜단위로 로그를 저장하면 로그가 많을때 오래된날짜의 인덱스만 삭제해서 용량을 확보함
+		
+	5.스턴을 이용한 실시간 로그 모니터링
+		스턴은 실시간으로 여러개 파드의 로그를 보고싶을때 사용함
+		
+		스턴은 셸에서 바로 여러개의 파드로그를 실시간으로 볼수있어,서비스개발을 진행하는중에 파드상태를 확인할때 유용함
+		스턴을 설치하고
+			stern kube -n kube-system
+		을 실행하면 로그를 확인할수 있음
+		
+		-n옵션으로 네임스페이스를 설정할수 있음
+		이외의 옵션으로는
+			--all-namespaces:모든 네임스페이스에 있는 로그를 한번에 출력
+			-l:특정레이블의 파들들 로그만 선택출력
+			-o:출력형식지정,-o json하면 json으로 출력
+			--template:출력형식을 마음대로 변경해서 원하는 항목만 확인가능
+		
+			
+2.쿠버네티스 대시보드
+	쿠버네티스를 일반적으로 쓸때는 kubectl로 커맨드라인 입력은 잘 안함
+	보통 대시보드를 쓰고 그걸 사용함
+	대시보드를 쓰려면 이거도 디플로이먼트추가를 해야하는데,깃허브에서 대시보드yaml을 다운받고,
+	포트와 env를(인증관련) 수정하고 그대로쓰면됨
+	
+	그리고 대시보드서비스의 포트로 접근하면 대시보드페이지가 뜨는데
+	거기서 yaml작성하고 뭐하고 하면됨
+	yaml작성할떈 오른쪽위에 생성누르고 생성하면되고
+	워크로드-디플로이먼트에서 실행중인 파드를 편집할수있음
+			
+		
+					 
 		
 		
 

@@ -1,0 +1,23 @@
+kubectl get pods
+kubectl describe pod123
+kubectl create pods --image=nginx
+kubectl run pods --image=nginx
+
+yaml로 생성시 api버전
+	pod:v1
+	service:v1
+	replicaset:apps/v1
+	deployment:apps/v1
+	
+	
+apiVersion: v1
+kind: Pod
+metadata:
+	name: pod123
+	labels:
+		app: myapp
+spec:
+	containers:
+		- name: con123
+		  image: nginx
+		  port: 80

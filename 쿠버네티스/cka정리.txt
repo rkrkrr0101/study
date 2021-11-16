@@ -2,6 +2,9 @@ kubectl get pods
 kubectl get pods --namespace=네임스페이스명
 kubectl get pods --all-namespace
 kubectl get all
+kubectl get pods --selector 키=벨류
+kubectl get pods --show-labels 레이블표시
+kubectl get pods --no-headers | wc -l  갯수만 표시
 kubectl describe pod123
 kubectl run 파드명 --image=nginx   (파드는 런임 크리에이트안됨)
 kubectl run 파드명 --image=nginx --labels=tiers=db 이런식으로 레이블은 넣으면됨
@@ -9,6 +12,7 @@ kubectl expose deployment 디플로이먼트명 --name=서비스 이름   기타
 ,포드도 가능,이러면 셀렉터에 포드나 디플로이먼트가 가지고있던 레이블 전부가 들어감
 kubectl run 파드명 --image=nginx --port=80 --expose 이런식으로 바로 서비스생성도 가능
 
+당연하지만 yaml에서 위에메타데이터레이블은 디플로이먼트레이블이고 밑에 템플릿밑에 레이블은 파드레이블임
 
 kubectl describe 머시기 | grep -i image나 뭐 찾을거
 
@@ -20,6 +24,7 @@ kubectl create deployment --image=nginx nginx
 kubectl create deployment --image=nginx nginx --dry-run=client -o yaml
 kubectl create deployment --image=nginx nginx --dry-run=client -o yaml > nginx-deployment.yaml
 kubectl create deployment --image=nginx nginx --replicas=4 --dry-run=client -o yaml > nginx-deployment.yaml
+kubectl run 파드명 --image=이미지 --dry-run -o yaml > bee.yaml
 
 kubectl scale deployment --replicas=5 디플로이먼트명
 
@@ -31,9 +36,15 @@ kubectl config set-context $(kubectl config current context) --namespace=dev
 
 서비스도 셀렉터넣어서 선택
 
+kubectl taint nodes 노드명 key=value:tainteffect(noSchedule(노스케쥴),preferNoSchedule(가능하면),NoExecute(톨러없이실행x))
+spec:
+	tolerations:
+	- key:테인트키값
+	  operator: equal(연산자넣는거)
+	  value:테인트밸류값
+	  effect:테인트이펙트값
 
-
-
+테인트 삭제시엔,테인트넣는거 똑같이넣고 마지막에 -붙여서 한번더 날리면됨
 
 
 
@@ -60,7 +71,8 @@ spec:
 	containers:
 		- name: con123
 		  image: nginx
-		  port: 80
+		  ports:
+			- containersPort: 8080
 
 apiVersion: apps/v1
 kind: ReplicaSet

@@ -10,6 +10,9 @@ kubectl get event
 kubectl top node  리소스사용량보기
 kubectl logs -f 파드명 컨테이너명(컨테이너가 2개이상일떄,이거안붙이면 무조건 첫번째컨테이너 출력)
 
+kubectl explain pods --recursive //파드 아래에 속한 모든 필드 설명 보기
+
+
 kubectl run 파드명 --image=nginx   (파드는 런임 크리에이트안됨)
 kubectl run 파드명 --image=nginx --labels=tiers=db 이런식으로 레이블은 넣으면됨
 kubectl expose deployment 디플로이먼트명 --name=서비스 이름   기타등등(서비스 특정디플로이먼트에 생성할때)
@@ -20,12 +23,13 @@ kubectl run 파드명 --image=nginx --port=80 --expose 이런식으로 바로 �
 
 kubectl describe 머시기 | grep -i image나 뭐 찾을거
 
-
+리눅스 파일실행 ./파일명
+쉘스크립트 sh 파일명 으로 실행하면 한번실행되고 맘
 
 
 
 kubectl run nginx --image=nginx
-kubectl run nginx --image=nginx --dry-run=client -o yaml
+kubectl run nginx --image=nginx --restart=never --dry-run=client -o yaml  리스타트네버 넣어야함
 kubectl create namespace dev
 kubectl create ResourceQuota
 kubectl create deployment --image=nginx nginx
@@ -35,6 +39,9 @@ kubectl create deployment --image=nginx nginx --replicas=4 --dry-run=client -o y
 kubectl run 파드명 --image=이미지 --dry-run -o yaml > bee.yaml
 
 kubectl run  --image=busybox sbox --dry-run -o yaml --command -- sleep 1000 > /etc/kubernetes/manifests/static-busybox.yaml    스태틱파드생성
+
+kubectl create configmap 컨피그맵이름 --from-literal=설정이름=설정값 --from-literal=설정이름2=설정값2
+kubectl create secret generic 시크릿이름 --from-literal=설정이름=설정값 or --from-file=파일경로  둘중 선택해서,혹은 둘다 넣을수있음
 
 kubectl apply -f .   현재폴더내 전부 크리에이트
 
@@ -95,18 +102,86 @@ api서버가 있으면 get할수는있지만 수정할순없음(파일이 노드
 메트릭서버 설치할땐   git clone 깃주소     하면됨
 
 
+kubectl rollout status deployment/디플이름  으로 롤아웃상태 볼수있음(롤링업데이트할때 현재상태)
+kubectl rollout history deployment/디플이름  으로 디플로이먼트 전단계 볼수있음(롤백할떄쓸거)
+kubectl rollout undo deployment/디플이름 히스토리숫자   로 롤백할수있음,히스토리숫자없으면 전거로 롤백함
+
+kubectl set image deployment/디플이름 이미지명=새이미지:태그  으로 명령형이미지변경가능
+
+describe로 디플로이먼트 배포전략을 볼수있는데(strategyType),
+리크리에이트는 전버전을 0으로 줄이고 새걸 그숫자만큼올림
+롤링업데이트는 1씩 줄이고 올림(이건 설정할수있음)
+
+
+cmd는 항상 전체를 바꾸는데(매개변수에 뭘넣어도 전부 바뀜)
+entrypoint는 엔트리 포인트에 더해서 뒤에 매개변수가 적힘
+
+기본값을 두고 값만 받아오게하려면
+	엔트리포인트 명령어
+	cmd 값
+을 하면 매개변수없으면 cmd값,있으면 cmd를 대체함
+
+엔트리포인트를 오버라이드하고싶으면,
+	docker run --entrypoint 대체명령어 이미지 매개변수
+이렇게 하면됨
+
+
+쿠버네티스에서 매개변수를 줄땐
+	spec:
+		containers:
+		-  name: 이름
+		   image: 이미지
+		   args:['매개변수값']
+을 하면됨
+엔트리포인트를 오버라이드할땐
+	spec:
+		containers:
+		-  name: 이름
+		   image: 이미지
+		   command: ['명령어']
+		   args:['매개변수값']
+하면됨
+만약 도커파일에 엔트리포인트가 있는데,커맨드쓰면 다 덮어씌워지니까 주의
+
+컨테이너속 앱에 매개변수줄땐
+	spec:
+		containers:
+		-  name: 이름
+		   image: 이미지
+		   env:
+		   -  name: 변수이름
+		      value: 변수값
+넣으면됨
+그러면 앱에서 이걸 가져다가 쓸수있음,그리고 직접 값을 하드코딩하는대신 valueFrom으로 값을 어디서 가져올수도 있음(컨피그맵이나 시크릿)
+컨피그맵을 파드에 넣고,그걸 컨테이너에 삽입하고,이름찾으면 거기서 찾는식
+	spec:
+		containers:
+		-  name: 이름
+		   image: 이미지
+		   envFrom:  (여기에 -가 컨피그맵은 있고 시크릿은 없었음)
+		   -   configMapRef:   //시크릿은 secretRef 넣으면됨 똑같이씀
+				 name:컨피그맵이름(미리만들어둔거)
+or
+		   env:
+		   -  name: 변수이름
+		      valueFrom:
+				configMapRef:
+					name:컨피그맵이름
+					키:컨피그맵에있는키
+or
+		volumes:
+		-  name:볼륨명(지금붙인거)
+		   configMap:
+			  namle: 컨피그맵이름
 
 
 
+시크릿에서 사용할땐 base64로 저장되니까,이걸 해독해줘야함
+리눅스상에선
+	echo -n 'gdfgd==' | base64 --decode
 
-
-
-
-
-
-
-
-
+그리고 시크릿 desc로 봤을때 데이터밑에 있는게 각각 하나의 default-token임
+왠진모르겠는데 시크릿은 이미지랑 이름 밑에 생성해야지,컨테이너 맨위에 생성하면 에러뜸(아 이미지에 속해있어야되나봄 이미지부터 행렬시작이니까)
 
 
 
@@ -175,5 +250,20 @@ spec:
 		- targetPort: 80
 		  port: 80
 		  nodePort: 30008		  
+
+apiVersion: v1
+kind: ConfigMap          //시크릿도 카인드만바꾸면 똑같음
+metadata:
+	name: conapp
+
+data:
+	변수명1:변수값1
+	변수명2:변수값2
+
+
+
+
+
+
 		  
 For Windows: Ctrl+Insert to copy and Shift+Insert to

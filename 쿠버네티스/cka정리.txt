@@ -9,8 +9,11 @@ kubectl describe pod123
 kubectl get event
 kubectl top node  리소스사용량보기
 kubectl logs -f 파드명 컨테이너명(컨테이너가 2개이상일떄,이거안붙이면 무조건 첫번째컨테이너 출력)
+kubectl -n 네임스페이스명  logs -f 파드명 컨테이너명(로그는 파드내 /log/컨테이너명.log에 저장되고,그걸불러옴)
 
 kubectl explain pods --recursive //파드 아래에 속한 모든 필드 설명 보기
+
+kubectl exec -it 파드명 -c 컨테이너명(컨테이너2개이상일때) -- bash (여기에 리눅스명령어 넣으면됨 cat /log/app.log넣으면 저파일 읽기)
 
 
 kubectl run 파드명 --image=nginx   (파드는 런임 크리에이트안됨)
@@ -108,6 +111,14 @@ kubectl rollout undo deployment/디플이름 히스토리숫자   로 롤백할�
 
 kubectl set image deployment/디플이름 이미지명=새이미지:태그  으로 명령형이미지변경가능
 
+kubectl drain --ignore-daemonsets 노드명 파드 밖으로 다뿌리고 스케줄러차단
+kubectl cordon 노드명 스케줄러만 차단 
+kubectl uncordon 노드명 차단해제
+
+
+
+
+
 describe로 디플로이먼트 배포전략을 볼수있는데(strategyType),
 리크리에이트는 전버전을 0으로 줄이고 새걸 그숫자만큼올림
 롤링업데이트는 1씩 줄이고 올림(이건 설정할수있음)
@@ -183,6 +194,80 @@ or
 그리고 시크릿 desc로 봤을때 데이터밑에 있는게 각각 하나의 default-token임
 왠진모르겠는데 시크릿은 이미지랑 이름 밑에 생성해야지,컨테이너 맨위에 생성하면 에러뜸(아 이미지에 속해있어야되나봄 이미지부터 행렬시작이니까)
 
+initContainers는 그밑에 여러 컨테이너를 가질수있고(-배열로 이름,이미지를 하나씩 포함한),그러면 위부터 순서대로 실행하고,실패하면 파드를 다시시작함
+그리고 실행된후에 종료되니까,컨테이너갯수에 포함안됨(get으로보는거)
+
+노드아웃됐을때 타임아웃 세팅은 kube-controller-manager --pod-eviction-timeout=3m0s 로 설정가능 (기본값5분)
+저 타임아웃시간내에 다시 가동가능하면, 그안에 업그레이드나 재부팅을 해도됨,근데 확신못하면 미리 다 뿌려두고 여기배치못하게 막고 업뎃하는게 안정적
+kubectl drain 노드명 --ignore-daemonsets 으로 현재그노드 파드 전부 다 밖으로 뿌리고 스케줄러차단
+드레인은 레플리카셋이 아닌 개별로 생성된 파드는 지우지못함(지우려면 뒤에 --force 붙이면되는데,이러면 파드소실됨)
+
+노드 업그레이드는 kubeadm upgrade apply v1.13.4 이렇게 하면됨(클러스터는 이렇게 안하고 자체적으로 지원함)
+현재 최신버전보려면 kubeadm upgrade plan
+업그레이드는 한번에 한버전씩 하는게 좋음(10에서 13으로 건너뛰지말고 11,12,13이렇게)
+다운타임 있어도되면 한번에업ㄱ글,없어야하면 하나씩업글,클러스터면 그냥 새로 노드추가하고(새버전으로)구버전노드 삭제
+kubelet 업그레이드는 apt-get upgrade  kubelet=1.12.9.00 하면 됨(마스터노드)
+그리고 systemctl restart kubelet 하면 재시작되고 업글됨
+
+워커노드는 마스터에서 그노드 드레인하고,그노드 접속해서 똑같이 업글하면됨(ssh),업글끝나면 드레인 해제(uncordon)
+
+kubeadm 마스터노드 업데이브방법
+	apt update
+	apt install kubeadm=1.20.0-00
+	kubeadm upgrade apply v1.20.0
+	apt install kubelet=1.20.0-00
+	systemctl restart kubelet
+
+워커노드 업데이트
+	드레인하고
+	ssh접속
+	apt update
+	apt install kubeadm=1.20.0-00
+	kubeadm upgrade node
+	apt install kubelet=1.20.0-00
+	systemctl restart kubelet
+	exit
+
+즉 adm을 업데이트하고 그거로 노드를 업데이트하고 쿠버렛을 업데이트하면됨
+
+
+
+kubectl get all --all-namespace -o yaml >백업.yaml 로 현재실행중인것들을 백업할수있음
+물론 상용에선 백업도구를 사용함(velero같은)
+etcd는 etcd.service에 있는 data-dir=/var/lib/etcd 에 저장됨
+etcdctl snapshot save 파일명.db 로 etcd 백업할수있음
+etcdctl snapshot status 파일명.db 로 상태볼수있고
+//친건 시험에선 안해도됨  클러스터메인터넌스는 한번더해보자 잘못하겠음
+//////////////service kube-apiserver stop 로 api서버 멈추고
+etcdctl snapshot restore 파일명.db --data-dir etcd경로     로 리스토어할수있음(/var/lib/etcd-from-backup)
+겹치는거 방지위해서,새로 경로를 지정해야함,겹쳐도되긴함 원래자리랑 혹시 겹쳐서 파일날아갈까봐 이렇게해둔거
+그리고 경로바뀌었으면, 
+/etc/kubernetes/manifests 이런 스태틱파드자리가서 볼륨(volumes,맨밑에있을거임)의 etcd위치(etcd-data)를 바꾼거로 바꿔줘야함
+
+////////////systemctl daemon-reload   로 서비스데몬 재시작하고
+//////////////service etcd restart    로 etcd 리스타트하고
+//////////////service kube-apiserver start 로 api서버 재시작하면됨
+
+그리고 인증서파일을 쓰면,
+snapshot save 할때
+	--endpoints=https://ip:포트(127.0.0.1:2379),etcd는 마스터노드에서 실행되고(로컬호스트) 포트기본값은 2379임 listen-client-urls
+	--cacert=ca.crt파일경로,tls보안인증서  ,trusted-ca-file
+	--cert=etcd-server.crt 경로,tls보안클라이언트식별  cert-file
+	--key=etcd-server.key 경로,보안클라이언트 식별 키  key-file
+지정해주면됨
+
+etcd파드에서 cert-file는 서버인증서,peer은 클라이언트인증서
+etcd ca 인증서는 trusted-ca-file
+
+이렇게 백업방식은 두가지가있음 
+etcdctl을 쓰기 전에
+export ETCDCTL_API=3 을 날려서 etcd버전을 3으로 설정해줘야함(백업및 복원은 3에있음)
+
+시험칠땐 하고나서 describe로 다시 확인하래
+
+
+
+
 
 
 
@@ -203,7 +288,7 @@ metadata:
 	labels:
 		app: myapp
 spec:
-	containers:
+	containers:          //initContainers는 그냥 멀티컨테이너처럼 쓰는데,컨테이너앞에 init붙이고 그대로쓰면됨 C대문자에 주의 
 		- name: con123
 		  image: nginx   //여기까지 기본
 		  ports:

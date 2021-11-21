@@ -1,6 +1,9 @@
 kubectl get pods
 kubectl get pods --namespace=네임스페이스명
 kubectl get pods --all-namespace
+kubectl get pods |wc -l 몇줄인지 라인세기,맨위도 포함이니까 -1해줘야함
+kubectl get pods | grep 찾을거  grep된거만 표시해줌
+kubectl get pods -l 레이블키=레이블밸류  레이블로 검색
 kubectl get all
 kubectl get pods --selector 키=벨류
 kubectl get pods --show-labels 레이블표시
@@ -14,6 +17,7 @@ kubectl -n 네임스페이스명  logs -f 파드명 컨테이너명(로그는 �
 kubectl explain pods --recursive //파드 아래에 속한 모든 필드 설명 보기
 
 kubectl exec -it 파드명 -c 컨테이너명(컨테이너2개이상일때) -- bash (여기에 리눅스명령어 넣으면됨 cat /log/app.log넣으면 저파일 읽기)
+
 
 
 kubectl run 파드명 --image=nginx   (파드는 런임 크리에이트안됨)
@@ -446,27 +450,7 @@ kubeconfig파일은 클러스터,컨텍스트,유저 섹션으로 나눠져있�
 그리고 컨텍스트에서 그거 두개를 바인딩한걸 들고있음(키밸류로)
 얘도 yaml형식으로 apiVersion은 v1이고 kind는 Config임
 
-	apiVersion: v1
-	kind: Config
-	
-	current-context:컨텍스트명1
-	
-	clusters:
-	-  name: 클러스터명1
-	   cluster:
-	     certificate-authority:ca.crt  //ca는 여기
-		 server: https://경로:포트
-	contexts:
-	- name: 컨텍스트명1
-	  context:
-		cluster: 클러스터명1
-		user: 유저명1
-		namespace: 네임스페이스명1  //옵션,클러스터1의 네임스페이스1로 들어감
-	users:
-	-  name: 유저명1
-	   user:
-	     client-certificate: 유저.crt
-		 client-key: 유저.key
+
 
 당연히 클러스터 컨텍스트 유저는 여러개될수있음
 그리고 커런트컨텍스트가 기본값이고,저걸 바꿔서 다른컨텍스트로 넘어갈수있음
@@ -482,6 +466,232 @@ kubeconfig파일은 클러스터,컨텍스트,유저 섹션으로 나눠져있�
 그리고 certificate-authority-data필드를 쓰면 파일경로말고 base64된 파일데이터를 그대로넣을수도 있긴함
 
 
+
+kubectl을 쓰지않고 똑같이 하려면
+	curl https://kube-master:6443/version
+	curl https://kube-master:6443/api/v1/pods  //k get pod
+하면됨
+/api밑에 있는게 코어고(파드 노드 네임스페이스 서비스등)
+/apis 밑에있는게 아직 코어로(메이저로) 안들어온애들이나 논리적으로 존재하는애들 (certificates.k8s.io,디플로이먼트,네트워크정책 등)
+공식페이지의 pod v1 core를 검색하면 상세한게나옴,그리고 v1/core는 v1임
+이렇게할땐 컨피그파일의 값을 못가져오기때문에 key랑 cert랑 cacert를 직접넣어줘야함 --ca 이런걸로
+
+그리고 각 리소스들에는 동사라고 하는 작업집합이 있음(get list delete 이런거)
+
+kubeproxy와 kubectlproxy는 같지않음
+kubectlproxy는 kubectl이 액세스하려고 생성된 프록시(얘가 명령받아서 저 kube-master어쩌구로 바꿔줌)
+kubeproxy는 쿠버네티스자체에서 외부에서 받을때 쓰는 프록시
+
+권한부여할땐 네임스페이스로 나눠서 걔가 쓸거만 최소한으로 주는게좋음
+보통 rbac를 쓰는데 권한을 만들고 그걸 사람(그사람의 인증서)에 바인딩하는거
+그리고 보통은 외부도구를 사용해서 권한을 관리함
+
+권한선택은 kube-admin에 --authorization-mode에 적혀있고 수정할수있음
+rbac말고 AlwaysAllow와 AlwaysDeny가 있는데 이건 항상승인과 항상거부
+두개이상 쓸수도있는데 --authorization-mode=RBAC,webhook,Node 이렇게 하면됨,그러면 앞에서부터 순서대로 인식함
+
+rbac의 롤도 yaml로 만들면됨
+	apiVersion: rbac.authorization.k8s.io/v1
+	kind:Role
+	metadata:
+		name: 롤이름
+		namespace: 지정네임스페이스
+	rules:
+	-  apiGroups: [""]  //비워두면 코어그룹임   그냥 ''할땐 -붙여서 배열표시해주고 아니면 ['']할땐 안붙여야함
+	   resources: ['pods']
+	   verbs: ['get','list','delete','update']
+	   resourceNames: ['blue'] //옵션,파드중에서 blue만 접근가능하게
+	-  apiGroups: 
+	   -  ""  //비워두면 코어그룹임
+	   resources: ['ConfigMap']
+	   verbs: ['get','create','delete','update']
+	-  apiGroups: ["apps",'extensions']  //비워두면 코어그룹임
+	   resources: ['deployments']
+	   verbs: ['get','create','delete','update']	   
+	   
+
+이걸 롤바인딩으로 바인딩하면됨
+	apiVersion: rbac.authorization.k8s.io/v1
+	kind:RoleBinding
+	metadata:
+		name: 롤바인딩이름
+		namespace: 지정네임스페이스
+	subject:
+	- kind: User
+	  name: 유저이름
+	  apiGroup: rbac.authorization.k8s.io/v1
+	roleRef:
+		kind: Role
+		name: 롤이름(지금생성되어있는)
+		apiGroup: rbac.authorization.k8s.io/v1
+
+
+내가 그 권한이 있는지 알려면
+	k auth can-i 명령(get pods)
+하면 yes no 로 리턴옴
+그리고 걔가 권한있는질 알려면 
+	k auth can-i 명령(get pods) --as 유저이름
+하면 걔의 권한으로 가능한지 알수있음
+	k auth can-i 명령(get pods) --as 유저이름 --namespace 네임스페이스명
+으로 네임스페이스까지 확인가능
+
+그리고 네임스페이스 여러개써야할땐 한롤로 여러개하는거보다 롤 여러개만드는게 더 편함,아니면 클러스터롤쓰던가
+
+노드는 클러스터롤에서만 사용할수있음,특정네임스페이스에 포함되지않음
+클러스터롤에서 포함되는건
+	노드,pv,네임스페이스들,certificatesigningrequests등
+
+클러스터롤은 롤이랑 똑같이 만들면되고 kind랑 리소스만 다름(node나 pv같은거 넣을테니까)
+클러스터롤바인딩도 똑같음
+그리고 클러스터롤에 pod같은거 넣으면,모든네임스페이스의 pod에 접근가능함
+
+바인드된 유저/그룹을 찾으려면 롤바인딩에서 kind보면됨
+
+
+
+
+유저어카운트는 사용자가 쓰는거,서비스어카운트는 컴터가 쓰는거
+프로메테우스 젠킨스등 얘들은 서비스어카운트를 사용함
+
+서비스어카운트를 생성하면 서비스어카운트 토큰도 같이 자동으로 생성됨(시크릿으로 생성됨)
+
+즉
+	서비스계정생성
+	시크릿객체생성
+	서비스계정에 시크릿객체 연결
+	rbac 서비스계정에 연결
+그리고 이 토큰을 서로 통신할때 사용함
+즉 앱에서 쿠버네티스랑 통신을 해야할땐,이 시크릿의 토큰을 가져가서 curl의 
+	curl https:ip포트/api -insecure --header "Authorization:  Bearer 토큰내용"
+으로 통신하면됨(즉 토큰이 저사람이라는걸 확인함)
+토큰은 서비스어카운트를 desc하면 밑에 토큰이름나오는데,그 시크릿을 다시 desc하면 나옴
+
+
+그리고 쿠버네티스 내에서 파드나 디플로이먼트로 만들경우엔,그냥 시크릿을 볼륨으로 마운트해서 쓰면됨(이거도 자동으로된대)
+
+각 네임스페이스엔 자동으로 생성되는 서비스어카운트가 있고,
+쿠버네티스를 설치하면 기본으로 default가 있고 이건 모든 네임스페이스에 접근할수있음
+
+클러스터내에서 파드를 생성할경우엔,자동으로 현재사용자의 토큰볼륨을 자동으로 마운트함(기본값으로 디폴트의 서비스어카운트를 넣음)
+그리고 그 적힌곳을 직접가면 ca.crt랑 토큰이랑 네임스페이스가 있음
+
+만약 파드가 다른 서비스어카운트를 쓰고싶으면 컨테이너랑 같은라인에
+	serviceAccountName: 서비스어카운트이름
+을 쓸수있음
+이경우에 파드의경우 새로 생성해야함(apply로 덮어씌우기안됨),디플로이먼트는 상관없지만
+그리고
+	automountServiceAccountToken:false
+로 서비스어카운트토큰자동마운트를 막을수도 있음
+
+
+기본적으로 이미지앞에 /가 없으면 도커허브(library)로 인식함 nginx=docker.io/library/nginx  (레지스트리/유저네임/이미지이름)
+내이미지를 쓰려면 도커허브에 올리거나 사설레지스트리를 만들어야함
+도커허브말고도
+	gcr.io  구글
+등이있음
+
+얘들은 다 퍼블릭인데,기본적으로 클라우드를 쓰면 비공개레지스트리를 제공함
+그리고 도커허브도 비공개 레지스트리가 있는데,여기 접근하려면
+	--docker-server=
+	--docker-username=
+	--docker-password=
+	--docker-email=
+	
+	kubectl create secret docker-registry private-reg-cred  //이거가 공식페이지에 있으니까 이거쓰자그냥,즐찾해둠
+	--docker-username=dock_user 
+	--docker-password=dock_password 
+	--docker-server=myprivateregistry.com:5000 
+	--docker-email=dock_user@myprivateregistry.com
+	
+yaml생성시	
+타입은 type: "kubernetes.io/dockerconfigjson",데이터랑 같은라인
+이 있는 시크릿을 파드에서 제공해야함,컨테이너랑 같은위치에 imagePullSecrets를 넣으면됨
+	imagePullSecrets:
+	-  name: 시크릿명
+이거하면 디플로이먼트도 지웠다가 다시해야함 apply안됨
+
+
+kubectl create secret -help 를 보면 사용가능한 레지스트리 보안 방식이 나옴(도커레지스트리,generic,tls등)
+
+
+
+
+쿠버네티스에선 컨테이너수준보안과 포드수준 보안을 할수있는데,파드수준으로 하면 파드내 모든 컨테이너에 적용됨,둘다있으면 파드설정이 덮어씌워짐(컨테이너가 이김)
+파드단위로 설정하려면 스펙밑 컨테이너랑 같은라인에 securityContext:를 넣으면됨(파드레벨)
+	securityContext:
+		runAsUser:1000
+컨테이너단위로 하려면 컨테이너 밑에 네임이랑 같은라인에 적으면됨
+	- name: nginx
+	  image: nginx
+	  securityContext:
+		runAsUser:1000  //루트면 걍 지우면됨
+		capabilities:     //이건 컨테이너단위만 적용됨
+			add: ["MAC_ADMIN"] 
+
+
+network policy는,기본적으로 쿠버네티스는 모든노드가 서로서로 통신이 가능한데,이걸 특정 파드만 나한테 통신을 걸수있게 차단하는것(포트로 차단함)
+이건 레이블과 셀렉터로 차단할수있음,그리고 수신,송신 둘다 차단하거나 허용하거나 하나만 하거나 할수있음
+
+
+	apiVersion: networking.k8s.io/v1
+	kind: NetworkPolicy
+	metadata:
+		name: 정책이름
+	spec:
+		podSelector:
+			matchLabels:
+				레이블키: 레이블밸류  //이거 씌울 레이블,즉 보호받을애
+		policyTypes:
+		-  Ingress  //ingress랑 egress ,수신과 송신 두개잇음 
+		-  Egress  //둘중 하나나,둘다넣어도됨
+		ingress:
+		- from:
+		  -  podSelector:
+			    matchLabels:
+				  레이블키2:레이블밸류2  //이 레이블이 있는
+			 namespaceSelector:                //이거빼면 클러스터 전체에서 접근가능하고,넣으면 네임스페이스안에서만 접근됨
+				matchLabels:
+					레이블키3:레이블밸류3 
+		  -  ipBlock:
+				cidr: 192.168.5.10/32         //얘는 클러스터 외부에서 접근할때 사용함,저ip범위는 허용하는거
+		  ports:
+		  - protocol: TCP
+		    port: 3306      //나 자신의(보호받는애의) 이 포트만 허용됨
+		  - protocol: TCP
+		    port: 8080 
+		egress:
+		- to :
+			...  //위랑 똑같이 적으면됨
+		  ports:
+		  - protocol: TCP
+		    port: 80      //저 포트로 던지는거만 허용됨,즉 80포트로밖에 못던짐
+
+	
+	그리고 to나 프롬이 여러개와도됨,그게 보기쉬우면 그렇게해도됨(저렇게 or로 안하고 그냥 따로표기하는거임,결과는같겠지만)
+	즉 
+	 -to
+	  - 조건들
+	  ports
+	 -to
+	  - 조건들
+	  ports	 
+	이렇게되도됨
+	  
+		
+
+그리고 인그레스를 허용하면,거기에 대한 리턴은 이그레스가 아닌,인그레스만으로 됨(tcp는 서로 세션열어서 하는거라서 그거까진허용됨)
+즉,처음에 어떤방향으로 갈지(수동적으로 받을지 능동적으로 내가 먼저 걸지)를 가지고 인그레스 이그레스를 정하면됨
+
+네임스페이스를 쓰려면 당연히 네임스페이스에 레이블이 있어야함
+그리고 파드셀렉터가 없고,네임스페이스셀렉터만 있으면,그안에 있는 모든 파드가 거기 접근가능함(물론 포트는 맞춰야함),외부에선 접근불가
+
+그리고 보면 알겠지만,파드셀렉터랑 네임스페이스 셀렉터는 같은배열에 들어가있으니까 둘다만족해야하고
+ipblock는 따로있으니까 위에서 튕겨내면 얘가 받아서 확인하고 ok주는거임,즉 위랑 아래는 or임
+저기서 네임스페이스셀렉터도 분리할수있는데 -로,그러면 파드에서 보고 아니면 네임스페이스에서 보고 아니면 블록에서 보는거,전체 or됨
+즉 포함되면 and 아니면 or
+
+이건 kube-router,calico,romana,weave-net은 지원하는데 flannel은 지원하지않음
+그리고 flannel에서도 만들어지고 오류메세지도 안뜨는데,적용은안됨
 
 
 
@@ -563,6 +773,30 @@ data:
 
 
 
+
+
+
+	apiVersion: v1   
+	kind: Config       //cubeconfig,#HOME(환경변수 HOME)/.kube/config 에 위치
+	
+	current-context:컨텍스트명1
+	
+	clusters:
+	-  name: 클러스터명1
+	   cluster:
+	     certificate-authority:ca.crt  //ca는 여기
+		 server: https://경로:포트
+	contexts:
+	- name: 컨텍스트명1
+	  context:
+		cluster: 클러스터명1
+		user: 유저명1
+		namespace: 네임스페이스명1  //옵션,클러스터1의 네임스페이스1로 들어감
+	users:
+	-  name: 유저명1
+	   user:
+	     client-certificate: 유저.crt
+		 client-key: 유저.key
 
 
 

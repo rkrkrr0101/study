@@ -693,6 +693,127 @@ ipblock는 따로있으니까 위에서 튕겨내면 얘가 받아서 확인하�
 이건 kube-router,calico,romana,weave-net은 지원하는데 flannel은 지원하지않음
 그리고 flannel에서도 만들어지고 오류메세지도 안뜨는데,적용은안됨
 
+기본적으로 도커에선 컨테이너 스토리지에 저장된 정보들은 컨테이너가 사라지면 같이사라짐
+그리고 컨테이너는 이미지레이어와 컨테이너 레이어로 나눠지고,(c,d디스크라생각하면됨)이미지레이어는 리드온리,컨테이너는 rw둘다허용
+만약 이미지레이어에있는거 바꿔야하면,컨테이너레이어로 복사해서 그걸바꿔서 쓰는건 허용됨
+영구볼륨이 필요하면 docker volume create 볼륨명으로 만들고 docker run -v 볼륨명:/경로 로 컨테이너에 삽입가능
+이거 뭐 다 본건데 할필요없겠지,그 경로지정해서 그땅 먹을수도있고,볼륨지정되고 그거 겹치는거 다사라지게할거냐 그런거잇던거
+볼륨으로하면 내부데이터가 덮어쓰기안되면 살아있고,바인드마운트하면(경로) 내부 다사라지고 초기화됨
+그리고 docker run 할때 --volume-driver 드라이버명 으로 드라이버를 선택할수도있음(클라우드같은거쓸때,근데 뭐 쿠버네티스는 자동처리하겠지)
+
+쿠버네티스단에선,도커든 뭐든 외부로 나가서 cri를 거쳐서 작동하기때문에 신경안써도됨 로우레벨은
+그냥 cri쪽에 명령던지면 드라이버가 알아서함 볼륨 삭제든 생성이든
+
+볼륨만들땐(pv말고 그냥볼륨) 스펙밑 컨테이너랑 같은라인에
+	volumes:
+	-  name: 볼륨명1
+	hostPath:
+		path: /data  //실제 데이터위치 경로
+		type: Directory
+로 생성하고
+컨테이너에
+	volumeMounts:
+	-  mountPath: /opt  //컨테이너내에서 사용할 경로(바로가기라고보면됨)
+	   name:볼륨명1       //사용할 볼륨명
+
+이렇게하면,단일노드에선 상관없는데 다중노드에선 서로 다른데를 가리키고,어떻게 파드가 겹칠지 예상할수없기떄문에 사용못함
+그래서 외부에있는 스토리지를 사용하는데(아마존 스토리지같은)보통 클라우드에 다 있음
+
+	volumes:
+	-  name: 볼륨명1
+	   awsElasticBlockStore:
+	     volumeID:볼륨id(스토리지id)
+		 fsType:ext4  //저장타입
+
+
+이렇게 주먹구구식으로 안하고,볼륨을 잔뜩만들어두고 제일 적당한걸 가져가는식으로 하는게 pv/pvc임
+pv yaml은
+	apiVersion: v1
+	kind: PersistentVolume
+	metadata:
+		name: pv이름
+	spec:
+		accessModes:
+		-  ReadWriteOnce    //ReadOnlyMany,ReadWriteMany도 있음,말그대로 읽고쓰기 동시에할수있는 사람 수
+		capacity:
+			storage: 1GI
+		hostPath:          //이건 클라우드상황에선 사용되지않음,위에썻던 아이디값으로 대신함 awsElasticBlockStore이거
+			path: /tmp/data
+		persistentVolumeReclaimPolicy:Retain//delete나 retain이나 그런거 선택
+
+pvc가 생성되면 가장 요구사항(용량,액세스모드)이 비슷한 pv에 바인딩되고,파드는 그걸 가져다가 씀
+그리고 pvc에서 원하는 pv에 바인딩을 하고싶으면,레이블셀렉터로 바인딩을 직접 할순있음
+그리고 용량은,pvc가 적어둔거보다 크게줄순있는데 작게는 안줌
+
+pvc와 pv는 1대1관계이므로,다른클레임에선 그걸 사용할수없음
+만약 사용가능한 pv가 없거나,용량이 작으면,생길때까지 pending함
+
+pvc yaml은
+	apiVersion: v1
+	kind: PersistentVolumeClaim
+	metadata:
+		name: 클레임명
+	spec:
+		accessModes:         //ReadOnlyMany,ReadWriteMany도 있음,말그대로 읽고쓰기 동시에할수있는 사람 수
+		-  ReadWriteOnce
+		resources:
+		  requests:
+		    storage: 500Mi
+			
+pv랑 pvc는,액세스모드는 무조건 일치해야함
+그리고 pvc가 삭제되면,pv에 어떤작업을 할지(포멧할지 그냥둘지) 정할수있는데
+	persistentVolumeReclaimPolicy: 
+		Retain(그대로둠,수동으로 삭제해야하고 다른pvc가 사용할수없음)
+		Delete(자동삭제)
+		Recycle(그대로두는데,다른pvc가 사용할수도있음)
+
+파드에서 pvc쓸때는(pvc만 쓰면됨 바인딩되어있으니까)
+컨테이너밑에
+	volumeMounts:
+	-  mountPath: /opt  //컨테이너내에서 사용할 경로(바로가기라고보면됨)
+	   name:볼륨명1       //사용할 볼륨명
+하고
+컨테이너랑 같은라인에(스펙밑에)
+	volumes:
+	-  name: 볼륨명1
+	persistentVolumeClaim:
+		claimName:클레임이름
+으로 쓰면됨,클레임이름으로 로컬볼륨명1에 바운딩하고,그거가져다쓰면됨
+
+pvc는 apply덮어쓰기안되고 지우고다시만들어야함
+그리고 파드에서 사용중일경우엔 삭제되지않음(터미네이팅무한대기)
+retain시에 pvc 삭제하면 pv상태는 released되는데 이게 현재 데이터남아있고 다시배정안받는다는거
+
+클라우드쓸때 
+pv생성전에 클라우드에서 먼저 디스크를 생성하는걸 정적 프로비저닝 볼륨이라고 함
+그리고 포드(앱)에서 요구할때 자동으로 볼륨이 프로비저닝되는걸 동적프로비저닝볼륨이라고 함
+
+동적 프로비저닝을 할땐 storageClass를 써야함
+yaml은
+	apiVersion: storage.k8s.io/v1
+	kind:StorageClass
+	metadata:
+	  name:스토리지클래스명1
+	provisioner: kubernetes.io/gce-pd //구글
+	volumeBindingMode:WaitForFirstConsumer //WaitForFirstConsumer 는 파드가요청하면,immediate이면 바로연결
+	parameters: //각 회사에서 특정 조건을가진걸 배당해달라고 요구할수있음,이건 회사따라 다름,적힌건 구글
+		type: pd-standard        //pd-standard,pd-ssd 등있음
+		replication-type: none  //none,regional-pd 등있음,볼륨의 위치 지정,리저널이면 비쌈
+이렇게되면 pv는 필요없고,pvc에서 
+	spec: 
+		storageClassName:스토리지클래스명1
+
+해주면,pvc가 파드에 연결될때 자동으로 볼륨이생성됨,그러면 딱 요구한사이즈만큼 생성하고 바인딩함
+정확히는 pv를 만들필요가 없다뿐이지,스토리지클래스가 자동으로 pv를 생성하는것
+이런 스토리지 클래스를 여러개만들어서,각기 다르게 배급하는거도 가능해짐 파라미터덕분에(속도필요한애는 ssd주고 그런식)
+
+프로비저너가 kubernetes.io/no-provisioner 이면 동적프로비전을 제공하지않음(도큐참고)
+그리고 정적 프로비저닝할때도 스토리지클래스로 생성했으면 그쪽으로 연결시켜줘야함(같은 스토리지클래스끼리만 만날수있음)
+그리고 스토리지클래스의 volumebindingmode가 waitforfirstconsumer이면 파드생기기전까진 pending이고,immediate이면 바로 연결함
+
+
+
+
 
 
 

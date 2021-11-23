@@ -1,0 +1,161 @@
+	ip link
+로 네트워크 정보를 볼수있음
+ip addr add ip/네트워크갯수(24같은) dev eth0  하면 스위치내에 할당하고(2계층)내부망내에서 통신할수있음
+
+외부로 나가려면 라우터를 거쳐야함(3계층)
+라우터랑 스위치랑 연결된거도,그냥 스위치에 연결된 장치 하나라고 보고 똑같이 처리함(그냥 게이트웨이라고 정해진 장치로 던지는것)
+
+	route
+로 라우팅테이블을 볼수있음,여기에 게이트웨이 설정이 되어있어야,제대로 라우터로 던지고 외부랑 소통가능
+	ip route add 도착지ip/네트워크갯수(24같은) via 홉라우터ip
+로 라우팅테이블 추가가능
+
+이건 모든 시스템에 구성되어있어야함(최소 서로 통신하는애들은)
+사실 그냥 모르겠으면 라우터에 던지면 걔가알아서 해줌
+	ip route add default via 게이트웨이ip
+근데 내부망이랑 외부망이랑 둘다있는경우엔,디폴트쓰고,내부망도 따로처리해워야함(그쪽 ip대역은 따로 그쪽으로 준다고 라우팅테이블추가)
+그냥 라우팅테이블에 그쪽으로 통한다고만 해주면됨
+
+그리고 인터페이스간 패킷전달은 기본적으론 허용안되지만
+/proc/sys/net/ipv4/ip_forward 값을 1로주면 허용됨
+이건 영구적용안되는데, /etc/sysctl.conf에서 같은값을 수정하면 영구적용됨(net.ipv4.ip_forward=1)
+
+	ip link
+	ip addr
+이거로 변경사항만들면 재부팅하면 사라지니까
+	/etc/network/interfaces 파일에서 설정해야함
+	
+	
+dns 추가하려면 /etc/hosts 에
+	ip  문자열
+ex) 192.168.1.11  db
+이렇게하면됨
+그러면 그냥 db라는 문자가 들어오면 기계적으로 ip로 치환해서 내보냄
+근데 외부망의경우엔 보통 dns서버가 있고,내부에서 찾다가 없으면 거기가서 물어보고 있으면 그거 컴퓨터로 가져옴
+dns서버 추가할떈 /etc/resolv.conf 에
+	nameserver   ip주소
+주면됨
+이건 여러개를 둘수있는데,위에서부터 순서대로 서치하고 서치성공하면 그냥그거씀(되든안되든)
+
+그래서 etc/hosts는 개인용도로 테스트할때나 사용됨
+기본적으론 로컬보고 외부로 나가는데,etc/nsswitch.conf에서 그 순서를 바꿀수도있음
+거기서 hosts: files dns인걸 hosts: dns files 로 바꾸면됨
+
+그리고 도메인에 서브도메인이 있을경우,dns와 dns를 매핑하고 재귀적으로 풀어가는식도 될수있음
+
+nslookup은 특정도메인의 ip와 그걸 무슨dns에서 찾았는지를 볼수있음,단 이건 로컬호스트의 결과는 알수없음,무조건 외부dns만됨
+좀더 자세히보고싶으면 dig
+
+	
+
+컨테이너상에서 돌아가는 프로세스id와 호스트에서 표시되는 프로세스id는 다름,이게 네임스페이스의 방식
+	
+리눅스에서 네트워크네임스페이스 생성시엔
+	ip netns add 네임스페이스명
+하면됨
+	ip netns
+로 생성된 네임스페이스를 볼수있음
+
+자세히 보려면
+	ip netns exec 네임스페이스명 ip link
+	ip -n 네임스페이스명 link
+으로 볼수있음
+
+이렇게 외부내부 분리되는건 arp테이블,라우팅테이블도 마찬가지임
+즉 내부에서 따로 뭐 안해주면 외부랑통신불가(같은호스트상이라도)
+
+이떄 네임스페이스끼리 연결해주고싶으면
+	ip link add 통로1 type veth peer name 통로2
+하고
+	ip link set 통로1 netns 네임스페이스명1
+	ip link set 통로2 netns 네임스페이스명2
+하면됨	
+
+그리고
+	ip -n 네임스페이스1 addr add 내부ip dev 통로1
+	ip -n 네임스페이스2 addr add 내부ip dev 통로2
+해서 ip부여해주고
+	ip -n 네임스페이스1 link set 통로1 up
+	ip -n 네임스페이스2 link set 통로2 up
+로 살려주면됨
+
+이러면 서로 arp테이블에 값이 적혀있고,ping도 감
+	
+이렇게 만들면,호스트네임스페이스에선 접근이 안되고,네임스페이스내에서 접근해야함
+
+만약 네임스페이스가 많으면,가상 스위치를 만들고 거기로 연결하면됨
+
+	ip link add v-net-0 type bridge
+	ip link set dev v-net-0 up
+	
+	ip link add 통로1 type veth peer name 통로2	
+	ip link set 통로1 netns 네임스페이스명1
+	ip link set 통로2 master v-net-0	       //이걸 모든네임스페이스에 반복(생성하고 연결)
+	
+	ip -n 네임스페이스1 addr add 내부ip dev 통로1
+	ip -n 네임스페이스1 link set 통로1 up	
+	
+	ip addr add ip/네트워크갯수(24같은) dev v-net-0   //스위치에 ip부여
+이러면 내부망속에서는 돌아감(네임스페이스끼리)
+여기서 외부망에 가려면,라우팅테이블을 추가해야함
+	ip netns exec 네임스페이스명1 ip route add 외부ip via 게이트웨이ip
+하면됨
+이러면근데 내부망에서 통신안될수도있으니까 내부먼저로 순서바꿔줘야함
+	iptables -t nat -A POSTROUTING -s ip대역/24 -J MASQUERADE
+그리고 디폴트 라우트테이블 추가
+	ip netns exec 네임스페이스명1 ip route add default via 라우터ip
+
+아니면 특정포트로 들어온걸 전부 포트포워딩할수있음
+	iptables -t nat -APREROUTING --dport 80 --to-destination 내부망:80 -j DNAT
+	
+
+
+
+도커에선
+	docker run --network none 이미지
+로 네트워크 없이 생성하고(나가는거도 들어오는거도 막힘)
+	docker run --network host 이미지
+로 호스트와 똑같이 생성하고(이러면 포트 같은데를 쓰는애는 쓸수없음,포트가 하나기떄문,그래서 포트포워딩함)
+	docker run 이미지 
+하면 기본값인 브리지로 생성됨,얘는 브릿지를 통한 내부ip가 따로있고,브릿지를 통해 호스트로 가고 호스트를 통해 외부랑 통신하는식	
+
+브리지는
+	docker network ls
+의 brige로 볼수있음,ip link로도 볼수있음
+
+즉 컨테이너와 네트워크네임스페이스는 같은거고,직접 저거 복잡하게 연결하던걸 걍 대신해주는거
+포트포워딩은 iptable로 하는데 자동으로 해줌도커가
+정확히는 브리지라는 플러그인이 대신해줌(어짜피 하는건 다똑같으니까)
+
+쿠버네티스는 none로 도커를 생성하고,그걸 브리지로 직접 연결함
+
+
+ip link
+ip addr
+ip route
+route
+cat /proc/sys/net/ipv4/ip_forward
+arp
+netstat -plnt
+
+ip addr add ip/네트워크갯수(24같은) dev v-net-0   //스위치에 ip부여
+ip route add default via 게이트웨이ip
+그리고 네트워크 플러그인을 적용할땐
+https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/#steps-for-the-first-control-plane-node
+(2 단계)
+하면됨
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+	
+	

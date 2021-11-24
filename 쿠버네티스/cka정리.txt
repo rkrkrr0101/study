@@ -845,14 +845,79 @@ ip route치면 게이트웨이(디폴트값)나옴
 
 netstat -plnt 치면 현재 점유중인 포트와 프로그램이름나옴(describe의 프로브에도 같은값인듯)
 
+쿠버네티스에선 모든 파드가 내부ip만 가지고 서로 통신할수있어야함
+기본적으로 노드내에선 브릿지로 연결되고,한노드에서 특정ip가 할당되면,다른 모든노드에서 그ip를 할당하고,거기로 통신하면 파드의 위치로 보냄(라우팅)
+좀더 커지면,노드들을 서브넷팅한다음에 그안에서만 파드를 만들수있게하고,서브넷팅을 가지고 라우팅테이블을 생성함
 
+이런걸 쿠버네티스가 직접하진않고,cni를 통해서 하청을주면 cni가 스크립트를 실행시켜서 함(매개변수받아서 스크립트에넣는식)
+즉,쿠블렛이 컨테이너를 생성하면 명령줄인수를 cni에 넘겨서 패스를 만듬
 
+cni플러그인은 kubelet.service의
+	--network-plugin=cni    //ps -aux | grep cni-conf-dir 로 검색가능
+	--cni-bin-dir=/opt/cni/bin   //여기서 쓸수있는거 볼수있고
+	--cni-conf-dir=/etc/cni/net.d  //여기서 현재 쿠버네티스가 사용중인거 볼수있음
+에 있음
+그리고
+	/etc/cni/net.d
+에서 뭘쓸질 찾아서
+	/opt/cni/bin
+에서 그거대로 함
 
+그리고 저 서브넷팅을 가지고 하는거도 노드100개이하에선 잘동작하는데 그이상가면 너무부하커져서(라우팅테이블의 한계)
+그래서 쓰는게 weave같은 서드파티플러그인임
+얘끼우면 얘가 알아서 할테니까 신경안써도됨(각 노드에 에이전트를 배치하고,걔한테 주면 알아서함,걔들끼리 네트워크가있음)
+정확히는 나가려는걸 얘가 뺏어서 가져가서 새로 헤더 갈아치워서 보내고,받는쪽의 에이전트가 다시 헤더풀어서 원복하고 전달함
 
+kubectl exec busybox ip route 로 디폴트게이트웨이를 볼수있음
 
+weave를 설치하는건,
+	kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+이거 치면 데몬셋으로 알아서 설치함
 
+네트워크 문제생기면
+	k get pod --all-namespaces
+해서 문제생긴 노드에 있는 weave-net보고
+	k logs weave-net-id값 weavve -n kube-system
+하면 로그볼수있음
 
+	ps -aux | grep kubelet 해서 network-plugin찾는거로 쿠버렛의 네트워크플러그인을 알수있음
 
+파드 desc에서 unable to allocate ip address 뜨면 기본네트워크가 문제생긴거
+networkplugin cni failed to set up pod 머시기 network:unable to allocate ip address 
+그리고 이때 보면,네트워크플러그인이 쿠버네티스상에 없는걸 볼수있음(pod전체검색해서 안나옴)
+
+파드에 ip배정은 cni가 함
+이건 iplist를 만들어서,각 노드(노드별로 서브넷팅이 되어있으니까)내에서 ip를 중복없이 할당함
+	/etc/cni/net.d/net-script.conf
+에 서브넷과 디폴트라우트,플러그인 유형을 설정할수있음(ipam하위의 type)
+ip a 로 ip범위도 당연히볼수있음
+
+보통 파드가 다른파드에 접근할떈 서비스를 사용함
+이때 내부면 클러스터ip 외부면 노드포트나 로드밸런서
+노드포트일경우,그 노드에 그 파드가 있든없든 그포트로 접근하면 다 노드포트서비스로 연결됨
+
+그리고 서비스는 실제 형태는없고,논리적 존재임()
+만약 누가 서비스의 ip로 던지면,쿠버네티스가 그걸 서비스에 매핑된 파드의 ip로 다시던져줌,kubeproxy(여러개면 랜덤이나 조건따라서)
+
+kubeproxy는
+	kube-proxy --proxy-mode [userspace|iptable|ipvs]
+로 뭘로쓸지 선택할수있음,기본값 iptable
+	kube-api-server --service-cluster-ip-range ipNet
+로 서비스의 클러스터 ip 범위를 볼수있음(기본값 10.0.0.0/24)
+	ps aux | grep kube-api-server
+로 api서버 전체범위를 알수있음
+
+	cat /var/log/kube-proxy.log
+로 쿠베프록시가 서비스에게 줄떄 로그도 볼수있음
+
+노드의 네트워크 범위 알때는,노드ip를 체크하고,거기속한 ip a값을 찾으면됨
+
+	kubectl logs <weave-pod-name> weave -n kube-system
+의 ipalloc-range로 파드의 범위도 찾을수있음
+
+	cat /etc/kubernetes/manifests/kube-apiserver.yaml | grep cluster-ip-range
+로 서비스의 ip범위를 알수있음
+kubeproxy 파드의 로그로 프록시가 사용중인 프록시모드도 알수있음
 
 
 

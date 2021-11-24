@@ -902,7 +902,7 @@ ip a 로 ip범위도 당연히볼수있음
 kubeproxy는
 	kube-proxy --proxy-mode [userspace|iptable|ipvs]
 로 뭘로쓸지 선택할수있음,기본값 iptable
-	kube-api-server --service-cluster-ip-range ipNet
+kube-api-server.yaml의 --service-cluster-ip-range(스태틱파드)
 로 서비스의 클러스터 ip 범위를 볼수있음(기본값 10.0.0.0/24)
 	ps aux | grep kube-api-server
 로 api서버 전체범위를 알수있음
@@ -918,6 +918,129 @@ kubeproxy는
 	cat /etc/kubernetes/manifests/kube-apiserver.yaml | grep cluster-ip-range
 로 서비스의 ip범위를 알수있음
 kubeproxy 파드의 로그로 프록시가 사용중인 프록시모드도 알수있음
+
+쿠버네티스는 기본적으로 dns를 가지고있음
+이때 다른네임스페이스를 접근하고싶으면,네임스페이스까지 붙여줘야함
+	서비스이름.네임스페이스이름.svc(타입).cluster.local
+파드도 접근할수있긴한데,쿠버네티스 특성상 추천하지도않고 할일도 별로없음,그냥 서비스쓰면됨
+이때는 파드이름을쓰지않고,파드ip를 192-168-0-1 .을 -로 대신한 이걸 이름으로 씀
+	192-168-0-1.네임스페이스명.pod.cluster.local
+
+저게 기본적으로 주는 이름이고,저건 마스터노드의 coredns에 저장됨(/etc/resolv.conf)
+coredns는 마스터노드의 레플리카셋으로 2개 생성됨(많이쓰는거라 고가용성때문에 2개한듯)
+
+cluster.local이 들어간 모든건 코어dns에서 처리됨(/etc/coredns/Corefile에서 볼수있음)
+그리고 여기서 파드를 192-168-0-1 이렇게해서 사용할수있게 할수있음(pods insecure)
+
+그리고 코어dns의 설정파일은 컨피그맵에 있는데,이걸 수정해서 설정참조위치를 바꿀수도있음
+
+그리고 코어dns의 서비스를 거쳐서 dns:ip매핑을 하는데,이건 쿠버네티스(쿠브렛)에서 자동으로 함
+그리고 dns명으로 날렸을때 그거 바꾸는거도 쿠버네티스가 알아서 함(/etc/resolv.conf에 있음)
+
+서로 다른네임스페이스라서 통신안될때 디플로이먼트의 env에서 host를 고치면됨(db연결의 경우)
+
+	kubectl exec -it hr -- nslookup mysql.payroll > /root/CKA/nslookup.out
+hr에서 mysql서비스접속해서 nslookup을 날린결과를 nslookup.out에 저장
+
+
+외부에서 접속할때 노드포트를 쓸수있지만,이러면 트래픽관리(한파드에 트래픽이 몰릴수있음)가 안되고,포트선택을 해야함
+그래서 80으로 들어온걸 특정 포트로 바꿔주는 프록시를 사용할수있음
+
+물론 클라우드설정이면 로드밸런서쓰면됨(얘한테 던지면 알아서 로드밸런싱해줌)
+이땐 로드밸런서 서비스를 가리키게 dns를 설정하면됨(포트는 쟤가 알아서함)
+
+인그레스는 웹에서의 라우터처럼 들어오는 url을 분석해서 특정 서비스로 매핑할수있음
+즉 인그레스는 서비스를 선택하는거임
+인그레스로 http랑 https를 각각 처리하게 할수도있고
+인그레스단에서 ssl을 전부처리할수도있음
+
+인그레스를 7레이어 로드밸런서라고 생각하면됨
+
+그리고 인그레스를 써도 외부에서 접근할수있게 노트포트나 로드밸런서로 노출은 해야함 
+기본적으론 쿠버네티스엔 인그레스가 없고,따로 받아야함
+gce나 nginx를 주로쓰는듯
+
+nginx인그레스컨트롤러는 디플로이먼트로 배포됨
+그리고 쓸때 인그레스컨트롤러에
+	env:
+	- name: POD_NAME
+	  valueFrom:
+		fieldRef:
+			fieldPath: metadata.name
+	- name: POD_NAMESPACE
+	  valueFrom:
+		fieldRef:
+			fieldPath: metadata.namespace
+	ports:
+	- name:http
+	  containerPort:80
+	-name: https
+	  containerPort:443
+를 넣어줘야함			
+
+그리고 노드포트로 여기 접근하는 서비스를 만들고(80,443 포트)
+서비스 어카운트도 만들어야함
+
+
+인그레스의 yaml은
+	apiVersion: extensions/v1beta1
+	kind: Ingress
+	metadata:
+		name: 인그레스이름
+	spec:
+		backend:
+			serviceName: 서비스이름
+			servicePort: 서비스포트
+
+	apiVersion: networking.k8s.io/v1
+	kind: Ingress
+	metadata:
+		name: 인그레스이름
+		namespace:네임스페이스명
+	spec:
+		rules:
+		- host: wear.my.com
+		  http:
+			paths:
+			- path: /wear
+			  pathType: Prefix
+				backend:
+					service:
+					  name: 서비스이름1
+					  port:
+					    number: 서비스포트
+			paths:
+				backend:
+					service:
+					  name: 서비스이름1
+					  port:
+					    number: 서비스포트
+		- host: my.com
+			- path: /watch
+			  pathType: Prefix
+				backend:
+					service:
+					  name: 서비스이름1
+					  port:
+					    number: 서비스포트		
+
+그리고 정의되지않은곳으로 가려고하면 default-http-backend라는 서비스(404)로 감
+
+kubectl create ingress ingress-test --rule="wear.my-online-store.com/wear*=wear-service:80"
+이렇게 명령형으로 생성도가능,드라이런하기좋음
+
+인그레스의 기본호스트(/앞의값)은 desc의 rules/host에 있음(전체면 *)
+
+정확히는
+	인그레스ip:인그레스포트/태그 -->태그에맞는  서비스ip:서비스포트
+로 바꿈,즉 인그레스ip만 알고있으면 걔가 알아서 리턴하는거,리버스프록시
+그리고 rewrite-target옵션이 있으면 뒤에 태그를 지워주고,없으면 그냥 그대로 
+	서비스ip:서비스포트/태그
+로 보냄
+이건
+	annotations:
+		nginx.ingress.kubernetes.io/rewrite-target: /
+이렇게 어노테이션에 넣어서 nginx ingress controller가 알아서 처리함
 
 
 

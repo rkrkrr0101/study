@@ -981,6 +981,19 @@ nginx인그레스컨트롤러는 디플로이먼트로 배포됨
 그리고 노드포트로 여기 접근하는 서비스를 만들고(80,443 포트)
 서비스 어카운트도 만들어야함
 
+ha에서 요청이 성공했냐 실패했냐는,과반수를 넘게 성공했냐 아니냐로 나뉨,그래서 3,5같은 수로만 etcd나 마스터노드를 둘수있음
+요청이 실패하면,적용했던걸 지우고 실패했다고 알림
+보통 3개나 5개를 둠,5개넘어갈필요는 없음
+
+
+kubeadm init --apiserver-cert-extra-sans=controlplane --apiserver-advertise-address 10.2.223.3 --pod-network-cidr=10.244.0.0/16
+
+
+
+
+
+
+
 
 인그레스의 yaml은
 	apiVersion: extensions/v1beta1

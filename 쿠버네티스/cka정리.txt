@@ -987,7 +987,8 @@ ha에서 요청이 성공했냐 실패했냐는,과반수를 넘게 성공했냐
 
 
 kubeadm init --apiserver-cert-extra-sans=controlplane --apiserver-advertise-address 10.2.223.3 --pod-network-cidr=10.244.0.0/16
-
+이거할때 그냥 kubeadm init만 해도 시험에선 되는듯?
+그냥 설치는 버리자
 
 
 
@@ -1056,6 +1057,71 @@ kubectl create ingress ingress-test --rule="wear.my-online-store.com/wear*=wear-
 이렇게 어노테이션에 넣어서 nginx ingress controller가 알아서 처리함
 
 
+트러블슈팅할때 파드살아있으면 먼저 curl로 서비스접속해보고,안되면 서비스 엔드포인트보고,레이블확인,
+그리고 로그확인(desc랑 logs),이떄 -f --previous 로 실패하는걸 봐야함
+
+다이어그램 주어지면 다이어그램에 맞추자
+
+그리고 이상한거 생기면 전부 원본값에 맞추자
+그리고 서비스의 타겟포트는,서비스가 갈곳(db서비스면 db에서 열린포트)의 포트로 가야함,서비스의 포트는 들어오는값(저포트로 들어옴)
+액세스거부는 패스워드아이디틀렸을떄
+
+kubectl get ep 로 엔드포인트볼수있음
+
+마스터노드문제의경우,kube-system에 전부 제대로있는지 확인
+	service kube-apiserver status 로 api서버 상태확인
+	service kube-controller-manager status 로 컨트롤러매니저 상태확인
+	service kube-scheduler status 로 스케줄러 상태확인
+	service kubelet status 로 쿠브렛 상태확인
+	service kube-proxy status 로 쿠브렛 상태확인
+다 정상이면
+	k logs kube-apiserver-master -n kube-system 으로 로그확인
+	sudo journalctl -u kube-apiserver 로 확인할수도있음
+
+/etc/systemd/system/kubelet.service.d/10-kubeadm.conf 찾으면 쿠브렛설정파일 위치찾을수있고(service kubelet status 하면나옴)
+거기서 staticpodpath찾으면 그위치임
+/etc/kubernetes/mainifests
+
+노드도 k describe node 노드명 으로 자세히 볼수있고,문제생긴데 알수있음
+문제가 있으면 true뜸,없으면 레디가 true
+워커노드 연결안되면 다 언노운뜸
+이땐 노드들어가서
+	top
+	df -h
+로 노드상태보고
+	service kubelet status
+	sudo journalctl -u kubelet -f (잘보면 ca파일같은거 에러뜸)
+	openssl x509 -in /var/lib/kubelet/worker-1.crt -text ca만료확인
+로 쿠블렛 상태확인
+그리고 단순히 꺼진거면(서비스스테이터스가 데드)
+	systemctl daemon-reload
+	service kubelet start
+	
+로 재시작가능(일단 쿠브렛이면 이거부터해보고 딴거하자)
+
+node01 not found 하고 api서버 어쩌구하는건 api서버랑 통신안된다는소리니까 포트확인하자(기본 6443)
+이때 status보면 타임아웃(리퓨즈)날거임
+/etc/kubernetes/kubelet.conf에 있음,
+service kubelet status으로 위치따고,그안에 kubeconfig위치따면 있음
+그리고 이떄 쉬프트g누르면 맨밑으로감
+마스터에서 k cluster-info 하면 기본포트나옴
+
+일반적으로 워커노드 뻗는거문제는 kubelet아니면 kubeproxy임
+
+
+코어dns가 펜딩이면
+	네트워크플러그인 설치확인
+	kube-dns의 엔드포인트 확인
+쿠베프록시가 문제이면
+	일단 있긴한지 확인하고
+	로그확인
+	컨피그맵확인(kube-config) 컨피그맵에서  
+		데이터란의 바로밑(kubeconfig아니고 그걸 통틀어서 있는 config.conf와 kubeconfig의파일말고 경로만더함)
+			/var/lib/kube-proxy/  +  config.conf
+	구성파일 확인
+	쿠베프록시 컨테이너가 실행중인지 확인(netstat -plan | grep kube-proxy)
+
+일단 문제있는거있나 파드확인하고,없는데 네트워크에러면 wave같은 플러그인빠졋나 확인
 
 
 yaml로 생성시 api버전

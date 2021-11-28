@@ -1,0 +1,27 @@
+$.car.wheels[?(@.model=='KDJ39848T')]
+$ 이건 루트
+$.employee.payslips[2]  배열
+$.car.wheels[?(@.model=='KDJ39848T')]  하위트리 전부 서치,겹치지않으면 여러단계밑도 서치됨
+$.?(@=='car') 이거로 키값밸류 아닌거도 찾을수있음
+$.[0] 이것도됨
+
+$.?(@=='car' || @=='bus') or   and는 &&
+$[0,3] 0과 3번째
+$[0:3] 0부터 3번까지
+
+
+$.* 하면 전체 밸류만 나옴
+$.*.color 하면 처음거무시하고 두번쨰꺼의 컬러만
+$..*.*.model 이런식으로 하나나올떄마다 상위괄호를 전체에서 지운다고생각하면됨
+$..*.laureates.*.id 보통 배열에선 한번 와일드카드 써줘야 값만 뽑을수있음
+
+$.prizes[?(@.year=2014)] 특정필드에서 특정값 찾을떈 이렇게
+
+$[-5:].age 처음부터 -5값의 나이
+
+
+
+리스트딕셔너리 [{}]는 선택하고나서 *로 딕셔너리 벗겨줘야함
+$.status.containerStatuses[*]
+
+$.status.containerStatuses[?(@.restartCount==2)].restartCount

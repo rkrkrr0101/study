@@ -1123,6 +1123,46 @@ service kubelet status으로 위치따고,그안에 kubeconfig위치따면 있�
 
 일단 문제있는거있나 파드확인하고,없는데 네트워크에러면 wave같은 플러그인빠졋나 확인
 
+jsonpath는 yaml안의 데이터를 밖을 뽑아내서,-o wide로 안보이는거도 볼수있고,순서도 바꿀수있음
+	k get pod -o json
+으로 구성보고
+	k get pod -o=jsonpath= '{json패스1}{json패스2}{json패스3}'
+	json패스는 .items[0].spec.containers[0].image 이런식
+	전체가져올려면 .items[*].spec.containers[0].image
+jsonpath에서 서식주려면 중간에 넣으면됨
+	k get pod -o=jsonpath= '{json패스1}{"\n"}{json패스2}{json패스3}'
+
+그리고 원래 k get pod 처럼 넣으려면
+	k get pod -o=jsonpath= '{range.items[*]}{.metadata.name}{"\t"}{.status.capacity.cpu}{"\n"}{end}  '
+
+
+아니면 그냥
+	k get pod =o=custom-columns=컬럼이름:jsonpath 
+해도됨
+	k get node =o=custom-columns=node:.metadata.name,cpu:status.capacity.cpu
+이런식임
+
+여기서 정렬하려면
+	k get node =o=custom-columns=node:.metadata.name,cpu:status.capacity.cpu --sort-by=status.capacity.cpu
+저 정렬은 그냥 커스텀컬럼없이해도 동작함
+	k get node --sort-by=.status.capacity.cpu
+	k get pv --sort-by=.spec.capacity.storage
+그리고 맨처음엔 .items[]고,괄호쳐야댐 {}
+,넣을땐 양쪽에 스페이스바 넣으면안됨
+
+  k get pv --sort-by=.spec.capacity.storage -o=custom-columns=NAME:.metadata.name,CAPACITY:.spec.capacity.storage>/opt/outputs/pv-and-capacity-sorted.txt
+
+그리고 jsonpath할땐 ''말고 ""써야됨
+
+jsonpath는 다시하자
+
+exam2 6,7
+
+
+csr에서 csr은 진짜 인증서등록만 하는거임,그래서 얘이름으로 엮어줄필요없고,컨피그에 유저추가할때,등록된 인증서랑 같기만하면됨
+그래서 롤바인딩에 subject에 이름적을땐,요구하는 이름 (john같은)을 적으면되고 csr이름 적을필요없음
+
+그리고 dns에서 파드는 ip로 기록되는데 그때 .말고 -써야함
 
 yaml로 생성시 api버전
 	pod:v1

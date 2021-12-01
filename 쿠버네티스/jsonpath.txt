@@ -25,3 +25,7 @@ $[-5:].age 처음부터 -5값의 나이
 $.status.containerStatuses[*]
 
 $.status.containerStatuses[?(@.restartCount==2)].restartCount
+
+
+
+쿠버네티스에서 쓸땐 -o json으로 뽑아서 보고 넣고,치트시트에 대충있으니까 그거 바꿔서쓰자

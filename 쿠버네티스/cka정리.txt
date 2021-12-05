@@ -1170,6 +1170,8 @@ killsh는 안해도될듯,범위가 다름
 책상정리 웹캠
 인그레스 네트워크폴리시
 
+service kubelet status,service kubelet start 외워두자
+
 yaml로 생성시 api버전
 	pod:v1
 	service:v1

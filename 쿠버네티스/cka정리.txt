@@ -1172,6 +1172,7 @@ killsh는 안해도될듯,범위가 다름
 
 service kubelet status,service kubelet start 외워두자
 엠프티볼륨기반으로 컨테이너끼리 데이터공유
+그리고 롤에선 전부 소문자 뛰어쓰기없이(리소스들,파드나 pv같은거,사용규칙에 있으니까 그거보고)
 
 yaml로 생성시 api버전
 	pod:v1

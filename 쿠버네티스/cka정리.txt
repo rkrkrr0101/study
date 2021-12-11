@@ -1172,6 +1172,7 @@ killsh는 안해도될듯,범위가 다름
 
 
 cka끝
+합격
 
 service kubelet status,service kubelet start 외워두자
 엠프티볼륨기반으로 컨테이너끼리 데이터공유

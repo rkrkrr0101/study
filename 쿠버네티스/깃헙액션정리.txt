@@ -1,0 +1,104 @@
+깃헙액션 시작하는건,레포 액션칸에서 원하는거 누르면 기본적으로 템플릿을 자동으로 만들어줌,
+수동으로 만들려면 .github/workflows/시작파일.yml
+을 넣어주면됨
+
+이거에서 각 코드설명은
+	# Repository의 Actions 탭에 나타날 Workflow 이름으로 필수 옵션은 아닙니다.
+	name: CI
+
+	# Workflow를 실행시키기 위한 Event 목록입니다.
+	on:
+	  # 하단 코드에 따라 develop 브랜치에 Push 또는 Pull Request 이벤트가 발생한 경우에 Workflow가 실행됩니다.
+	  # 만약 브랜치 구분 없이 이벤트를 지정하고 싶을 경우에는 단순히 아래와 같이 작성도 가능합니다.
+	  # on: [push, pull_request]
+	  push:
+		branches: [develop]
+	  pull_request:
+		branches: [develop]
+
+	  # 해당 옵션을 통해 사용자가 직접 Actions 탭에서 Workflow를 실행시킬 수 있습니다.
+	  # 여기에서는 추가적으로 더 설명하지는 않겠습니다.
+	  workflow_dispatch:
+
+	# 해당 Workflow의 하나 이상의 Job 목록입니다.
+	jobs:
+	  # Job 이름으로, build라는 이름으로 Job이 표시됩니다.
+	  build:
+		# Runner가 실행되는 환경을 정의하는 부분입니다.
+		runs-on: ubuntu-latest
+
+		# build Job 내의 step 목록입니다.
+		steps:
+		  # uses 키워드를 통해 Action을 불러올 수 있습니다.
+		  # 여기에서는 해당 레포지토리로 check-out하여 레포지토리에 접근할 수 있는 Action을 불러왔습니다.
+		  - uses: actions/checkout@v2
+
+		  # 여기서 실행되는 커맨드에 대한 설명으로, Workflow에 표시됩니다.
+		  - name: Run a one-line script
+			run: echo Hello, world!
+
+		  # 이렇게 하나의 커맨드가 아닌 여러 커맨드도 실행 가능합니다.
+		  - name: Run a multi-line script
+			run: |
+			
+이렇게 나뉘는데
+on이 이벤트트리거고,잡이 트리거발동했을때 실행시킬일
+
+잡의 빌드의 runs-on은 실행할 os설정
+
+스텝의 uses는 사용할 액션(actions/checkout@v2은 해당 레포지토리의 전체를 가져옴)
+런으로 리눅스 명령어를 실행할수있음
+그리고 깃허브비밀번호같은 중요정보가 필요하면(그 레포에 이슈올린다던가),정보를 환경변수취급하고 시크릿에서 가져올수있음
+이거 세팅은 해당레포의 설정의 시크릿에 있음
+
+ci용 블럭을 만들땐
+
+	name: Automatically Deployment  #이름
+
+	on: [push]  #설정트리거
+
+	jobs:
+	  deployment:
+		runs-on: ubuntu-latest  #사용os
+
+		# 해당 Job의 이름을 아래와 같이 설정하여 Actions 탭에서 확인할 수 있게 설정합니다.
+		name: Deploying to surge   #잡이름
+
+		steps:
+		  # 해당 레포지토리로 check-out하는 Action을 불러왔습니다.
+		  - uses: actions/checkout@v2
+
+		  # Node 환경을 설정하여 npm 커맨드를 사용할 수 있도록 하는 Action을 불러옵니다.
+		  # 여기에서는 14 버전을 사용하고 있습니다.
+		  - uses: actions/setup-node@v2
+			with:
+			  node-version: '14'
+		  # 해당 프로젝트에서 사용하는 모든 라이브러리와 Surge를 설치합니다.
+		  - name: Install Dependencies and Surge
+			run: |
+			  npm install
+			  npm install surge --global
+		  # React 프로젝트를 빌드합니다.
+		  - name: Build React Application
+			run: npm run build		
+		  # Surge에 빌드된 파일을 배포합니다.
+		  - name: Deploy React Application to Surge
+			run: surge ./build ${{ secrets.SURGE_DOMAIN }} --token ${{ secrets.SURGE_TOKEN }}			
+이렇게 셋업노드로 npm을 쓰게하고 npm으로 원하는 라이브러리를 전부설치하고 빌드하고 배포하면됨
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

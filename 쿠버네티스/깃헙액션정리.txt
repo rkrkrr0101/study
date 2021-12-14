@@ -86,6 +86,10 @@ ci용 블럭을 만들땐
 			run: surge ./build ${{ secrets.SURGE_DOMAIN }} --token ${{ secrets.SURGE_TOKEN }}			
 이렇게 셋업노드로 npm을 쓰게하고 npm으로 원하는 라이브러리를 전부설치하고 빌드하고 배포하면됨
 
+그리고 잡은 여러개를 둘수있는데,따로 명시없으면 병렬적으로 실행하고,명시하면 순서대로 실행할수도있음
+이떈
+	jobs 를 jobs_1 ,jobs_2 이렇게 넣으면됨
+
 
 
 

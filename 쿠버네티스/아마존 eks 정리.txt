@@ -2,4 +2,141 @@
 	스킵
 2.쿠버네티스환경구축과 예제앱
 1.예제앱과 aws기본
+	아마존의 서비스들
+		S3:aws의 클라우드 스토리지 서비스,버킷이라는 영역을 생성하고(최소단위) 거기에 파일을 저장
+		cloudFront:aws의 컨텐츠전송네트워크,웹,이미지,동영상등을 빠르게 전송함,홈페이지를 여기를통해서 접속하면됨
+		rds:aws의 관계형 db,여러종류가 있음(오라클,마이sql등)
+		ecr:aws의 컨테이너 레지스트리 관리서비스
+		ec2:aws의 가상머신서비스,배스천 호스트(외부와 유일하게연결된 호스트)로 주로사용,eks의 워커노드도 이거로 동작
+		elb:aws의 로드밸런서,l7로드밸런서(애플리케이션로드밸런서),l4로드밸런서(네트워크로드밸런서),게이트웨이로드밸런서(다른회사거 같이쓰는용도)
+			클래식로드밸런서(기본로드밸런서,http,https,tcp로 분산가능하고,기본적인 로드밸런서를수행)가 있음
+		iam:aws에 접속하는 사용자와 권한을 관리하는 서비스
+	eks설치법
+		보통 eksctl로 설치함
+		이러면 vpc(가상내부클라우드),서브넷,보안그룹등을 한번에 구성할수있음
+		
+	vpc는 서버등의 리소스를 논리적으로 분리된 영역으로 나눠둔거
+	하나의 aws계정에 여러 vpc를 생성할수있지만,각각 전부 독립된 환경이고 명시적으로 vpc를 연결하지않으면(피어링)서로 통신할수없음
+	aws는 모두 리전을 정해서 리소스를 생성함
+	vpc는 서브넷을 사용해 네트워크를 분할해 관리함,서브넷은 가용영역 여러개를 할당받을수없고,받은거에서 나눠서 여러vpc에 나눠줘야함
+	라우팅설정은 서브넷단위로 할수있음,즉 퍼블릭서브넷(인터넷접속가능)과 프라이빗서브넷을 생성할수있음
+	
+	aws에서 리소스를 구축할땐 클라우드포메이션이나 테라폼을 사용함
+	여기선 yaml이나 json을 써서 리소스구성을 정의함
+	
+	aws관리콘솔은 aws서비스를 관리하는 웹인터페이스
+	awscli는 aws의 터미널
+	
+2.eks클러스터 구축
+	설치는 필요해지면 보자
+	대충 클라우드포메이션으로 템플릿을 만들거나 불러와서 그대로 함
+	리소스확인은 서비스의 네트워크및 콘텐츠전송의 vpc를 하면됨
+	
+	eks클러스터 설치는
+	워커서브넷값을 복사하고
+		$ eksctl create cluster \   # 아래의 인수를 설정하여 eksctl 실행
+		> --vpc-public-subnets <WorkerSubnets값> \ # 워커 노드용 서브넷
+		> --name eks-work-cluster \   # 클러스터 이름
+		> --region ap-northeast-2 \   # 리전(서울 리전을 설정)
+		> --version 1.19 \   # EKS 클러스터 버전
+		> --nodegroup-name eks-work-nodegroup \   # 노드 그룹 이름
+		> --node-type t2.small \   # 워커 노드 인스턴스 타입
+		> --nodes 2 \   # 워커 노드 수
+		> --nodes-min 2 \   # 워커 노드의 최소 노드 수
+		> --nodes-max       # 워커 노드의 최대 노드 수
+	이걸쓰면됨
+	워커노드서브넷값을 넣고,클러스터이름지정하고 리전지정하고 버전지정하고 노드그룹이름넣고 워커노드인스턴스타입 넣고 노드수,최대최소노드수 넣으면됨
+	이러면 커맨드로도 출력되지만,현재진행상태가 클라우드포메이션에서도 출력됨
+	그리고 eksctl을 쓰면 클러스터구축중에 kubeconfig파일(C:\User\사용자명\.kune\config)을 자동으로 업데이트함
+	얘의 설정값으로 쿠버네티스클러스터에 접속함(마스터노드url,인증정보,네임스페이스)
+	eks 클러스터에 접속하기위한 인증정보는 awscli로 확인할수있고,eksctl로 awscli를 호출하여 인증하기위한 설정을 kubeconfig파일에 추가할수있음
+	
+	이제 eks에 접속되니까 
+		k config get-contexts
+	로 현재컨텍스트 확인할수있음
+	
+	여기서부턴 쿠버네티스 쓰면됨
+3.db설정
+	db는 rds를 사용함
+	rds는 db가 설치된 os에 로그인할수없는등의 제약이 있어서,베스천호스트로 ec2를 만들어서 사용함
+	이때도 클라우드포메이션쓰면됨
+	db생성은 스킵하고(필요하면보자)
+	
+	db에 베스천호스트로 세션을 연결하면됨
+	관리및 거버넌스의 aws systems manager로 들어가서 세션매니저를 고르고 세션시작하면됨
+	그러면 만들어둔 db베스턴호스트가 보이고 거기로 시작하면됨
+	
+	거기에 깃과 db클라이언트를 설치하고(sudo amazon-linux-extras install -y db명   으로 설치가능)
+	
+	클라우드포메이션으로 데이터베이스엔드포인트(클라우드포메이션에서 스택을선택하고 출력을보면 키값이있음),
+	어드민비번(보안자격증명 secrets manager에 있음),
+	사용자비번(보안자격증명 secrets manager에 있음,단 아이디는없는데,아이디를 만들때 이비밀번호를 사용하면됨)을 확인하면됨
+	db에 접속할떈 엔드포인트로 접속하면됨
+	
+	그리고 세션관리자의 콘솔에서
+		createuser -d -U 유저명 -P -h <RDS 엔드포인트 주소> mywork
+	로 유저를 생성할수있음,이거치면 비밀번호를 3번입력하는데 앞에2번은 거기에 아까 그사용자비번 넣으면되고 마지막엔 어드민비번넣으면됨
+	
+	그리고
+		createdb -U mywork -h <RDS 엔드포인트 주소> -E UTF8 myworkdb
+	로 db를 생성할수있음
+		psql -U mywork -h <RDS 엔드포인트 주소> myworkdb
+	로 db에 접속가능
+	그리고 테이블설정하고 할거하면됨
+	
+4.앱빌드와 배포
+	컨테이너 이미지를 빌드할떈
+		docker build
+	로 빌드하면되고
+		
+		$ sudo docker build -t k8sbook/backend-app:1.0.0 --build-arg \
+		> JAR_FILE=build/libs/backend-app-1.0.0.jar . //도커데스크톱 자바예제
+	이 이미지를 ecr에 푸시하고 거기서 풀받아서 쿠버네티스에서 사용하면됨
+	이때 ecr을 사용할땐,
+	서비스-컨테이너-elastic container registry에서 리포지터리를 생성하고(이때 네임스페이스/레포이름 구조임,즉 네임스페이스사용가능)
+	레포이름을 적으면,
+		<AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/네임스페이스/레포이름
+	구조의 url이 생기고,저기로 푸시풀하면됨
+	
+	ecr에 로그인할떈
+		$ aws ecr get-login-password --region ap-northeast-2  | \
+		pipe> docker login --username AWS --password-stdin \
+		pipe> <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com
+	하면 로그인되고
+	그상태에서
+		docker tag 네임스페이스/앱이름:태그 \
+		<AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/k8sbook/backend-app:1.0.0
+	로 설정함(이건 ecr에 가기전에 이름을 매칭해두는거)
+	이건 처음에 네임스페이스/앱이름:태그 를 aws링크로 매핑하는것
+	
+	그리고 
+		$ docker push <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/k8sbook/backend-app:1.0.0
+	하면 푸시됨
+	
+	그리고 이걸 쿠버네티스에서 받아가면되는거
+	
+	그리고 db에 접속할 시크릿을 쿠버네티스에 등록하고
+	그걸받는 디플로이먼트를 배포하고 서비스를 만들면됨,서비스는 로드밸런서를 쓰면됨
+	로드밸런서확인은 서비스의 ec2를 누르고 왼쪽에서 로드밸런서를 누르면됨
+	
+		
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	

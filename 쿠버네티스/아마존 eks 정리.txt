@@ -119,11 +119,47 @@
 	그걸받는 디플로이먼트를 배포하고 서비스를 만들면됨,서비스는 로드밸런서를 쓰면됨
 	로드밸런서확인은 서비스의 ec2를 누르고 왼쪽에서 로드밸런서를 누르면됨
 	
+5.프론트앤드 앱 빌드와 배포
+	먼저 코드를 빌드하고 결과물을 생성(자바면 jar파일같은 출력물)
+	그리고 s3버킷과 cloudFront를 생성하고(cloudformation으로)
+	s3버킷에 결과물을 업로드하고
+		$ aws s3 sync dist s3://eks-work-frontend-<BucketSuffix값> \
+		> --delete --include "*" --acl public-read
+	클라우드프론트의 캐시를 제거(클라우드프론트는 12시간동안 캐시를 기억해서 파일이 바뀌어도 바로 적용이 안되니까 캐시를 지워줘야함)
+		$ aws cloudfront create-invalidation --distribution-id <DistributionID값> \
+		> --paths "/*"
 		
+	그리고 클라우드포메이션의 스택출력탭의 url을 보면 결과물이 나옴
+	이게 모든리전에 배포될때까진 24시간이 걸림
 	
+6.배치앱빌드와 배포
+	이거도 똑같이 코드를빌드해서 결과물을 생성하고
+	도커로 이미지를 생성
+		$ sudo docker build -t k8sbook/batch-app:1.0.0(이미지명) --build-arg \
+		> JAR_FILE=jar파일 .
+	그리고 ecr리포지터리를 생성하고
+	ecr에 로그인(지속시간12시간)
+		$ aws ecr get-login-password --region ap-northeast-2 | \
+		pipe> docker login --username AWS --password-stdin \
+		pipe> <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com
+	그리고 ecr에 이미지태그를 생성하고 푸시
+		$ docker tag k8sbook/batch-app:1.0.0 \
+		> <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/ \
+		> k8sbook/batch-app:1.0.0
+	태그생성
+		$ docker push <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/ \
+		> k8sbook/batch-app:1.0.0
+	그리고 버킷을 생성하고,버킷이름과 s3의 디렉토리이름이 담긴 컨피그맵을 생성(쿠버네티스)
 	
-	
-	
+	그리고 s3버킷을 프라이빗으로 설정하면,거기 접속하기위한 정보를 전달해야하는데 이때 시크릿을 사용함
+	인증정보는 aws systems manager의 파라미터스토어에 있는데 거기의 유저키와 유저시크릿액세스키를 복사해서 시크릿을 생성
+	그리고 db와 버킷이 잘생성됐나 확인해보고 디플로이먼트 배포(ecr이미지를 써서)
+7.삭제
+	aws는 걍두면 돈나가니까 다했으면 지워야함
+	이건 만들때보자
+	이거도 순서대로 지우면됨(생성의 역순)
+8.클라우드포메이션 정보들
+	나중에보자
 	
 	
 	

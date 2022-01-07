@@ -1,0 +1,14 @@
+dx랑dy만든다음[0,1,2,3]마다 각각 가능한지 확인하고 res+1
+
+
+
+
+dx=[2,2,-2,-2,-1,1,-1,1]
+dy=[-1,1,-1,1,2,2,-2,-2]
+a='a1'
+x=ord(a[0])-96
+y=int(a[1])
+res=0
+for i in range(len(dx)):
+    if dx[i]+x>0 and dx[i]+x<=8 and dy[i]+y>0 and dy[i]+y<=8:
+        res=res+1

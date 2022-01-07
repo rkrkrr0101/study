@@ -1,0 +1,23 @@
+간단히 큰거부터 최대한 나눠서 0될때까지
+
+받고
+동전배열 for:
+	동전만큼 값에서 나누고
+	res+동전수
+	돈 -동전크기x동전수
+	
+	
+
+
+a=1220
+arr=[500,100,50,10]
+arr.sort(reverse=True)
+
+res=0
+count=0
+for i in arr:
+    count=a//i
+    a=a-(i*count)
+    res+=count
+    if a==0: break;
+	

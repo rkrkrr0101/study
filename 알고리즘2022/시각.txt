@@ -1,0 +1,20 @@
+단순구현하면 1씩더하고 60진법만들어서 체크하면되고
+아니면 59 59 구해서 xn하면되고
+
+3중루프로 60까지 반복해서 3있으면 +1
+
+
+n=1
+
+res=0
+
+for i in range(n):
+    if str(i).count('3')!=0:res=res+3600
+    else:
+        for j in range(60):
+            if str(j).count('3')!=0:res=res+60
+            else:
+                for k in range(60):
+                    if str(k).count('3')!=0:res=res+1
+
+그냥 문자열 다더하고 k단에서 다합쳐서 체크해도될듯 완탐하려면

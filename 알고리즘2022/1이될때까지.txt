@@ -1,0 +1,17 @@
+무한루프돌리고
+만약 mod가 0이면 나누고 아니면 1빼기
+값이 0이랑 같아지면 탈출
+
+
+
+n=17
+k=4
+res=0
+while True:
+    if n<=1:break;
+    if n%k==0:
+        n=n//k
+    else:
+        n=n-1
+    res=res+1
+	

@@ -1,0 +1,11 @@
+그냥 각배역마다 min쳐서 가장 높은수 뽑기
+
+
+arr=[[3,1,2],[4,1,4],[2,2,2]]
+res=[]
+
+for i in arr:
+    res.append(min(i))
+    
+    
+print(max(res))

@@ -1,0 +1,22 @@
+배열 정렬하고 k백업하고 m이랑 k 1씩깍으면서 m 0되면 끝나고 k0되면 한칸작은배열더하고 반복하고 k돌리고
+
+배열정렬
+k백업
+
+arr=[2,4,5,4,6]
+arr.sort(reverse=True)
+m=8
+k=3
+res=0
+while True:
+    for i in range(k):
+        if m==0:break
+        res+=arr[0]
+        m=m-1
+    
+    if m==0:break
+    res+=arr[1]
+    m=m-1
+    if m==0:break
+	
+		

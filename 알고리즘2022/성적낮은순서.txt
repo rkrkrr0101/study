@@ -1,0 +1,10 @@
+arr=[]
+arr.append(('aa',2))
+arr.append(('aag',1))
+arr.append(('aaad',5))
+
+def akey(data):
+    return data[1]
+
+arr.sort(key=akey)
+#arr=sorted(arr,key= lambda a:a[1])

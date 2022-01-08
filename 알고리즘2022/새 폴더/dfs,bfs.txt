@@ -1,0 +1,21 @@
+def dfs(arr,v,visit):
+    visit[v]=True
+    print(v)
+    for i in arr[v]:
+        if visit[i]==False:
+            dfs(arr,i,visit)
+from collections import deque
+def bfs(arr,v,visit):
+    que=deque([v])
+    visit[v]=True
+    while que:
+        v=que.popleft()
+        print(v)
+        for i in arr[v]:
+            if visit[i]==False:
+                que.append(i)
+                visit[i]=True
+                 
+graph =[[],[2, 3, 8],[1, 7],[1, 4, 5],[3, 5],[3, 4],[7],[2, 6, 8],[1, 7]]
+visited=[False]*9
+dfs(graph,1,visited)

@@ -1,0 +1,107 @@
+1,1부터 1인곳 bfs로 긁어서 한번긁어넣을떄마다 카운트+1씩해서 nm에 도달하면 브레이크하고 리턴
+
+
+이거 dxdy배열만든다음에 for문돌리는게 더 깔끔했을듯
+그리고 카운트쓰지말고 배열위치에다가 현재값에서 +1하는식으로 하고 배열받아다가 리턴하는게 맞았을듯
+
+
+
+from collections import deque
+n,m=5,6
+array=[[1,0,1,0,1,0],
+      [1,1,1,1,1,1],
+      [0,0,0,0,0,1],
+      [1,1,1,1,1,1],
+      [1,1,1,1,1,1]]
+      
+x=1
+y=1
+count=0
+
+def bfs(arr,x,y,n,m):
+    que=deque()
+    que.append((x,y))
+    arr[x][y]=0
+    cnt=1
+    while que:
+        point=que.pop()
+        dx=point[0]+1
+        dy=point[1]
+        cnt+=1
+        if dx==n-1 and dy==m-1:return cnt
+        if dx>-1 and dx<n and dy>-1 and dy<m:
+            if arr[dx][dy]==1:
+                que.append((dx,dy))
+                arr[dx][dy]=0
+        dx=point[0]-1
+        dy=point[1]
+        if dx>-1 and dx<n and dy>-1 and dy<m:
+            if arr[dx][dy]==1:
+                que.append((dx,dy))
+                arr[dx][dy]=0                
+        dx=point[0]
+        dy=point[1]+1
+        if dx>-1 and dx<n and dy>-1 and dy<m:
+            if arr[dx][dy]==1:
+                que.append((dx,dy))
+                arr[dx][dy]=0
+        dx=point[0]
+        dy=point[1]-1
+        if dx>-1 and dx<n and dy>-1 and dy<m:
+            if arr[dx][dy]==1:
+                que.append((dx,dy))
+                arr[dx][dy]=0  
+                
+count=bfs(array,x,y,n,m)
+
+
+
+
+
+from collections import deque
+n,m=5,6
+array=[[1,0,1,0,1,0],
+      [1,1,1,1,1,1],
+      [0,0,0,0,0,1],
+      [1,1,1,1,1,1],
+      [1,1,1,1,1,1]]
+      
+x=1
+y=1
+count=0
+
+def bfs(arr,x,y,n,m):
+    que=deque()
+    que.append((x,y))
+    arr[x][y]=2
+    cnt=1
+    while que:
+        point=que.pop()
+        dx=point[0]+1
+        dy=point[1]
+        cnt+=1
+        #if dx==n-1 and dy==m-1:return cnt
+        if dx>-1 and dx<n and dy>-1 and dy<m:
+            if arr[dx][dy]==1:
+                que.append((dx,dy))
+                arr[dx][dy]=arr[point[0]][point[1]]+1
+        dx=point[0]-1
+        dy=point[1]
+        if dx>-1 and dx<n and dy>-1 and dy<m:
+            if arr[dx][dy]==1:
+                que.append((dx,dy))
+                arr[dx][dy]=arr[point[0]][point[1]]+1               
+        dx=point[0]
+        dy=point[1]+1
+        if dx>-1 and dx<n and dy>-1 and dy<m:
+            if arr[dx][dy]==1:
+                que.append((dx,dy))
+                arr[dx][dy]=arr[point[0]][point[1]]+1
+        dx=point[0]
+        dy=point[1]-1
+        if dx>-1 and dx<n and dy>-1 and dy<m:
+            if arr[dx][dy]==1:
+                que.append((dx,dy))
+                arr[dx][dy]=arr[point[0]][point[1]]+1  
+                
+count=bfs(array,x,y,n,m)

@@ -1,0 +1,75 @@
+현재위치받고,방향마다 이동하는 dxdy해두고 보고있는방향 포인터해둔다음 돌리고,뒤로가기할땐 그거에 맞춰서 뒤로감
+바다는 1 간곳이면 2 육지는0
+체크횟수가 4되면 뒤로가기하고 포인터가 3에서 4되면 0으로 리셋
+
+
+
+현재값받고
+dxdy정하고
+포인터
+4카운트
+res
+
+와일트루
+	for i in range(4):
+		
+		dxdy로 현재위치에서 더한값이 0이면
+			그자리로 이동하고
+			res+1
+			
+			break
+		else:
+			방향돌림
+			포인터가 4나 -1이면 맞춰서 초기화
+			4카운트 +1
+	4카운트가 4면
+		뒤로갈수있는지 확인하고
+			갈수있으면 이동
+		갈수없으면
+			
+			브레이크
+			
+	
+	
+arr=[[1,1,1,1],[1,0,0,1],[1,1,0,1],[1,1,1,1]]
+x=1
+y=1
+arr[x][y]=2
+pointer=0
+dx=[-1,0,1,0]
+dy=[0,-1,0,1]
+res=1
+fourcount=0
+a=arr[x][y]
+while True:
+    fourcount=0
+    for i in range(4):
+        if arr[x+dx[pointer]][y+dy[pointer]]==0:
+            res+=1
+            x=x+dx[pointer]
+            y=y+dy[pointer]
+            arr[x][y]=2
+            break;
+        else:
+            pointer+=-1
+            if pointer<0:
+                pointer=3
+            fourcount+=1
+    if fourcount==4:
+        back=pointer-1
+        if back<0:
+            back=3
+        if arr[x+dx[back]][y+dy[back]]!=1:
+            x=x+dx[back]
+            y=y+dy[back]
+        else:
+            break;
+        
+    
+            
+            
+    	
+	
+	
+	
+	

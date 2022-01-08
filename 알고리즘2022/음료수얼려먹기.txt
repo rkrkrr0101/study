@@ -1,0 +1,28 @@
+0,0부터 잡고 0이면 상하좌우 재귀해가면서 1로 전부바꾸고 리턴값+1
+
+
+
+
+def ice(arr,x,y):
+    w=len(arr[1])
+    h=len(arr)
+    if x<h and y<w and x>=0 and y>=0:
+        if arr[x][y]==0:
+            arr[x][y]=1
+            ice(arr,x+1,y)
+            ice(arr,x-1,y)
+            ice(arr,x,y+1)
+            ice(arr,x,y-1)
+            return 1
+    return 0
+            
+
+            
+
+            
+arr =[[0,0,1,1,0],[0,0,0,1,1],[1,1,1,1,1],[0,0,0,0,0]]
+res=0
+print(len(arr[1])-1)
+for i in range(len(arr)):
+    for j in range(len(arr[1])):
+        res+=ice(arr,i,j)

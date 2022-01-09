@@ -1,0 +1,25 @@
+이진탐색만들고 -1이면 no 아니면 yes하는 반복문 리턴
+
+
+
+arr=[8,3,7,9,2]
+resarr=[5,7,9]
+arr.sort()
+
+def binsearch(arr,start,end,target):
+    if start>end:
+        return -1
+    mid=(start+end)//2
+    if arr[mid]==target:
+        return mid
+    if arr[mid]<target:
+        return binsearch(arr,mid+1,end,target)
+    if arr[mid]>target:
+        return binsearch(arr,start,mid-1,target)
+res=''        
+for i in resarr:
+    if binsearch(arr,0,len(arr)-1,i)==-1:
+        res+='no'
+    else:
+        res+='yes'
+            

@@ -1,0 +1,49 @@
+배열에있는 최대값을 맥스로잡고 최소는 0으로 잡고 그사이 이진탐색하면서 떡길이를 재면서 모자라면 왼쪽 많으면 오른쪽 반복하다가 같아지면 그거리턴
+파라메트릭서치임
+파라메트릭서치는 반복문쓰는게 편함(만족했을때 값을 계속 저장하다가 스타트엔드 넘어가면 그거리턴)
+
+
+arr=[19,15,10,17]
+tar=6
+arr.sort(reverse=True)
+
+def binsearch(arr,start,end,target):
+    if start>end:
+        return end
+    tar=0
+    mid=(start+end)//2
+    for i in arr:
+        if mid-i>0:
+            tar+=mid-i
+    if tar>target:
+        return binsearch(arr,start,mid-1,target)
+    if tar<target:
+        return binsearch(arr,mid+1,end,target)    
+    if tar==target:
+        return mid    
+res=''
+print(binsearch(arr,0,max(arr),tar))
+
+이거보다
+
+arr=[19,15,10,17]
+tar=6
+arr.sort(reverse=True)
+
+start=0
+end=max(arr)
+res=0
+while start<end:
+    mid=(start+end)//2
+    total=0
+    for i in arr:
+        if i-mid>0:
+            total+=i-mid
+    if tar<=total:
+        res=mid
+        start=mid+1
+    else:
+        end=mid-1
+
+print(res)
+이게더편함

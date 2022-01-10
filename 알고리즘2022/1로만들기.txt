@@ -1,0 +1,19 @@
+1부터 올려가면서 타겟까지 배열채우기
+
+target=27
+arr=[999 for _ in range(target)]
+
+arr[1]=0
+arr[2]=1
+
+for i in range(1,target):
+    if i+1<target:
+        arr[i+1]=min(arr[i+1],arr[i]+1)
+    if i*2<target:    
+        arr[i*2]=min(arr[i*2],arr[i]+1)
+    if i*3<target:
+        arr[i*3]=min(arr[i*3],arr[i]+1)
+    if i*5<target:
+        arr[i*5]=min(arr[i*5],arr[i]+1)
+    
+    

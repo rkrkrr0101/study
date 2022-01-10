@@ -1,0 +1,11 @@
+1이면 n-1 *2-1 2면 n-2*3
+
+
+arr=[0 for i in range(30)]
+
+arr[1]=1
+arr[2]=3
+arr[3]=5
+
+for i in range(4,29):
+    arr[i]=(arr[i-1]+2*arr[i-2])

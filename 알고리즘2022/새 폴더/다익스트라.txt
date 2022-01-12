@@ -1,0 +1,18 @@
+def dijkstra(start):
+    q =[]
+	#시작노드로가기위한최단경로는 0으로설정하여,큐에삽입    
+	heapq.heappush(q,(0, start))    
+	distance[start]= 0    
+	while q:
+	#큐가비어있지않다면#가장최단거리가짧은노드에대한정보를꺼내기
+		dist, now = heapq.heappop(q)
+		#현재노드가이미처리된적이있는노드라면무시        
+		if distance[now]< dist:            
+			continue
+			#현재노드와연결된다른인접한노드들을확인        
+			for i in graph[now]:            
+			cost = dist + i[1]
+			#현재노드를거쳐서,다른노드로이동하는거리가더짧은경우            
+			if cost < distance[i[0]]:                
+				distance[i[0]]= cost                
+				heapq.heappush(q,(cost, i[0]))

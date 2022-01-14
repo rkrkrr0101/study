@@ -1,1 +1,9 @@
 1.데브옵스란?
+스킵
+
+
+
+2.aws툴
+1.iac란?
+
+2.aws cloudformation

@@ -84,6 +84,23 @@
 
 
 3.aws opsworks
+	opsworks는 chef나 puffet기반으로 클라우드에서 iac를 하는 도구임
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

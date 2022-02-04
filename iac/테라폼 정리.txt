@@ -76,7 +76,12 @@ init할때 프로바이더엔
 
 
 
-
+프로바이더엔 뭐 이상한거 다있는데,랜덤도 있음
+	resource "random_pet" "mypet"{
+		prefix="Mrs"  //접두사,앞에 붙음
+		separator="."//접두사와 이름사이 구분기호
+		length="1" //펫이름길이
+	}
 
 
 

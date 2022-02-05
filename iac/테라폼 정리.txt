@@ -84,21 +84,96 @@ init할때 프로바이더엔
 	}
 
 
+변수를 사용할땐,변수파일을 만들어두고
+	variable "변수명"{default="디폴트값"}
+	
+	filename=var.변수명
+으로 불러오면됨
+이때 변수의 파라미터엔 3개가 있음
+	variable "변수명"{
+		default="디폴트값"
+		type=string  //타입,옵션이긴한데 있는게좋음,
+		description //주석,옵션임
+	}
+
+타입은
+	string
+	number
+	bool
+	any
+	list  //["a","b","c"]  filename=var.변수명[1]으로 참조가능,list(string)이런식의선언도 가능
+	map   //{"a":1,"b":2,"c":3}  filename=var.변수명["a"]로 참조가능  map(string)도 가능
+	set   //["a","b","c"]이건 리스트랑 비슷한데 중복이 불가능함,수학에서 집합이라보면됨
+	object//객체임,여러값을 가지고있는 단일객체를 넣을수있음
+			type=object({
+				name=string
+				color=string
+				age=number
+				food=list(string)
+			})
+	tuple  //[string,number,bool] ["cat",2,true]이렇게 여러타입을 묶어서 하나로쓸수있음
+를 지원함	
+안적으면 any들어감(아무거나다되는거)
+
+그리고 terraform apply뒤에 -var "변수명=값"으로 그 변수명의 값을 바꿀수있음
+	terraform apply -var "filename=/root/ppt.txt" -var "content=abcd"
+아니면
+	export TF_VAR_변수명="abcd"
+	terraform apply
+할수도있음
+그리고 이런걸 terraform.tfvars나 terraform.tfvars.json,*.auto.tfvars,*.auto.tfvars.json에 넣어두면 자동으로 로드해서 적용함
+	terraform.tfvars안에
+		filename="abcd"
+		content="fff"
+
+자동적용을 원하지않으면,*.tfvars로 만들고 terraform apply -var-file 파일이름.tfvars로 적용할수도있음
+그리고 아예 기본값을 안주고 타입만 줄수도있는데 이러면 파일명을 안받으면 에러나게 할수있음
+
+그리고 변수의 적용순서는
+	export로 적은거
+	tfvar에 적힌변수
+	*.auto.tfvars에 적힌변수(알파벳순)
+	-var로 apply에 수동입력한거 
+순으로 덮어씌워짐
+
+중요한건,tfvars는 값을 넣는거지,변수를 선언하는게 아니라서 변수를 선언하는건 꼭 필요함(.tf에 변수선언)
+
+그리고 만약 어떤 리소스가 다른리소스에 종속성을 가지게하려면(그리소스의 특정값을 가져간다던가)
+이경우엔
+	${리소스유형.리소스이름.가져갈값}
+	${random_pet.my_pet.id}
+	content="my ff is ${random_pet.my_pet.id}"
+이런식으로 하면됨
+
+이렇게되면 종속성을 주는(값을 주는)쪽부터 먼저 만들고 그값을 받는애를 그 뒤에 만들게됨
+삭제할때도 역순으로 함
+이렇게 생기는 종속성이 암시적 종속성임
+아예 이걸 명시적으로 줄수도 있음
+	resource "local_file" "pet"{
+		filename="/root/pets.txt"
+		content='abcd'
+		depends_on=[
+			random_pet.my-pet
+		]
+	}
+	depends_on으로 종속항목을 추가할수있음
+	이건 리소스가 다른 리소스에 간접적으로 의존할때만 사용함(직접 명시적으로 적을수없을때 이거로 강제로 종속성을 박음)
+	즉 거기서 무슨값을 가져오는건 아닌데,그게 있어야 존재할수있을때
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+그리고 뭘 출력하고싶으면
+	output 이름{
+		value=출력할값,참조표현식이어야함
+		description="설명"
+	}
+으로 출력할수있음
+이걸 tf파일에 넣으면,apply할떄 outputs에 표시됨
+terraform output으로 저거만 볼수도있음 
+특정값만 보려면
+	terraform output 변수명
+으로 특정값만 볼수도있음
+저거로 원하는값을 빼서 쉘스크립트나 엔서블에 줘서 그쪽에서 보고 대응하는식으로 사용함
 
 
 

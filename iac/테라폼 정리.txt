@@ -258,19 +258,135 @@ configration drift는 구성파일이 다른것과 달라지는것(3개서버가
 저기 ignore_changes안에 all을 넣으면(ignore_changes=all)모든 변경사항을 무시함
 
 
+테라폼에서 데이터소스를 사용하면,리소스에서 속성을 읽을수있으며,제어범위를 벗어난 프로비저닝이 가능해짐
+이걸 사용하는방법은
+	data "local_file" "리소스이름"{
+		filename="abcd/aa.txt"
+	}
+이렇게 하면 이미 만들어진 리소스의 값을 가져다쓸수있음
+가져다쓸떈 data.local_file.리소스이름.content 이렇게 리소스를 불러서 값을가져오면됨
+datasource는 readonly라서,그냥 읽기만할수있고 변경점을 줄순없음
+
+테라폼에서 같은리소스의 여러파일을 만들때는 메타아규멘트를 사용함
+이건 depends_on,lifecycle과 같은 테라폼자체의 시스템적인?키워드임
+
+정확히는 count를 사용함
+이건 그냥
+	resource "local_file" "pet"{
+		filename="/root/pets.txt"
+		content='abcd'
+		count =3
+	
+이렇게 카운트를 넣어주면됨
+이렇게 만들면 배열에 3개를 넣어서 만드는데(local_file.pet[0~2]),
+문제는 파일을 생성한다던가 하는 유일성을 가지는 객체를 생성할경우엔(파일생성같은),그냥 같은걸 3번만들어서 다 덮어씌워짐
+이경우엔 여러해결방법이 있는데,파일네임같은 변수에 배열로 넣어주던가
+	variable "변수명"{
+		default=["abc.txt",""bcd.txt,"cdf.txt"]
+
+	}
+	resource "local_file" "pet"{
+		filename=var.filename[count.index]
+		content='abcd'
+		count =3
+
+이렇게되면 딱 카운트갯수에 맞는 정적값으로 들어가게됨
+이걸 변수에 선언된 디폴트값의 갯수로 하려면
+	count=length(var.filename)
+으로 할수있음
+근데 이건 문제가,만약 0번을 지우고싶어서 지우면 그냥 1번과 2번이 앞으로 땡겨져서 그자리를 차지하는데,
+이때 앞에있는걸 땡기면 리플레이스되면서 다 디스트로이되고 재생성되는게 문제임
+즉 0번은 1번으로 바뀌고 1번은 2번으로 바뀌고 2번이 디스트로이됨,원한건 0번만 디스트로이인데
+
+그래서 대신 사용하는게 foreach임,이건 0번부터 반복문돌리는게 아니라,목록에 있는거를 가지고 반복문을 돌려서 없어진거만 체크할수있음(딴데foreach랑같음)
+이건 카운트자리에 그대로쓰면됨
+	resource "local_file" "pet"{
+		filename=each.value		
+		for_each=var.filename
+근데 그냥 이렇게하면,foreach는 리스트를 받아먹을수가 없어서 에러가남,그래서 변수의 타입을 set(string)처럼 집합으로 설정해줘야함
+	variable "변수명"{
+		default=["abc.txt",""bcd.txt,"cdf.txt"]
+		type=set(string)
+
+	}
+그냥 리스트로 두고싶으면 for_each쪽에서 set으로 바꾸는방법도있긴함
+	for_each=toset(var.filename)
+	
+이렇게 for_each를 쓰면,값이 리스트가 아닌 맵으로 저장되게됨
+즉 리소스가 인덱스로 식별되지않고 키:밸류로 식별됨
+
+테라폼에서 특정플러그인에 무슨버전이 있는지는,테라폼 레지스트리사이트가서 검색하면 나옴
+테라폼에서 init로 플러그인을 받을때,버전을 명시하려면
+	terraform{
+		required_providers{
+			local={
+				source="hasgicorp/local"
+				version="1.4.0"
+			}
+		}
+	}
+이걸 tf파일 맨위에 넣으면됨
+여기서 버전은
+	version="!=1.4.0"(저게아닌 가능한 최신버전)
+	version="< 1.4.0"(1.4.0보다 작은버전)
+	version="> 1.4.0"(1.4.0보다 큰버전)
+	version="> 1.2.0,<2.0.0,!=1.4.0"(1.2.0보다 크고 2.0.0보다 작은 1.4.0이 아닌버전)
+	version="~> 1.2.0"(1.2.0에서 0에다가 숫자붙은 패치를 허용한다는것(1.2.3 이런거))
+	version="<= 1.4.0"(1.4.0보다 같거나 작은버전)
+저 조건을 만족하는 가장 큰값으로 버전이 붙음(최대한 최신버전에 가까워지려고함)
 
 
 
+뭐 aws에서 iam그룹을 꼭 사용해야하고, 루트계정을 사용하지마래
+루트계정은 첫 iam사용자를 만들기위해서 사용하는거라는 그런소리
 
+iam은 글로벌로 한번생성하면 모든리전에서 사용할수있음
+그리고 유저를 생성할때,액세스타입을 고를수있는데 프로그래머식(코드로 접근)과 콘솔로 접근 둘중 하나이상(둘다도됨)선택하면됨
+콘솔로 접근할땐 패스워드가 필요하니까 비밀번호를 설정할수있음
+근데 이건 별로 필요없고,만들고나면 액세스키아이디랑 액세스키패스워드가 나오는데 이걸로 터미널에서 접근할수있음
+그리고 권한에서 *은 와일드카드로 전부허용이라는뜻
 
+그리고 그룹을 만들수도있는데,그 그룹에 적용할 정책은 기본값으로 보통 다 있고,필요하면 만들수도있음
 
+롤을 만들땐,어떤거에 연결할지(서비스나 aws어카운트나)를 고르고,어떤리소스를 사용할지 고르고,거기에 따른 정책(폴리시)를 적용하면됨
 
+터미널에서 aws iwc계정에 연결하려면
+	aws configure
+를 치고 액세스키 아이디 패스워드를 넣고 리전을 적고 yaml이나 json등 아웃풋형식을 뭐로할지 선택하면됨
 
+이값은 .aws/config/config에 있으니까 거기가서 값바꿀수있고(리전과 아웃풋)
+로그인값은 .aws/config/credentials에 있음(액세스키 액세스패스워드)
 
+기본적으로 awscli는 aws 커맨드 서브커맨드 옵션    으로 이루어짐 
+	aws 커맨드   서브커맨드          옵션
+	aws iam create-user --user-name lucy
+이런식
 
+aws --version은 버전보기
+aws iam은 권한관련
+aws iam list-users는 iam유저를 전부 나열
 
+그리고 접근경로를 줄땐 --endpoint옵션으로 주면됨
+	aws --endpoint http://aws:4566 iam list-users
+이런식,그리고 vi에서 페이지이동은 f,g로 움직일수있음
 
+어떤 유저에 정책 적용방법은
+	aws --endpoint http://aws:4566 iam attach-user-policy --user-name mary --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+attach-user-policy를 써서 유저네임으로 유저특정하고 policy-arn으로 정책특정하면됨
 
+그룹 생성은
+	aws --endpoint http://aws:4566 iam create-group --group-name 그룹명
+	
+그룹에 사람추가는
+	aws --endpoint http://aws:4566 iam add-user-to-group --user-name 유저명 --group-name 그룹명
+	
+그룹에 정책추가는
+	aws --endpoint http://aws:4566 iam attach-group-policy --group-name 그룹명 --policy-arn 정책명
+
+그룹의 정책 보기는
+	aws --endpoint http://aws:4566 iam list-attached-group-policies --group-name 그룹명
+개인의 정책보기는
+	aws --endpoint http://aws:4566 iam list-attached-user-policies --user-name 유저명
 
 
 

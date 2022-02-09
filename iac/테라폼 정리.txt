@@ -389,6 +389,70 @@ attach-user-policy를 써서 유저네임으로 유저특정하고 policy-arn으
 	aws --endpoint http://aws:4566 iam list-attached-user-policies --user-name 유저명
 
 
+테라폼에서 aws_iam쓸땐
+	resource "aws_iam_user" "admin-user"{
+		name="이름"
+		tags={
+			Description="주석"
+		}
+	}
+name은 필수인수
+그리고 plan날리면 리전을 입력하라고 나옴,그리고 자격증명도 없다고나옴
+이걸 해결하려면 리소스위에(파일 맨위에)
+	provider "aws"{
+		region="us-west-2"
+		access_key="키값"
+		secret_key="패스워드값"
+	}
+을 넣으면됨
+이거말고 좀 안보이게 하고싶으면(tf파일은 다보이니까).aws/config/credentials에 적어두면(키값) 거기서 알아서 가져옴
+말고 다른방법은 export AWS_ACCESS_KEY_ID와 export AWS_SECRET_ACCESS_KEY_ID를 앞에 먼저 적어두면되긴함
+리전도 export AWS_REGION=us-west-2 이렇게할수있음
+
+이런식으로 엔드포인트를 줄수도있음
+	provider "aws" {
+	  region                      = "us-east-1"
+	  skip_credentials_validation = true
+	  skip_requesting_account_id  = true
+
+	  endpoints {
+		iam                       = "http://aws:4566"
+	  }
+	}
+
+테라폼에서 aws iam policy쓸땐
+	resource "aws_iam_policy" "adminUser"{
+		name="AdminUsers"
+		policy=<<EOF
+		{
+			json내용
+		}
+		
+		
+		EOF
+	}
+여기 폴리시에 json파일을 제공하는건 저렇게 직접적을수도있고 파일로 연결할수도있음
+	policy=file("admin-policy.json")
+
+그리고 유저와 폴리시를 연결하는건
+	resource "aws_iam_user_policy_attachment" "lucy-admin-access"{
+		user=aws.iam.user.admin-user.name
+		policy-arn=aws_iam_policy.adminUser.arn
+	}
+이렇게 연결하면됨
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

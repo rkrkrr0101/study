@@ -754,6 +754,7 @@ ssh로 접속할땐
 		
 	}
 	resource "aws_key_pair" "web"{
+		key_name="aaabbb"//옵션,이게있으면 다른데서 참조할때 리소스나열할필요없이 이거로참조가능
 		public_key=file("퍼블릭키파일의 위치/퍼블릭키이름.pub")
 	}
 	resource "aws_security_group" "ssh-access"{
@@ -777,6 +778,8 @@ ssh로 접속할땐
 
 aws_key_pair는 생성된 ec2에서 키에 접근할수있게 만드는 리소스임
 파일형태도 되고,당연히 스트링형태도 됨
+저기서 key_name을 지정하면 aws_instance에서 key_name="정해둔키네임"으로 짧게적을수도있음
+
 
 aws_security_group은 생성된 ec2에 접근할 포트와,허용할 ip대역을 만드는 리소스임
 
@@ -790,6 +793,181 @@ aws_security_group은 생성된 ec2에 접근할 포트와,허용할 ip대역을
 그리고 이 생성한 ec2에 접근하려면
 	ssh -i /아까정한키파일있는폴더 ubuntu@리턴받은퍼블릭ip
 하면 접속됨
+
+
+
+
+테라폼에서 리소스내에
+	resource "aws_instance" "abcdserver"{
+		ami="ami-0edab43b6fa892279"//필수
+		instance_type="t2.micro"   //필수
+		tags={ 						//옵션
+			abc="aaa"
+			bcd="bbb"
+		}
+		provisioner "remote-exec"{
+			inline=[
+				"sudo apt update",
+				"sudo apt install nginx -y"
+			]
+		}
+		key_name =aws_key_pair.web.id  //사용할키
+		vpe_security_group_ids=[aws_security_group.ssh-access.id]
+		
+		
+	} 
+
+이렇게 프로비저너를 넣어서 원격으로 스크립트를 실행시킬수도 있음
+프로비저너의 종류엔
+	local-exec  //로컬에서 스크립트실행
+	remote-exec //원격에서 스크립트실행 
+	chep        //원격에서 치프실행
+	file        //원격리소스로 파일복사
+등이 있음
+그런데 리눅스의경우 로컬시스템과 원격인스턴스간에 네트워크로 연결이 되어야함(그 ssh로 연결가능한 ip랑 그거)
+윈도우의경우 리소스생성시 설정한 시큐리티그룹으로 가능함
+
+리눅스에선 리소스내에 
+	resource "aws_instance" "abcdserver"{
+		ami="ami-0edab43b6fa892279"//필수
+		instance_type="t2.micro"   //필수
+		tags={ 						//옵션
+			abc="aaa"
+			bcd="bbb"
+		}
+		connection { 
+			type ="ssh" 
+			host =self.public_ip 
+			user="ubuntu" 
+			private_key = tls_private_key.example.private_key_pem  //file()도 가능
+		}
+		provisioner "remote-exec"{
+			inline=[
+				"sudo apt update",
+				"sudo apt install nginx -y"
+			]
+		}
+		key_name =aws_key_pair.web.id  //사용할키
+		vpe_security_group_ids=[aws_security_group.ssh-access.id]
+		
+		
+	} 
+
+저렇게 커넥션이 들어가야함,저게 프로비저너 하위에 있으면 그 프로비저너에만 영향을미치고,리소스하위에있으면 그 리소스내의 모든 프로비저너에 영향을줌
+그리고 inlile는 커맨드를 적는거고,파일을 쓰고싶으면 script="파일주소/파일명.sh" 쓰면됨
+
+이렇게 어플라이하면 커맨드에 remote-exec가 작업하는게 나옴
+
+
+
+그리고 리소스없이 프로비저너를 쓰고싶으면 null_resource를 쓰면됨
+	resource "null_resource" "ssh"{
+		provider "local-exec"{
+			script="파일주소/파일명.sh"
+		}
+	}
+
+
+그리고 aws리소스내에서 local-exec를 써서
+	provisioner "local-exec"{
+		inline=[
+			"echo ${aws_instance.abcdserver.public_ip}>>/tmp/ips.txt"
+
+		]
+	}
+이런식으로 값을 뺴오거나,로그저장하는거도 가능함
+
+그리고 프로비저너는 값이 파괴될때 실행하는거도 가능함
+	provisioner "local-exec"{
+		when=destroy
+		inline=[
+			"echo ${aws_instance.abcdserver.public_ip}>>/tmp/ips.txt"
+
+		]
+	}
+그리고 프로비저너가 에러났을때의 대처도 가능
+	provisioner "local-exec"{
+		on_failure=fail
+		inline=[
+			"echo ${aws_instance.abcdserver.public_ip}>>/tmp/ips.txt"
+
+		]
+	}
+on_failure이 continue면 오류를 무시하고 하던일을 함
+abort면 생성또는 삭제를 중단함,이미처리한건 롤백함 //fail과 같은듯,기본값
+
+그리고 이 프로비저너는 가능한 마지막수단으로 사용하고,어지간하면 공급자가 제공하는 옵션(aws ec2에선 user_data)를 쓰래
+
+
+
+aws_eip는 유동적ip리소스임,얘를 써서 고정 퍼블릭ip를 받을수있음  
+그리고,아웃풋을 받든 하는걸로 만들어진 인스턴스의 주소를 받는게 가능함(dns를 받을수있음 )
+사용법은 그냥 
+	resource "aws_eip" "elasticip"{
+		instance=aws_instance.리소스이름.id
+	}
+하는걸로 끝임
+
+테라폼에서 가능하면 프로비저너를 사용하지 마라는 이유는,
+	프로비저너를 사용하면 구성이 복잡해짐(리소스내에 블록이 들어가니까)
+	
+	커넥션블록을 따로 적어야함(user_data같은건 알아서처리해서 그런거안해도됨)
+	
+	그리고 아예 그게 설치되어있는 ami를 쓰는게 제일편함(nginx가 설치된 ami-XYZ같은)
+	즉,커스텀ami를 사용하면됨
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

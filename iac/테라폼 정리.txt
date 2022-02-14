@@ -921,26 +921,55 @@ aws_eip는 유동적ip리소스임,얘를 써서 고정 퍼블릭ip를 받을수
 
 
 
+테라폼에서 taint는,특정개체가 이상하니까 현재스테이트에 상관없이 그걸 재생성하라는소리임
+가장 빠른예는 프로비저너를 써서 에러가났는데 on_failure이 fail이면 그 리소스는 테인트가 걸려서 생성이 안됨
+그리고 수동으로 테인트를 걸수도있는데
+	terraform taint 리소스종류.리소스이름
+하면 테인트가 걸리고
+	terraform untaint 리소스종류.리소스이름
+하면 테인트가 풀림
+요즘은 안쓰고
+	terraform apply -replace="리소스종류.리소스이름"
+이렇게한다고함
 
 
 
+테라폼에서 디버깅을위해 로그를 보는건
+	export TF_LOG=로그레벨
+	export TF_LOG=TRACE
+여기서 로그레벨은 순서대로 (INFO,WARNING,ERROR,DEBUG,TRACE)가 있음
+이걸 설정하고 plan이나 apply를 하면 로그가 쭉나옴
+로그를 따로 파일로 빼고싶으면
+	export TF_LOG_PATH=/로그경로/로그파일.log
+하면됨
+이걸 다시 비활성화하려면
+	unset TF_LOG_PATH
+하면됨
 
 
 
+테라폼에서 원래 있던 리소스를 코드로 만드는건 import를 쓰면됨
+기본적으론 테라폼으로 다만들지만(이상적으로는),다른 프로비저닝툴로 만들수도있고,aws콘솔로 만들수도 있는데,
+그걸 코드화시켜서 다시 업데이트권한을 테라폼쪽으로 가져올수있음
+
+임포트 쓰는 방법은
+	terraform import 리소스타입.리소스네임 애트리뷰트(aws의 경우 리소스의 instanceid값같은,아니면 arn써도됨)
+	terraform import aws_instance.abcdserver i-026e13be10d5326f7//id값
 
 
+그리고 이건 파일을 생성하지않기때문에,tf파일을 만들고 빈 리소스를(위 기준으로 aws_instance.abcdserver가 있는)만들어야함
+그러면 거기에 덮어씌워서 업데이트만 함
+빈 tf파일엔 필수아규멘트같은거도 없어도됨
+이걸 사용하면 state에  업데이트가 됨
 
+그리고 import를 쓴다고 main.tf의 리소스정보에는 변화가 절대 없음,그래서 코드로 만들고싶으면 plan써서 비교해가면서 뽑아야함
+왜냐면  import는 aws의 모든걸 분석하는게 아니라,일부만 분석하기때문
+이때 같은개체인지 확인하려면,plan해서 replace가 아니고 변화없음나올때까지 복붙하면됨
+이때 그냥 terraform state show 리소스종류.리소스네임 해서 다 복붙한후,에러뜨는거 다지워가면됨
+이건 그냥 테라포밍쓰면 알아서 바꿔줌(aws만 되지만),이것도 안되는부분있긴함
 
-
-
-
-
-
-
-
-
-
-
+awscli에서 현재생성된 리소스보는건
+	aws ec2 describe-instances --endpoint http://aws:4566
 
 
 

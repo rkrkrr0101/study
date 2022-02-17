@@ -1,0 +1,155 @@
+앤서블은,주로 만들어진 인프라에 설치하거나 뭐 스크립트돌리거나 하는식으로 사용되는 ioc툴임
+
+
+앤서블에서 인벤토리는,여러 컴퓨터를 묶어둔거,ssh를 사용해서 수행됨
+앤서블은 에이전트리스임,그래서 os자체의 기능을 사용해서 연결해서 작업을 함
+그때 연결할 대상들이 모여있는게 인벤토리파일임
+
+만약 인벤토리파일이 없으면,기본인벤토리파일을 사용함
+이건 /etc/ansible/hosts에 있음
+
+인벤토리파일은 ini와 유사한형태임
+그형태로 서버들이 나열되어있음(서버주소,ip형태나 dns형태)
+	server1.company.com
+	server2.company.com
+	[mail]
+	server3.company.com
+	server4.company.com
+이걸 그룹화 시킬수도 있음
+단일 인벤토리파일에 여러 그룹이 들어갈수있음
+
+그리고 각 서버에 별칭을 붙이려면(alias)
+	web ansible_host=server1.company.com
+	db ansible_host=server2.company.com	
+이런식으로
+	붙일이름 ansible_host=서버주소
+하면됨
+그리고 이걸 그룹화할땐
+	web ansible_host=server1.company.com
+	db ansible_host=server2.company.com
+	[webserver]
+	web
+	[dbserver]
+	db
+이렇게 쓰면됨
+만약 그룹의 그룹을 넣고싶으면
+	[그룹이름:children]
+	자식그룹이름1
+	자식그룹이름2
+이렇게 넣으면됨,children선언해주고 그대로쓰면됨
+
+이런 앤서블인벤토리 매개변수엔 여러개가있는데
+	ansible_connection=ssh/winrm/localhost(연결방법을 정의)
+		web ansible_host=server1.company.com ansible_connection=ssh //이런식
+		localhost ansible_connection=localhost
+	ansible_port=22/5986(연결할포트를 정의,ssh의경우 기본값은 22임)
+		
+	ansible_user=root/adminstrator(연결할계정을 정함)
+		web ansible_host=server1.company.com ansible_connection=ssh ansible_user=root
+		web ansible_host=server1.company.com ansible_connection=ssh ansible_user=admin//이런식
+		
+	ansible_ssh_pass=패스워드(ssh연결할때 패스워드필요하면 여기적을수있음)
+		web ansible_host=server1.company.com ansible_connection=ssh ansible_user=root ansible_ssh_pass=123qk
+	ansible_password=패스워드(이건 윈도우용)
+여기서 패스워드는 가능하면 ssh키기반으로 하고,패스워드는 없애는게좋음,플레인텍스트로 주고받아야하는데 보안에안좋음
+
+
+그리고 
+	ansible 대상서버별칭 -m ping -i 인벤토리파일.txt
+로 핑을 날려볼수있음
+그러면 TF로 리턴이옴
+
+
+아예 저거 ssh 패스워드체크를 없애버리고싶으면
+	/etc/ansible/ansible/cfg의 host_key_checking=False를 주석을 제거하면 됨
+근데 이건 추천하진않는대 프로덕션에서
+애초에 패스워드를쓰면안되고,ssh키써야된다고함
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

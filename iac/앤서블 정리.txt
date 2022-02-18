@@ -38,6 +38,23 @@
 	자식그룹이름2
 이렇게 넣으면됨,children선언해주고 그대로쓰면됨
 
+이건 ini방식이고,yaml방식도 있음
+	all:
+		hosts://뭘 생성할떈 이게 필요함
+			주소ipdns1:
+		children:
+			그룹의그룹이름:
+				그룹명1:
+					hosts:
+						주소ipdns2:
+						주소ipdns3:
+				그룹명2:
+					hosts:
+						주소ipdns4:
+						주소ipdns5:
+		
+
+
 이런 앤서블인벤토리 매개변수엔 여러개가있는데
 	ansible_connection=ssh/winrm/localhost(연결방법을 정의)
 		web ansible_host=server1.company.com ansible_connection=ssh //이런식
@@ -59,6 +76,11 @@
 로 핑을 날려볼수있음
 그러면 TF로 리턴이옴
 
+그리고 
+	ansible --list-hosts abcd.example.com
+으로 현재 저 값이 있는지없는지를 확인할수있고,제대로 인벤토리가 물렸는지도 확인할수있음
+그리고
+
 
 아예 저거 ssh 패스워드체크를 없애버리고싶으면
 	/etc/ansible/ansible/cfg의 host_key_checking=False를 주석을 제거하면 됨
@@ -69,28 +91,74 @@
 
 
 
+앤서블은 yaml로 작업을 함
+근데 내가 지금 야믈을 할이유가잇을까
 
 
 
+앤서블 플레이북은 앤서블의 언어임
+앤서블에 일을 시킬땐,이 언어로 적어야함
 
+기본적으론
+	run command1 on server1
+	run command2 on server2
+	Restarting server1
+	Restarting server2
+이런식으로 적을수도있지만,이러면 대량의 서버에서 쓰기힘들고,재사용도 힘듬
 
+모든 플레이북은 yaml포멧으로 적히고,확장자도 .yml임
+앤서블 플레이북은 단일 yaml파일이고,
+그안에서 대상을 지정하고(그룹같은 인벤토리에 들어있는),명령이나 스크립트를 실행(패키지설치같은)하거나 재시작하는거임
+플레이북의 형태는
+	-  name: 플레이북이름
+	   hosts:localhost //대상,인벤토리에 들어있는 그룹같은거
+	   tasks:
+	   -  name: 명령이름
+	      command: date//리눅스커맨드
+	   -  name: 명령이름
+	      script: test.sh//스크립트실행
+	   -  name: 명령이름
+	      yum:
+		   name: httpd
+		   state: present
+	   -  name: 명령이름
+	      service:
+		    name: httpd
+			stete: started
 
+그리고 플레이북은,위에서부터 순서대로 실행됨
+그리고
+	-  name: 플레이북이름1
+	   hosts:localhost //대상,인벤토리에 들어있는 그룹같은거
+	   tasks:
+	   -  name: 명령이름
+	      command: date//리눅스커맨드
+	   -  name: 명령이름
+	      script: test.sh//스크립트실행
+	   -  name: 명령이름	
+	   
+	-  name: 플레이북이름2
+	   hosts:localhost //대상,인벤토리에 들어있는 그룹같은거
+	   tasks:
+	   -  name: 명령이름
+	      yum:
+		   name: httpd
+		   state: present
+	   -  name: 명령이름
+	      service:
+		    name: httpd
+			stete: started
 
+이런식으로 두개이상으로 나누는거도 가능함,그리고 야믈이니까,서순은 별상관없음 당연히,name이 젤위에오는게 기본적이긴하지만,호스트랑 자리바꿔도됨
+그렇지만 task는 리스트니까,순서가 있고,순서대로 실행됨
 
+앤서블에서 모듈은,테스크에서 사용하는 command,script,yum,service같은거임
+상세정보는 공식도큐에서 볼수있고,
+기본적으로 쓰는건 저거정도만 알고있으면됨
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+그리고 앤서블을 실행할땐
+	ansible-playbook 앤서블파일이름.yaml
+하면됨
 
 
 

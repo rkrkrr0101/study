@@ -278,6 +278,15 @@ service는 서비스를 중지하거나 재시작함,그 쿠버네티스 13점�
 얜 프리폼이 아님,서비스를 받아서 상태를 지정하는거니 당연하지만
 이거도 started인 이유는,선언형으로 하기떄문에 시작이 안되어있으면 시작시키고 시작했으면 아무것도 하지마라는 멱등성지키라는소리
 
+state에는 대표적으로
+	started
+
+	stopped //종료할때
+	restarted //재시작할떄
+	reloaded //변경된설정 적용할때
+	present //뭘 설치할때,installed랑 같음
+	removed //삭제할때
+	latest //마지막버전으로 업데이트
 
 lineinfile은 파일의 라인을 찾고 추가하는데 사용됨,없을경우 추가할수도있음
 	lineinfile:
@@ -288,7 +297,169 @@ lineinfile은 파일의 라인을 찾고 추가하는데 사용됨,없을경우 
 얘도 멱등성이 지켜짐 
 
 
+앤서블에서 변수는,각 서버마다 다른 정보를 가져오거나(대표적으로 id패스워드)할때 사용됨
 
+이건 인벤토리에서 했던거임
+	web1 ansible_host=server1.company.com ansible_connection=ssh ansible_user=root
+이건 web1에 저걸 다 박아둔거임
+
+그리고 인벤토리에서 특정 그룹의 변수를 정의할떈
+[server]
+qqq.ex.com
+ivv.ex.com
+[server:vars]
+user=joe
+
+이런식으로 특정 그룹에 속한 변수를 정할수있음
+
+우선순위는 명령줄입력-플레이북-인벤토리순으로 덮어씌워짐
+명령줄이 최우선으로 나옴
+
+
+
+플레이북에서 사용은
+	-  name: 플레이북이름
+	   hosts:localhost //대상,인벤토리에 들어있는 그룹같은거
+	   vars:
+	     변수명1:변수값2
+	   tasks:
+	   -  name: 명령이름
+		  lineinfile:
+			path: 파일경로/파일이름.txt
+			line: 'abc123{{변수명1}}'	
+저렇게 vars를 선언하고 {{변수명}} 으로 사용하면됨
+{{}}이걸 사용하는건,변수가 문자열내에 들어가야할때 사용함
+만약 변수가 그자체로 들어가야하면
+	"{{변수명1}}"
+을 넣으면됨
+변수가 맨앞에오면 ""쳐줘야하고,뒤에나오면 상관없는듯(이상함)
+
+변수도 배열을 쓸수있는데
+
+	users:
+		aaa:
+			first:aab
+			last:rrr
+		bbb:
+			first:qqq
+			last:ivv
+
+이런식으로 쓰고
+	{{users.aaa.first}}
+이런식으로 참조하면됨
+
+그리고 아예 varuables파일에 따로 담아둘수도있음
+이렇게쓰면 재사용하기좋음 하드코딩하는거보다
+이렇게 {{}}하는걸 jinja2 템플릿이라고 함
+
+
+
+앤서블에서 조건문 쓰는건 테스크밑에 네임과 같은칸에 when을 넣고 조건을 달면됨
+when이 true인경우에 그 테스크를 실행함
+
+	-name:install nginx
+	 hosts:all
+	 tasks:
+	 -  name:install nginx on debian
+	    apt:
+		  name: nginx
+		  state: present
+		when: ansible_os_family=="debian" and ansible_distribution_version=="16.04"
+	 -  name:install nginx on redhat
+	    yum:
+		  name: nginx
+		  state: present
+		when: ansible_os_family=="redhat" or ansible_os_family=="suse"
+
+이런식으로 각 os마다 설치방법을 바꿀수있음
+ansible_os_family는 빌트인함수로,현재 os의 값을 줌
+
+앤서블에서 패키지 여러개를 설치해야할떈,변수목록에 준다음,required로 필수인지 아닌지를 체크하고 그걸설치하는식으로 함
+	vars:
+		packages:
+			-name: nginx
+			 required: True
+			-name: mysql
+			 required: True
+			-name: apache
+			 required: False
+그리고 이걸 반복문돌림		 
+	tasks:
+	-  name: install "{{item.name}}"
+	   apt:
+	     name:"{{item.name}}"
+		 state: present
+		 
+	   loop: "{{packages}}"
+
+		
+루프에서도 제어문을 사용할수있음
+	tasks:
+	-  name: install "{{item.name}}"
+	   apt:
+	     name:"{{item.name}}"
+		 state: present
+	   when: item.required==True
+	   loop: "{{packages}}"
+이러면 required이 true인거만 작동하고 아니면 작동하지않음
+
+
+
+앤서블에서 한작업의 출력을 기록하려면 register를 쓰면됨
+	tasks:
+		-command:service httpd status
+		 register:result
+
+만약 한작업에서 출력을 받아서 그걸가지고 조건문을 돌려서 체크하고 다음작업을 하려면
+	tasks:
+		-command:service httpd status
+		 register:result
+		 
+		-mail:
+		  to: abc@naver.com
+		  subject:메일제목
+		  body: service다운
+		  when: result.stdout.find('down') != -1
+
+이런식으로하면 위에서 한값에서 down이 있으면 메일을 보냄
+
+
+앤서블에서 루프는 반복문임
+기본적으로 foreach식으로 작동함
+현재 작업하고있는 값은 item이라는 변수에 들어가고,거기서 item.name 이런식으로 빼다가 쓸수있음
+
+루프의 작동방식은
+	loop: {{변수명}}
+	loop:
+	-  qqq
+	-  ivv
+	-  sqqq
+이런식으로 배열변수를 넣어주거나,배열을 넣어주면됨
+사용할떈
+	name:{{item.name}}
+이런식으로 빼주면됨,만약 뭘로 래핑이 안되고(딕셔너리가 아니고) 그냥 값만 쌩으로 있으면
+	name:{{item}}
+이러면됨
+
+그리고 with_items는 loop랑 같은거임,with_items잇으면 그냥 루프라고생각하면됨
+
+그리고 파일을 반복할땐
+	with_file:
+		-"파일경로/파일이름"
+		-"파일경로/파일이름"
+url반복은 
+	with_url:
+	-  "naver1.com"
+	-  "naver2.com"
+db반복은
+	with_mongodb:
+	-  database:dev
+	   connection_string:"mongodb://dev.mongo"
+	-  database:prod
+	   connection_string:"mongodb://prod.mongo"
+
+이럭식으로 with가 붙은 여러개가 있음
+with_items은 안쓰고,쟤들은 조회플러그인으로 잘 사용함
 
 
 

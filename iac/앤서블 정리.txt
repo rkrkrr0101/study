@@ -536,6 +536,113 @@ with_items은 안쓰고,쟤들은 조회플러그인으로 잘 사용함
 
 
 
+기본적으로 배포를할떈,리눅스,아파치,mysql,php 이런 구성(os,웹서버,db,웹언어)으로 사용됨
+리눅스에선 
+	install firewall
+아파치에선 
+	install httpd
+	configure httpd
+	configure firewall
+	start httpd
+mariadb에선
+	install mariadb
+	configure mariadb
+	start mariadb
+	configure firewall
+	configure database
+	load data
+php에선
+	install php
+	configure code
+이 작업들을 해야함
+이걸 순서를 좀 바꿔서
+	install firewall
+	
+	install mariadb
+	configure mariadb
+	start mariadb
+	configure firewall
+	configure database
+	load data
+
+	install httpd
+	install php
+	configure firewall
+	configure httpd
+	start httpd
+	download code
+	test
+
+이런식으로 하면됨
+install firewall은
+	sudo yum install firewalld
+	sudo service firewalld start
+	sudo systemctl enalble firewalld
+이러면 설치후 시작하고
+
+install mariadb는
+	sudo yum install mariadb-server
+configure mariadb는
+	sudo vi/etc/my.cnf //쓸포트로 바꾸기
+start mariadb는
+	sudo service mariadb start
+	sudo systemctl enalble mariadb
+
+configure firewall은
+	sudo firewall-cmd --permanent --zone=public --add-port=3306/tcp //3306포트(db포트)액세스 활성화
+	sudo firewall-cmd --reload //리로드하면 포트가 적용됨
+
+configure database는
+	mysql
+		create database ecomdb; //db접속해서 sql로 db생성하고 유저생성하고 권한부여
+		create user 'ecom@localhost' identfied by 'ecompassword'
+		grant all privileges on *.* to 'ecom'@'localhost
+		flush privileges //그리고 리로드
+
+load data는
+	mysql < db백업파일.sql //db로드
+
+이러면 여기까지가 db설치임
+
+그리고 아파치랑 php설치는
+
+install httpd과 install php는
+	sudo yum install -y httpd php php-mysql //httpd와 php,php-mysql 설치
+	
+configure firewall는
+	sudo firewall-cmd --permanent --zone=public --add-port=80/tcp //80포트 액세스활성화
+	sudo firewall-cmd --reload //리로드
+
+configure httpd는
+	sudo vi /etc/httpd/conf/httpd.conf //index.html대신 index.php사용하게 변경,즉 내가사용할거로 바꿔치기
+
+start httpd는
+	sudo service httpd start
+	sudo systemctl enalble httpd
+
+download code는
+	sudo yum install -y git
+	git clone https://github.com/경로.git /var/www/html/  //웹파일 다운로드
+
+test는
+	curl http://localhost
+로 확인
+
+
+이건 단일노드기준으로 구성한것
+멀티노드의경우엔
+db노드와 웹서버노드가 분리됨
+이떄 신경써야할건 대부분은 비슷한데  커넥션만 조심하면됨
+웹서버에서 db쪽 모든노드 뚫어주고,db에서 웹서버쪽 모든노드 뚫어주기
+뭐근데 쿠버네티스쓰지않을까 노드설정이나 하고
+
+이걸 앤서블에 넣어서,각 단계별로 묶어서 자동화시키면됨
+
+
+끝
+
+
+
 
 
 

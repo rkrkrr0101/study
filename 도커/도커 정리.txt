@@ -164,28 +164,105 @@
 밑에 env안에 들어있음
 
 
+도커파일에서 뭘 실행할떄(진입할때),entrypoint와 cmd를 사용함
+cmd는
+	CMD ["nginx"]
+이런식으로 사용함
+근데 cmd를 사용하면 바로 터미널에 연결하지 않음,그래서 -it로 터미널에 연결해야하는거(cmd명령만 수행하고 따로 뭐 더하는건없음)
+그리고 
+	CMD sleep 5
+이런식 말고,괄호로 쌀떄는 맨처음인자는 온전한 실행파일이어야함
+	CMD ["sleep","5"]
+이렇게
 
+그리고 sleep를 영구적으로 하길원하면 ubuntu-sleeper 이미지를 사용하면됨
+ubuntu-sleeper는 entrypoint를 사용함
+	ENTRYPOINT ["sleep"]
+entrypoint는 기본적으로 cmd와 같은데,cmd는 만약 추가명령을 주면(docker run 이미지 sleep 10),전체가 덮어씌워지는데 반해
+entrypoint는 거기있던 명령에 추가로 적힌명령이 실행됨(최하단에)
+그래서
+	docker run ubuntu-sleeper 10
+하면 sleep 10과 같아짐
 
+만약 기본값을 정하고싶으면
+	ENTRYPOINT ["sleep"]
+	CMD ["5"]
+이렇게하면 됨,cmd만 덮어씌워짐 이러면
 
+그리고 entrypoint를 덮어씌우고싶으면
+	docker run --entrypoint 덮어씌울명령 이미지명 커맨드
+	docker run --entrypoint sleep2.0 ubuntu-sleeper 10
+이렇게 할수있음
 
+그리고 보통 이미지에 특정이름에(특정컨테이너이름) 연결시킬수 있는데,이럴땐
+	docker run --name=abc -p 5000:80 --link redis:redis 이미지명
+으로 --link로 안에서 정의한이름과 연결할 생성된 컨테이너이름과 연결할수있음
+근데 뭐 없어졋다그러고 있는지없는지 모르겟음,보통 도커스웜이나 네트워크로하나봄
 
+도커컴포즈는,도커명령을 yaml로 바꿔서 실행시키는거
+근데 쿠버네티스있는데 쓸까(기본적으로 스테이트풀로 실행하는거같긴함)
 
+도커컴포즈에선,각각의 이름을 가지고 이미지를 지정하고 설정을 넣음
+	version:2
+	services:
+		db:
+			image:이미지명
+			ports:
+			-  5000:80
+			links:
+			-  redis
+			-  db
 
+그리고 이미지를 가져오는대신,빌드를 하고 실행시키려면
+	db:
+		build: ./vote
+이렇게 이미지대신 빌드를넣고 경로지정해주면됨
 
+이렇게 생성시키면,저안에 있는 모든 컨테이너는 같은네트워크에 연결되고,서로의 서비스네임으로 통신할수있음
+그래서 링크는 필요없어짐
+	version:2
+	services:
+		db:
+			image:이미지명
+			ports:
+			-  5000:80
 
+그리고 저기서 시작순서를 정하려면
+	version:2
+	services:
+		db:
+			image:이미지명
+			ports:
+			-  5000:80
+		
+		vote:
+			image:vating
+			depends_on:
+			-  db
+이런식으로 의존성을 추가할수있음
+그리고 서로 분리된 네트워크를 만드려면
+	version:2
+	services:
+		각종컨테이너1
+			networks:
+			-  front
+		각종컨테이너2
+			networks:
+			-  back		
+		각종컨테이너3
+			networks:
+			-  front
+			-  back
+		각종컨테이너4
+			networks:
+			-  front
+			-  back		
+	networks:
+		front:
+		back:
+이런식으로 네트워크만들수있음
 
-
-
-
-
-
-
-
-
-
-
-
-
+그리고 버전3은,네트워크관련기능이 추가됨
 
 
 

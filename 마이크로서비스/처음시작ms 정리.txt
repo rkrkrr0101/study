@@ -393,19 +393,112 @@
 		
 		
 6.인프라 파이프라인 구축
+	여기는 그냥 테라폼설치하고 aws계정생성하고 권한주고 하는데임
+	아는건 생략하고 넘어가자
+	
+	데브옵스랑 마이크로서비스는 엄청 많은게 겹침,데브옵스의 모든것에서 추가로 제한된서비스와 독립적인 배포관리를 추가하면 마이크로서비스임
+	그러니까 데브옵스 방식을 채택하고,거기에 추가로 한두개더하면 됨
+	
+	데브옵스에서 중요한건
+		변경불가능한 인프라:한번생성되면 바꾸려면 파괴하고 다시생성해야함
+		iac:코드로적힌 인프라
+		ci/cd:지속통합/지속배포,소스를 지속적으로 통합하고,그걸 자동으로 테스트하고 배포함
+	가 있음
+	변경불가능한 인프라의 코스트를 낮추기위해 클라우드를 사용하고,
+	iac를 위해 테라폼을 사용함
+	그리고 한번에 큰변화가 생기면 되돌리기 힘드니까,변화를 나눠서 자잘하게 넣기위해 ci/cd파이프라인을 사용함
+	보통 ci(도커파일생성)는 깃헙액션이나 젠킨스,cd는 깃헙액션이나 젠킨스로 쿠버네티스에 던지는식으로 작성함
+	
+	그리고 클라우드를 사용하기위해 aws에서 iam유저를 만들고 권한주고
+	터미널에서 aws configure로 키와 시크릿액세스키를 넣어주고 리전과 아웃풋포맷(json같은)을 정함
+	
+	그리고 테라폼의 state를 클라우드에 저장하기위해(상태는 전역에서 하나만있는게 충돌문제때문에 좋음)s3버킷을 만들면됨
+	
+	1.iac 파이프라인 구축
+		먼저 iac용 깃레포를 하나 만들고,깃이그노어를 테라폼템플릿으로 생성
+		그리고 maintf에 백엔드를 s3로 생성하고 버킷이름,키,리전을 넣음
+		그리고 init plan apply하고(일단 똑같이 생성은 해뒀으니까 aws에 아마 plan에서 노체인지뜰거임)
+		
+		그리고 이걸 자동으로 적용하는 파이프라인은 깃헙액션으로 만들면됨
+		깃헙세팉ㅇ에서 시크릿을 고르고,aws_ACCESS_KEY_ID를 생성하고 패스워드도 생성함
+		그리고 태그를 트리거로
+			가상머신 프로비저닝
+			코드가져오기
+			도구설치후 환경설정
+			테라폼의 형식지정
+			코드검증
+			plan실행
+			apply실행
+			config업로드
+		를 순서대로하면됨
 
+		깃헙액션 yaml은
+			on:
+				create:
+					tags:
+					-  v*
+			jobs:
+				build:
+					runs-on:ubuntu
+					env:
+						AWS_ACCESS_KEY_ID:${{secrets.AWS_ACCESS_KEY_ID}}
+						AWS_SECRET_ACCESS_KEY:${{secrets.AWS_SECRET_ACCESS_KEY}}
+					steps:
+					-  uses: actions/checkout@v2//가져올 태그
 
+		여기서 on은 액션 발생시기고
+		잡에서 실행할 가상머신의 os와 aws아이디를 주고,uses에서 특정태그를 가져옴
+		여기까지가 프로비저닝후 코드가져오기
+		
+		종속성 설치는
+			jobs:
+				build:
+					가상머신프로비저닝..
+				steps:
+				-  uses: actions/checkout@v2//가져올 태그
+				-  name:aws-iam설치
+				   run: |
+					mkdir ~/aws
+					curl -o ~/aws/aws-iam-authenticator \
+					"https://amazon-eks.s3.us-west-2.amazonaws.com/\
+					1.16.8/2020-04-16/bin/linux/amd64/aws-iam-authenticator"
+					chmod +x ~/aws/aws-iam-authenticator
+					sudo cp ~/aws/aws-iam-authenticator /usr/local/bin/aws-iam-authenticator
+		이렇게 종류별로 name으로 나눠서 설치하면되고(안나눠도되지만 나누는게보기편함)
+		테라폼 적용은
+			jobs:
+				build:
+					가상머신프로비저닝..
+				steps:
+				-  uses: actions/checkout@v2//가져올 태그
+				-  name:aws-iam설치
+				   run: |
+					  대충 awsiam설치하는내용
+				-  uses: hashicorp/setup-terraform@v1
+				   with:
+					terraform_version: 0.12.19
+				-  name: fmt
+				   run: terraform fmt					  
+				-  name: init
+				   run: terraform init
+				-  name: validate
+				   run: terraform validate				   
+				-  name: plan
+				   run: terraform plan
+				-  name: apply
+				   run: terraform apply -auto-approve //auto-approve는 yes안쳐도되게하는거
+		이렇게하면되고
+		그리고 kubeconfig 업로드하면됨
+			-name: 업로드 kubeconfig
+			 uses: actions/upload-artifact@v2
+			 with:
+				name: kubeconfig
+				path: kubeconfig
 
+		이렇게
+		이러면 태그가 올라가면 자동으로 테라폼이 실행돼서 적용되게됨(중간에 테스트하는거 빠졋는데 그건 실제할때넣으면됨,테라테스트등 사용)
 
-
-
-
-
-
-
-
-
-
+7.마이크로서비스 인프라 구축
 
 
 

@@ -499,28 +499,276 @@
 		이러면 태그가 올라가면 자동으로 테라폼이 실행돼서 적용되게됨(중간에 테스트하는거 빠졋는데 그건 실제할때넣으면됨,테라테스트등 사용)
 
 7.마이크로서비스 인프라 구축
+	여기선 쿠버네티스설치하고 argocd모듈같으거 설치해서 배포환경을 만듬
+	1.인프라구성요소
+		인프라는 마이크로서비스기반 앱을 배포,관리,지원할수있는 구성요소의 집합임
+		인프라는 하드웨어,소프트웨어,네트워크,도구등 많은부분을 포함해서,범위가 넓기때문에 설정하고 실행하는것도 매우 큰작업임
+		그래서 클라우드를 사용해서 좀더 쉽게 할수있게(iac와 변경불가능한 인프라)했음
+		
+		aws에서 네트워크는,vpc라고 하는 가상네트워크의 상위객체 안에 포함됨
+		이 vpc는 서브넷으로 안에서 분리를 할수있고,
+		트래픽이 드나드는 방식을 지정하는 객체로,서브넷에 방식을 설정할수있음
+		
+		그리고 컨테이너를 사용하면 간단히 작은단위로 배포를 할수있고,그래서 쿠버네티스를 사용해서 컨테이너 오케스트레이션을 함
+		
+		그리고 프로덕션에 서비스를 배포할땐,보통 릴리즈팀이 하는데 이걸 돕기위해 깃옵스배포서버를 사용함
+		깃옵스는 깃을 단일소스저장소로 사용하고,깃에있는 모든것은 대상시스템에 상태여야함(테라폼의 상태와 같음)
+		즉 선언적으로 깃의상태를 현재 프로덕션상태와 일치시킴
+		이때 사용되는게 argocd이고 이걸사용하면 깃소스를 지정하면 거기에 변경사항이 생기고 테스트를 통과하면 자동으로 대상환경에 배포함
+		
+	2.인프라 구현
+		인프라는 테라폼을 사용해서 정의하고 깃헙액션으로 인프라를 테스트하고 적용하면됨
+		그래서 인프라설계를 모듈로 나누고 이걸 호출해야함
+		
+		일단 로컬이나 테스트할곳(샌드박스)에 kubectl을 설치해야함
+		
+		그리고 테라폼에 인프라만들땐
+			모듈사용:한가지역할을 수행하는 작은 함수 작성
+			캡슐화:내부데이터및 구현세부사항을 숨김
+			반복피하기:반복되는건 한번만구현
+		3가지를 지켜서 만들면됨
+		
+		즉 네트워크 모듈을 만들어서 프로덕션과 샌드박스에서 둘다 불러서 쓰는식
+		
+		각 모듈은 자체 디렉토리를 가지고,variables.tf,main.tf,outputs.tf 3개를 가짐,각각 변수,메인코드,출력을 담당함
+		이런식으로하면 모듈을 한번 정의하고,이걸 매개변수화해서 한모듈로 여러환경을 구축할수있음(클래스처럼 사용가능)
+		그리고 출력변수를 가지고,얘가 뭘만드는지 알수있게 표시할수있음
+		
+		네트워크모듈은 aws프로바이더선언으로 시작해서 리전정하고,
+		vpc_name과 cluster_name 넣어주고 
+		aws_vpc리소스에 사이더(192.168.0.0/16 이거)정하고 태그로(찾기쉽게) vpc이름과 쿠버네티스 클러스터이름 정함
+		이거 값들은 전부 변수로넣어줘야함,하드코딩하면안됨
+
+		이렇게 vpc를 만들면 이제 네트워크서브넷 구성이 가능해짐
+		보통 쿠버네티스쓰면 eks를 쓸텐데,이때 서브넷을 2개씩 묶어서,공개와 비공개를 하나씩 두고 서로통신할수있게하고
+		공개쪽에 로드밸런서등으로 뒤쪽으로 전달하는식으로 구성하면됨
+		이때 서브넷을 쓰니까 ip대역을 분할해야하는데,이거도 하드코딩말고 data를 써서 입력을 받던지 매개변수받던지하면됨
+		
+		이때 서브넷은 aws_subnet을 리소스로 만들면되고,
+		data로 입력을 받고
+			data "aws_availability_zones" "availables"{
+				state="available"
+			}
+		vpc_id(사용할vpc)와 cidr_block(vpc의 ip대역),availablility_zone(서브넷의 ip대역),각종태그들을 넣으면됨
+
+		그리고 인터넷에서 접근가능하게하려면(공개) 인터넷게이트웨이를 vpc에 추가해야함,이건 사설클라우드를 공개인터넷에 연결하는 aws네트워크 구성요소임
+			resource "aws_internet_gateway" "igw"{
+				vpc_id=aws_vpc.main.id
+				tags={
+					태그들
+				}
+			}
+			resource "aws_route_table" "public-route"{
+				vpc_id=aws_vpc.main.id
+				
+				route{
+					cidr_block= "0.0.0.0/0"
+					gateway_id= aws_internet_gateway.igw.id
+				}
+			}
+			resource "aws_route_table_association" "public-association"{
+				subnet_id=aws_subnet.서브넷이름.id
+				route_table_id= aws_route_table.public-route.id
+			}
+
+		이렇게 공개하면됨
+		그리고 사설서브넷과 공개서브넷을 연결시켜주는게 필요한데,이때 사용되는게 nat임
+		nat를 생성할땐 eip라는 유동적ip를 사용함
+		이거로 고정ip를 유동ip로 받을수있음
+			resource "aws_eip" "nat"{
+				vpc=true
+				태그
+			}
+			resource "aws_nat_gateway" "nat-gw"{
+				allocation_id=aws_eip.nat.id
+				subnet_id= aws_subnet.public-subnet.id
+				depends_on=[aws_internet_gateway.igw]//종속성
+				태그
+			}
+
+		이렇게만들면됨
+		그리고 사설서브넷에 대한 라우팅추가는
+			resource "aws_route_table" "private-route"{
+				vpc_id=aws_vpc.main.id
+				
+				route{
+					cidr_block= "0.0.0.0/0"
+					nat_gateway_id= aws_nat_gateway.nat-gw.id
+				}
+			}
+			resource "aws_route_table_association" "public-association"{
+				subnet_id=aws_subnet.사설서브넷이름.id
+				route_table_id= aws_route_table.private-route.id
+			}
+		이렇게 위랑 똑같은데 게이트웨이만 nat_gateway로 바뀜
+		
+		그리고 네트워크모듈의 variables.tf파일엔 
+			env_name,
+			aws_region,
+			vpc_name,
+			main_vpc_cidr,
+			public_subnet_cidr,
+			private_subnet_cidr,
+			cluster_name
+		전부 변수로 받으면됨,이때 전부 스트링으로 받으면됨
+		
+		다만들었으면 terraform fmt로 포맷변경(들여쓰가같은거 맞춰줌)
+		init,validate하고 깃에 푸시하면 모듈은 끝임
+		
+		그리고 모듈 가져와서 사용할땐
+			module "모듈에붙일이름"{
+				source="모듈경로"
+				모듈의 매개변수들...
+			}
+		이렇게 다 적으면 끝임
+		그리고 plan 하고 푸시해서 자동으로 apply하게하면됨
+		
+		쿠버네티스모듈도 방식은 똑같음
+		outputs.tf정의하고(이건 eks의 식별자와 다른모듈에서 클러스터에 접근할떄 사용하는값들)
+			클러스터id
+			클러스터이름
+			클러스터인증데이터
+			클러스터엔드포인트
+			클러스터노드그룹id
+		main.tf에 aws프로바이더 추가하고
+			resource "aws_iam_role" "ms-cluster"{ //iam정책
+				name=local.클러스터명
+				assume_role_policy=<<POLICY
+				{
+					정책들적히는곳
+				}POLICY
+				
+			}
+			resource "aws_iam_role_policy_attachment" "EKSPolicy"{
+				policy_arn= "n:aws:iam::aws:policy/AmazonEKSClusterPolicy"//정책경로
+				role= aws_iam_role.ms-cluster.name
+			}
+		이렇게 eks가 aws를 사용할수있게 정책열어주고
+		
+		네트워크 보안정책을 정의함
+			rosource "aws_security_group" "ms-cluster"{
+				name = local.클러스터명
+				vpc_id= var.vpc_id
+				
+				egress{
+					from_port=0
+					to_port=0
+					protocol="-1"
+					cidr_blocks=["0.0.0.0/0"]
+				}
+				태그
+			}
+		이렇게하면 이그레스(아웃바운드)는 무제한허용,인그레스는 거부
+		
+		그리고 eks클러스터를 생성하면됨
+			resource "aws_eks_cluster" "mscl"{
+				name=local.클러스터명
+				role_arn= aws_iam_role.ms-cluster.arn
+				
+				vpc_config{
+					security_group_ids=[aws_security_group.ms-cluster.id]
+					subnet_ids=var.cluster_subnet_ids
+				}
+				depends_on=[
+					aws_iam_role_policy_attachment.ms-cluster-AmazonEKSClusterPolicy
+				]
+			}
+		이렇게 지금까지 만들어둔거 다 연결하면됨
+		이렇게 생성하면 마스터노드(컨트롤플레인)이 생성됨
+		그런데 워커노드가 없으니 워커노드를 추가해야함
+		
+		일단 여기도 iam룰과 정책을 추가하고(위랑같음)
+			정책은 
+				 arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy 워커노드정책
+				 arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy이건 cni정책
+				 arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly 컨테이너레지스트리리드온리 정책
+			쓰고 나머진똑같이하면됨(aws_iam_role_policy_attachment 3개만들면됨)
+			
+		그리고 노드그룹을 만들어야함
+			resource "aws_eks_node_group" "ms-node-group"{
+				cluster_name=aws_eks_cluster.클러스터명.name
+				node_group_name= 노드그룹에붙일이름
+				node_role_arn=aws_iam_role.ms-node.arn
+				subnet_ids=var.nodegroup_subnet_ids //변수에있는 노드그룹서브넷
+				
+				scaling_config{
+					desired_size= 변수에있는 원하는스케일링사이즈크기
+					max_size= 변수에있는 최대스케일링사이즈크기
+					min_size = 변수에있는 최소스케일링사이즈크기
+				}
+				disk_size= 변수에있는 디스크사이즈
+				instance_types= 변수에있는 인스턴스사이즈(t2.namo같은)
+				
+				depends_on=[
+					arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy,
+					arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy,
+					arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly,
+					
+				]
+			}
+
+	이렇게만들면됨
+	그리고 마지막으로,로컬파일로 kubeconfig를 만들어서 넣어주면됨
+	이 kubeconfig의 값들은 만들어진 클러스터에서 값을 가져옴,이건 나중에 할때보자,그냥 값 다 가져오는거임
+	
+	그리고 variables에 변수선언해주고 fmt init validate하고 깃에 푸시하면됨
+	
+	사용할때도 똑같이 소스넣어주고 변수 다 적어주면 끝임
+	그리고 awscli로
+		aws eks list-clusters
+	하면 나옴
+	
+	
+	이제 argoCD를 설치하면되는데,이거도 테라폼모듈로 설치하면됨
+	얘는 쿠버네티스 프로바이더를 사용함,하는김에 헬름도 같이깔면좋음(그러면 헬름으로 아르고설치할수있음)
+		privider "kubernetes"{
+			cluster_ca_certificate= base64decode(var.kubernetes_cluster_cert_data)//만들어둔 클러스터의 인증데이터넣기
+			host= var.쿠버네티스클러스터엔드포인트
+			exec{
+				api_version="client.authentication.k8s.io/v1alpha1"
+				command= "aws-iam-authenticator"
+				args =["token","-i","$(var.클러스터이름)"]
+			}
+		}
+	이렇게 전부 다 변수처리해서 받아오는식으로 처리하고
+	헬름설치는
+		provider "helm"{
+			kubernetes{
+				cluster_ca_certificate= base64decode(var.kubernetes_cluster_cert_data)//만들어둔 클러스터의 인증데이터넣기
+				host=var.쿠버네티스클러스터엔드포인트
+				exec{
+					api_version="client.authentication.k8s.io/v1alpha1"
+					command= "aws-iam-authenticator"
+					args =["token","-i","$(var.클러스터이름)"]
+				}
+			}
+		}
+
+	이렇게 똑같이 넣어주면됨 위랑
+	그리고
+		resource "helm_release" "argocd"{
+			name= "msur"
+			chart="argo-cd"
+			repository= "https://argoproj.github.io/argo-helm"
+			namespace= "argo"
+		}
+	이렇게 레포정의하고 차트넣어서하면됨
+	그리고 변수파일정의하고
+	실제생성떈
+		module "argo-cd-server"{
+			source="경로"
+			
+			kubernetes_cluster_id=module.aws-eks.eks_cluster_id
+			kubernetes_cluster_name=module.aws-eks.eks_cluster_name
+			kubernetes_cluster_cert_data=module.aws-eks.eks_cluster_cert_data
+			kubernetes_cluster_endpoint=module.aws-eks.eks_cluster_endpoint
+			eks_nodegroup_id=module.aws-eks.eks_cluster_nodegroup_id
+		}
+	이런식으로 앞에있는 모듈의 값들을 참조하는식으로 넣으면됨
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+8.개발자 워크스페이스
 
 
 

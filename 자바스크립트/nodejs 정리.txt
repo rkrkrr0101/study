@@ -16,26 +16,172 @@
 	그리고 json이 자바스크립트형식이라 처리하기쉽다는 장점도있음
 	
 	
-2.알아두어야할 js	
+2.알아두어야할 js
+1.es6문법
+	const,let은 var과 다르게,블럭내에서만 스코프가 동작하는 변수선언임,
+	var은 전역스코프를 사용하고
+	const는 블록스코프에 상수(한번선언하면 값못바꿈)
+	let는 블록스코프에 변수
+	
+	그리고 `(백틱,1옆에있는거)과 ${}를 사용해서,문자열내에서 변수를 사용할수있음
+		`${num}은 숫자다`
+	이런식
+	
+	그리고 객체에 함수를 연결할때
+		const abc={
+			say(){
+				console.log('abc')
+			},
+			saynode
+			[변수+'qqq']:'qwer'
+		}
+	이런식으로 적고,이미 만들어진 함수면 그냥 나열하는식으로 넣는게가능
+	사용할떈
+		abc.say()
+		abc.saynode()
+		abc.변수qqq
+	이렇게그냥쓰면됨
+	
+	화살표함수는 그냥
+		const abc=(x,y)=>(x+y) //한줄만쓸땐
+		const abc=(x,y)=>{ //여러줄쓸때
+			if(){
+				...
+			}
+			return aaa
+		}
+	이렇게쓰면됨
+	화살표함수는 this바인드가 달라짐
+	기존 함수내에선 따로 this로 함수를 가리키는 포인터를 받아서 그걸 저장하고 써야했다면(안에서 for문같이 블록써서 스코프달라질경우)
+	화살표함수안에선 this가 외부를 그대로 가리키기떄문에,그냥 this를 써도됨,즉 내부스코프가 없음
+	
+	구조분해할당은,객체나 배열에서 속성이나 요소를 한번에 꺼내는거
+		const (getabc,status:{count})=abcmachine
+	이렇게하면 객체내의 함수와 값을,같은이름의(getabc와 count라는이름의)변수에 저장함
+	즉
+		const getabc=abcmachine.getabc
+	와 같음
+	단,구조분해할당을 사용하면,this의 스코프가 달라지니까,만약 this를 사용하면 bind등을 사용해야함
+	
+	배열을 구조분해할땐 딴데랑 똑같이 갯수맞춰서
+		const [a,b,,c]=array
+	하면 4개짜리로 나눠서 들어감
+	
+	그리고 es6부터는 클래스문법도 지원함,단 프로토타입으로 동작하는건 똑같고 그냥 외형상 클래스로 바꾼거
+	
+	프로미스는,비동기식으로 동작하는 함수임
+	그냥 함수를 진행하다가 성공,실패로 나눠서 기입하고(resolve,reject)
+	거기따라서 비동기식으로 진행하다가 성공,실패따라서 다른결과나오는거
+	이거도 try,catch,finally랑 같은식으로 진행됨
+	리턴값은 resolve와 reject의 값을 받으면됨
+		const abc=new Promise((resolve,reject))=>{
+			if (t/f){
+				resolve('T')
+			}else{
+				reject('F')
+			}
+		}
+		abc.then((message)=>{
+			console.log(message)
+		}).catch((error)=>{
+			console.error(error)
+		}).finally(()=>{
+			console.log(message)
+		})
+	이런식으로 그냥 비동기함수를 성공실패로 나눠서 동작함
+	즉,resolve가 호출되면 then,reject가 호출되면 catch가 작동하는식
+	그리고 프로미스안에 프로미스를 선언하고,리턴한다음 그걸 바로 then으로 붙여나갈수도 있음
+	이러면 이전 then의 리턴값을 다음then의 매개변수로 넘김
+	이걸 사용해서 콜백을 프로미스로 바꿀수있음
+	이렇게했을땐,마지막에 캐치하나써서 모든 에러를 거기서 한번에 처리할수있음
+	
+	그리고 promise.all([pro1,pro2]).then
+	으로 여러개를 한번에 실행할수도있음
+	이경우엔,모두 결과값이 나올때까지 기다렸다가,다 나오면 그걸 배열로 리턴함,만약 하나라도 reject가 있으면 catch로 가고
+	
+	async/await는 프로미스가 then catch로 길어지니까,그걸 해결하기위해 나온 비동기기능임
+	async함수를 선언하고,프로미스앞에 await를 붙이면 됨,그리고 catch를 하기위해,try catch로 딴언어랑 똑같이 싸면됨
+	이러면 await와 await사이가 기존 then이 됨
+	즉 await를 사용하면,코드가 알아보기 엄청편해짐
+	그리고 for문과 같이 사용해서,프로미스를 순차적으로 실행할수도 있음
+		(async()=>{
+			for await (promisere of [pro1,pro2]){
+				console.log(promisere)
+			}
+		})
+	이런식
+
+2.프런트엔드 js
+	ajax(비동기웹)을 사용해서 restapi를 사용할때도 프로미스로 보내면됨
+		axios.get(http://주소).then((result)=>{
+			...
+			console.log(result)
+			console.log(result.data)
+		}).catch((error)=>{
+			...
+			console.error(error)
+		})
+	이런식임
+	프로미스니까 그냥 async/await로 바꿀수있음
+		(async()=>{
+			try{
+				const result=await axios.get(http://주소)
+				console.log(result)
+				console.log(result.data)
+			}
+			catch{
+				console.error(error)
+			}
+		})();
+	post는
+		(async()=>{
+			try{
+				const result=await axios.post(http://주소,{json값들})
+				console.log(result)
+				console.log(result.data)
+			}
+			catch{
+				console.error(error)
+			}
+		})();	
+	이렇게 보내면됨
+	
+	
+	formdata는,html form태그 데이터를 동적으로 제어함,보통 ajax와 같이 사용됨
+	먼저 formdata는
+		append
+		has
+		get
+		getall
+		delete
+	메서드를 가지고있음
+	얘는 append로 키-값형식으로 저장하고(abc.append('name','aa')),키값이니까 같은키에 여러값이 들어갈수도 있음
+	그리고 has로 그 키에 값이있나 확인하고,get으로 키에해당하는값 하나를 받고,getall로 키에해당하는값 전체를 받음
+	delete로 키를 삭제,set으로 현재키 수정
+	이걸 post같은데서 매개변수로 받아서 거기에 해당하는걸 할수있음
+	
+	그리고 ajax요청을 보낼때,주소에 한글이 들어가면
+	백틱을 써서 
+		`앞주소${encodeURIcomponent('한글문자')}`
+	를 사용해서 16진수로 바꾸고
+		decodeURIcomponent('16진수')
+	로 다시 돌릴수있음
+
+	프런트엔드로 값을 넘길때 사용되는 공식방식이 데이터속성임
+	html태그의 속성으로 data-이름='값'으로
+		<li data-id="1" data-user-job="pro"  />
+	이런식으로 던져주면
+	id,userJob 이렇게 자바스크립트에서 사용할수있어짐
+		<script>
+			console.log(document.querySelector('li').dataset)
+			document.querySelector('li').dataset.money=1000
+			
+		</script>
+	이렇게 꺼내쓸수있고,dataset.이름=값 으로 삽입도 가능함 (dataset.money=1000은 data-money="1000")
 	
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+3.노드기능	
 	
 	
 	

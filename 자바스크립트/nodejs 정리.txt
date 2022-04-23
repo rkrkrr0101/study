@@ -449,35 +449,156 @@
 	
 	
 4.http모듈로 서버만들기	
+1.요청과 응답이해
+	기본적으로 서버를 돌릴땐
+		http 임포트
+		http.createServer((req,res)=>{
+			응답내용
+		})
+	이렇게하면 됨
+	req에는 요청정보,res에는 응답정보가 담김
+	즉
+		http 임포트
+		http.createServer((req,res)=>{
+			res.wirteHead(200,{'Content-type':'text/html; charset=utf-8'})
+			res.write('<h1>Hello Node</h1>')
+			res.end('<p>Hello Server</p>')
+		})
+		.listen(8080,()->{
+			console.log('8080포트대기')
+		})
+	이렇게하면 8080포트가 열리고,로컬호스트 :8080으로 접근할수있음
+	그러면 저 헬로우노드 헬로서버가 나옴
+	
+	즉 createServer에서 응답내용을 명시하고,
+	그걸 listen으로 열어주면 거기적힌포트로 접근하면 크리에이트서버의 이벤트가 발생해서 응답을 하게됨
+	
+	그리고 listen에 콜백함수를 넣는거대신,
+		server.listen(8080)
+		server.on('listening',()=>{
+			console.log('8080포트대기')
+		})
+		server.on('error',(error)=>{
+			console.error(error)
+		})
+	이렇게 이벤트리스너를 붙일수도있음
+	
+	한번에 여러서버를 쓸때도,크리에이트서버를 여러개하고 포트만다르게해서 listen하면됨
+	그리고 매번 html을 일일히 적을수없으니까,그냥 파일에 만들고 파일던지는게 좋음
+		http.createServer(async (req,res)=>{
+			try{
+				const data=await fs.readFile('./html파일명')
+				res.wirteHead(200,{'Content-type':'text/html; charset=utf-8'})
+				res.end(data)
+			} catch(err){
+				console.error(error)
+				res.wirteHead(500,{'Content-type':'text/html; charset=utf-8'})
+				res.end(err.message)
+			}
+		})
+		.listen(8080,()->{
+			console.log('8080포트대기')
+		})		
+	이렇게 파일로 던지고,못읽을수도있으니까 못읽으면 에러던지면됨(일단 무조건 응답을 보내긴해야함,안그럼 타임아웃까지 기다려야하니까)
+	
+2.rest와 라우팅 사용하기
+	restapi를 사용해서,rest메서드와(get,post등)과 주소와 쿼리+데이터를 보내면,그걸 받아서 라우팅하는방식으로 동작시킬수있음
+	대충 if문을 사용하면됨
+		http 임포트
+		http.createServer(async(req,res)=>{
+			if (req.method==='GET'){
+				if(req.url === '/'){
+					res.wirteHead(200,{'Content-type':'text/html; charset=utf-8'})
+					res.write('<h1>Hello Node</h1>')
+					return res.end('<p>Hello Server</p>')
+				}
+				else if (req.url==='/about'){
+					const data= await fs.readFile('./about.html')
+					res.wirteHead(200,{'Content-type':'text/html; charset=utf-8'})
+					return res.end(data) //end자체만으론 함수가안끝나니까 return붙여야함
+				}
+				try{ // /도 /about도 아니면 
+					const data = await fs.readFile(`.${req.url}`)
+					return res.end(data)
+				}catch(err){
+					//404에러발생
+				}
+			}
+			res.wruteHead(404)
+
+		})
+		.listen(8080,()->{
+			console.log('8080포트대기')
+		})	
+	대충 이렇게던지면되는데,물론 전체를 싸는 try catch(500에러)도 있긴해야하지만
+	post의 경우엔(delete,put등도 포함해서)
+		req.method
+			req.url
+				let body=''
+				req.on('data',(data)=>{
+					body+=data
+				})
+				return req.on('end',()=>{
+					const{name}=JSON.parse(body)
+					const id=Date.now()
+					users[id]=name
+					res.writeHead(201)
+					res.end('등록성공')
+				})
+	이런식으로 스트림으로 받아서 json으로 넣으면됨,기본적으로 req와 res도 스트림형식이라서,스트림처럼 읽으면됨
+	근데 이렇게 if문으로 분기하면 보기머리아프니까,express모듈을 사용하면 쿠키세션과 rest분기도 편해짐
+	
+	
+	
+3.쿠키와 세션
+	로그인을 구현하려면 쿠키와 세션을 알아야함
+	서버에서 클라이언트를 구분하기위해 기본적으로 사용하는건 쿠키임
+	쿠키는 유효기간이 있는 단순한 키-값쌍임
+	서버로부터 쿠키가오면 브라우저는 저장해뒀다가 다음에 그 서버에 요청할때마다 쿠키를 같이 보내고,서버는 그걸 읽어서 누구인지를 파악함
+	브라우저는 쿠키가 있으면 자동으로 같이 보내주니까 따로 처리할필요가 없음
+	
+	즉 서버는 미리 클라이언트에 요청자를 추정할만한 정보를 쿠키로 보내고,그다음부턴 쿠키를보고 누군지파악함
+	쿠키를 만들어서 넣을떈
+		http 임포트
+		http.createServer((req,res)=>{
+			res.wirteHead(200,{'Set-Cookie':'쿠키키=쿠키값'})
+			res.end('<p>Hello Server</p>')
+		})
+		.listen(8080,()->{
+			console.log('8080포트대기')
+		})	
+	이렇게 보내면됨
+	그리고 쿠키를 보내면,기본적으로 홈페이지의 아이콘을 같이 보냄(favicon.ico)
+	
+	서버에서 이걸 사용하려면,쿠키 파싱함수를 만들고(기본적으로 문자열로 들어옴),기본적으로 쿠키의 특정값이 있는지 없는지로 분기타서 맞춰서 던져주면됨
+	
+	근데 그냥 이렇게만쓰면 쿠키가 노출되고,쿠키를 조작할수있기때문에,쿠키에는 번호만 주고,서버에서 사용자정보를 관리하게만들어야함
+	(특정숫자와 정보배열이 연동되는식으로),이게 세션임
+	보통은 그냥 다른사람들이 만들어둔 세션모듈을 사용함
+	
+	
+	
+4.https와 http2
+	https는 웹서버에 ssl암호화를 추가한거
+	이건 근데 해보려면 인증서필요함
+	거의 비슷한데,http모듈대신 https모듈 임포트하고,cert,key,ca를 읽어서 https.createServer앞 매개변수에 넣어주면됨
+	그리고 443포트를 열면됨
+	
+	http2는 그냥 좀 빠른 http인데,그렇게 큰차이는 안난다고함
+	이거도 그냥 https를 http2모듈로 바꾸고 똑같이쓰면됨
+
+	
+	
+5.cluster
+	클러스터모듈은 기본적으로 싱글프로세스로 동작하는 노드가,cpu를 전부사용하게 해주는 모듈임
+	쓰레드가 아닌 프로세스를 사용함
+	기본적으로 마스터는 워커를 생산하는일만 하고,워커들이 같은포트에서 대기하고있다가 일을 받아가서 하는식
 	
 	
 	
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+5.패키지매니저
 	
 	
 	

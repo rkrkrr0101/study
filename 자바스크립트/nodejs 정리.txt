@@ -625,6 +625,70 @@
 	
 	
 6.익스프레스 웹서버
+1.익스프레스시작
+	일단 맨먼저 폴더를만들고 npm init로 package.json을 생성하고,
+	package.json의 스크립트에 start:nodemon app 으로 노드몬(코드변경시 자동재시작해줌)설정하고(dev에서만 쓰는게좋음)
+	코드를 적으면됨
+	
+	기본적으론
+		express모듈임포트
+		const app=express()
+		app.set('port',process.env.PORT || 3000) //env포트환경변수가있으면 그거쓰고,아니면 3000번사용
+		
+		app.get('/',(req,res)=>{
+			res.sendFile(path.join(__dirname,'html파일이름'))
+		})
+		
+		app.listen(app.get('port'),()=>{
+			console.log('대기중')
+		})
+		
+	이런식으로,포트세팅하고 라우팅 나열하고 listen하면됨
+	get은 get요청이 들어오면 /인지 확인하고 들어가는,2중if문을 암축해둔거임
+	요청이 들어오면 파일경로에 있는 파일을 전송함
+	
+	
+2.자주사용하는 미들웨어
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	

@@ -649,45 +649,333 @@
 	
 	
 2.자주사용하는 미들웨어
+	미들웨어는 익스프레스의 핵심임
+	라우터와 에러헨들러등도 다 미들웨어니,익스프레스의 전부라고 봐도됨
+	
+	미들웨어를 사용하는방법은
+		app.use(주소,미들웨어) //주소는 옵션
+	임
+	기본적으로
+		app.use((req,res,next)=>{
+			함수내용
+			next()
+		})
+	로 동작하고,next가 없으면 다음미들웨어로 넘어가지못하고 거기서끝남
+	매개변수의 맨앞에 주소를 넣어주면,그 주소에서만 동작하고,아니면 모든요청에서 동작함
+		app.post('주소',미들웨어)
+		app.get('주소',미들웨어)
+	이렇게 액션을 선택해서 거기만 동작하게할수도있음
+		app.use((err,req,res,next)=>{
+			res.status(500).send(err.message)
+			
+		})	
+	이렇게 err을 미들웨어 매개변수에 넣으면,모든에러처리가 됨
+	
+	미들웨어는 위부터 순서대로작동하기떄문에,저런 에러처리는 맨마지막에 넣으면됨
+	
+	직접 미들웨어를 만들어쓰기도 하지만,기본적으로 이미 다 만들어둔 모듈을 가져다 쓰는경우가 많음
+		app.use(morgan('dev'))
+		app.use(express.json())
+	이런식임
+	보통 만들어둔건 next가 안에 들어있어서,그냥 순서대로 동작한다고 생각하면됨
+	
+	morgan은 요청에 대한 정보를 콘솔로 출력해줌
+		메서드/주소/http상태코드/응답속도/응답바이트
+	가 나옴
+	개발시엔 dev,배포시엔 combined를 넣어주면됨
+	
+	static은 정적인 파일을 제공하는 라우터임
+	얘는 기본적으로 익스프레스에 들어있고
+		app.use('요청경로',express.static('실제경로'))
+	이렇게 하면됨
+	이걸 사용하면,실제경로를 감출수있어서,보안에 도움이됨,즉 어떤폴더에 뭐가 들어가있고 그런걸 감출수있음
+	그리고 정적파일을 알아서 제공해줘서,fs.readFile로 파일을 직접 읽어서 전송할필요가 없음
+	이떄 파일을 발견하면 next를 안치고,파일을 못찾으면 next를 침
+	응답을 보넀으면 더할필요가없으니까
+	
+	body-parser은 요청의 본문에 있는데이터를 해석해서 req.body객체로 만들어줌
+	보통 폼데이터나 ajax요청데이터를 처리하고,이미지,동영상,파일같은건 처리하지못함
+	즉 얘는 rest의 쿼리스트링을,키값객체로 만들거나,post같은거의 json객체를 파싱해서 키값객체에 넣어줌
+	
+	cookie-parser는,요청에 있는 쿠키를 해석해 req.cookies객체로 만들어줌
+	해석된 쿠키는 req.cookies객체에 들어가고,거기서 그냥 키값쌍처럼 쓰면되고,유효기간지난건 알아서걸러줌
+		app.use(cookieparser(비밀키))
+	첫번째인수로 비밀키를 받을수있는데,서명된쿠키의경우,저 키로 내가 만든키인지를 검증할수있음(내키까지 같이 압축해서 그걸로 복호화걸어서 풀리나보는느낌)
+	이건 기본적으로 쿠키 해석하는용도고,쿠키를 생성/제거할땐
+		res.cookies(키,값,옵션) //옵션에 유효기간,httponly등이 들어감
+		res.clearCookie(키,값,옵션)//키,값,옵션이 전부 일치해야 지울수있음
+	이렇게 하면됨
+	옵션에 signed라는 옵션이 있는데,이걸 true로하면 키뒤에 서명이 붙으니,항상켜두는게좋음
+	이때 키는 cookieparser에 인수로넣은값이고,process.env.COOKIE_SECRET에 있음
+	
+	express-session은 세션관리용 미들웨어임
+	로그인등의 이유로 세션을 구현하거나,특정사용자를 위한 데이터를 임시로 저장해둘때 사용됨
+	세션은 사용자별로 req.session객체 안에 유지됨
+		app.use(session({
+			resave:false,
+			saveUninitialized:false,
+			secret:process.env.COOKIE_SECRET,
+			cookie:{
+				httponly:true
+				secure:false
+			}
+			name:'session-cookie'
+			
+		}))
+	일반적으론 미들웨어순서랑 상관없는데,구버전에선 내부적으로 쿠키파서를 사용해서 쿠키파서미들웨어보다 뒤에있어야했지만,
+	이젠 상관없긴한데 관례적으로 뒤에다 놓는게 좋다고함
+	
+	얘는 인수로 세션에 대한 설정을 받음
+		resave는 요청이 올때 세션에 수정사항이 없어도 세션을 다시저장할지 설정하는거고
+		saveUninitialized는 세션에 저장할내용이 없을때 처음부터 세션을 생성할지 설정하는것
+		secret는 쿠키서명에 필요한 비밀키값을 주는거고,쿠키파서값과 똑같이주는게조음
+		cookie옵션은 세션쿠키에 대한 설정임,쿠키파서에서 사용가능한옵션이 다 제공됨
+			httponly는 클라이언트에서 키확인을 막는거고
+			secure는 https가 아닌환경에서 사용가능한지아닌지
+		store는,기본적으론 메모리에 세션을 저장하는데,이걸 db에 저장하는거임,보통 레디스사용함
+		
+	여기서 만들어진 req.session객체에 값을 대입하거나 삭제해서 세션을 변경할수있음
+		req.session.name='zeor' //세션등록
+		req.sessionID //세션아이디확인
+		req.session.destroy()//세션모두제거
+		
+	세션쿠키는 앞에 s%3A로 시작하는데,이렇게시작하면 express-session에서 서명했다는거임
+	이 뒤에내용이 실제 암호화된 쿠키내용임
+	
+	그리고 미들웨어는 동시에 여러 모듈을 장착할수있음(app.use하나에 여러개장착가능)
+	이경우에도 다음으로 넘어가려면 next를 내부적으로 호출해야함
+	이때 express.static같은경우는 next대신 res.sendFile을 보내므로,그뒤에있는건 실행되지않음
+	즉 서순을 잘 맞춰야함
+	만약 next도 안보내고 응답도 안보내면 클라이언트는 타임아웃까지 기다려야하니까 주의
+	
+	그리고 next에 매개변수를 넣어서 특수한동작을 하게할수있음
+		next('route')//다음 라우터의 미들웨어로 이동
+		next(err)//에러처리미들웨어로 이동
+	미들웨어간에 데이터 전달할땐,req객체에 데이터를 넣고,그걸읽으면됨
+		req.data='31'
+	이경우엔 현재 요청이 처리되는동안 공유되고,새요청이오면 초기화됨
+	이떄 다른미들웨어와 겹치지않게,유니크한이름을 쓰는게좋음
+	이렇게 전달하면,req객체는 요청을 보낸 사용자 개개인에 귀속되니까,함수내 지역변수처럼 사용할수있어서 조흥ㅁ
+	
+	그리고 미들웨어안에 미들웨어를 넣어서,조건에따라 분기처리를 하는 패턴도 있음
+	
+	multer은 이미지,동영상,파일등을 업로드할때 사용하는 미들웨어임
+	이때 형식이 multipart/form-data라서 멀티파트형식이라고 부르고,이걸처리해줌
+	사용법은
+		const upload=multer({
+			storage:multer.diskStorage({
+				destination(req,file,done){ //어디에저장할지
+					done(null,'uploads/')
+				},
+				filename(req,file,done){ //어떤이름으로
+					const ext=path.extfile(file.originlname)
+					done(null,path.basename(file.originlname,ext)+Date.now()+ext)//중복방지를위해 시간붙임
+				}
+			}),
+			limits:{fileSize:5*1024*1024}
+			
+		})
+	이렇게 사용함
+	스토리지속성엔 어디에,어떤이름으로 저장할지를 넣고 리미트를 거는거임
+	req는 요청에대한정보가,file엔 파일경로정보가,done에는 req와 file을 사용해 가공한값이 들어있음
+	리미트는 사이즈제한같은걸 거는거(저기는 5mb)
+	
+	이경우에,uploads/폴더가 반드시 있어야하기때문에,readFileSync를 사용해서 폴더있는지확인을 해줘야함
+	저 만들어진 upload변수를 사용할땐
+		app.post('파일경로',upload.single('image'),(req,res)=>{
+			console.log(req.file,req.body)
+			res.send('ok')
+		})
+	이 미들웨어를 라우터미들웨어 앞에 넣어두면,req.file객체가 생성되고 인수는 input태그의 name이나 폼데이터의 키와 일치하게넣으면됨
+	업로드성공시 결과는 req.file에 들어있음
+	req.body엔 파일이 아닌 데이터인  title이 들어있음
+	
+	여러파일업로드시엔 html input태그에 multiple을 넣고
+	미들웨어에 single대신 array를 사용하면됨
+	업로드결과는 req.files배열에 들어있음
+	req.files['html인풋이름']에 들어있음
 	
 	
 	
+3.라우터객체로 라우팅분리
+	익스프레스에서는 라우팅을 깔끔하게 관리할수있음
+	route/app.js에서
+		const router=express.Router()
+		
+		router.get('/',(req,res)=>{
+			내용
+		})
+		mudule.exports=router
+	이렇게 js파일을 따로 만들고,
+		const indexRouter=require('.route/app.js') //만약 route/하면 index.js가 기본값으로 들어가짐
+		app.use('/',indexRouter)
+	
+	이렇게 사용하면됨
+	이경우,app,js와 메인의 값이 같으니까 /2개가 합쳐져서 get / 라우터가 되고,
+		app.use('/user',userRouter)
+	이경우엔 /와 /user이 합쳐져서 get/user라우터가 됨
+	
+	여기서 next('route')를 사용하면,현재라우터를 종료하고 다음라우터로 넘어가는것(라우터에 연결된 나머지미들웨어를 건너뜀)
+	그리고 같은주소의 라우터를 여러개만들어도,그냥 한라우터에 미들웨어 여러개달린거랑 똑같이동작함
+	
+	라우터주소에 정규표현식을 사용해서 값을 받을수도있는데,보통 정규표현식이 범위가 넓으니까,라우터단에서 제일밑쪽에 넣는게 좋음
+		/user/like를 먹는 라우터 위에 /user/:id 를 먹는애가있으면 다먹어버리고 밑에는 안주니까
+		
+	그리고 주소는같지만 메서드가 다른코드는
+		router.route('/abc')
+		.get((req,res)=>{내용})
+		.post((req,res)=>{내용})
+	이런식으로 묶을수도있음
 	
 	
+4.req,res객체
+	익스프레스의 req,res객체는 http모듈의 req,res객체를 확장한것
+	기존http모듈의 메서드도 사용할수있는데,보통 잘안씀 익스프레스메서드쓰지
+		req.app:req객체를 통해 app객체에 접근할수있음
+			req.app.get('port') 이렇게사용
+		req.body:body-parser미들웨어가 만드는요청의 본문을 해석한 객체임
+		req.cookies:쿠키파서가 만든 요청의 쿠키를 해석한객체
+		req.ip:요청의 ip주소가 담겨있음
+		req.params:라우트매개변수정보가 담겨있음
+		req.query:쿼리스트링정보가 담겨있음
+		req.signedCookies:서명된쿠키는 req.cookies대신 여기있음
+		req.get(헤더이름):헤더읙밧을 가져올때 사용
+		
+		res.app:req.app처럼 res객체를 통해 app에 접근할수있음
+		res.cookie(키,값,옵션):쿠키설정메서드
+		res.clearCookie(키,값,옵션):쿠키제거메서드
+		res.end():데이터없이 응답보냄
+		res.json(JSON):json형식응답을 보냄
+		res.redirect(주소):리다이렉트주소와 함께 응답을보냄
+		res.render(뷰,데이터):템플릿엔진을 렌더링해서 응답함
+		res.send(데이터):데이터와 함께 응답을보냄,문자열,html,버퍼,객체,배열 다 가능
+		res.sendFile(경로):경로에 위치한 파일을 응답함
+		res.set(헤더,값):응답헤더를 설정
+		res.status(코드):응답http상태코드를 지정
+	보통 메서드체이닝을 지원하니까	
+		res
+			.status(201)
+			.cookie('text','tt')
+			.redirect('/admin')
+	이런식으로 적는경우가 많음
+	
+5.템플릿엔진
+	html은 정적인언어라서 기능추가가 안돼서,자바스크립트로 처리해야함
+	템플릿엔진은 js를 사용해서 html을 렌더링할수있게 해줌
+	제일 큰건 퍼그와 넌적스임
+	1.퍼그
+		퍼그는 괄호없이
+			html
+				head
+					title=title //title는 변수,js에서 받아다씀
+					link(rel='stylesheet')
+		
+		이런식으로 적는방식임,즉 들여쓰기가지고 구분함
+		그리고 변수보내는건,렌더링호출시 거기서함
+			router.get('/',(req,res,next)=>{
+				res.render('index',{title:'exp'})
+			})
+		이런식으로넣음
+		이러면 html에서도 변수를 사용할수있어짐
+		그리고
+			router.get('/',(req,res,next)=>{
+				res.locals.title='exp'
+				res.render('index')
+			})	
+		이렇게 locals에 넣어주면,자동으로 렌더링시에 그 변수를 찾아서 집어넣음
+		이거의 장점은,현재라우터뿐아니라 다른 미들웨어에서도 res.locals객체에 접근할수있다는게 장점임
+		퍼그에서 변수사용시엔,대입은 그냥붙이면되고,문자열에서 쓸땐
+			p abcd to #{title}
+		이렇게 #{변수명}으로 사용하면됨
+		내부적으로 #{}내부와 =뒤는 js로 처리하는방식임
+		
+		퍼그내부에서 변수사용하는방법은
+			- const a='abcd'
+		이렇게 앞에 -를 붙이면 js구문을 사용할수있음
+		
+		그리고 퍼그는 기본적으로 변수의 특수문자를 html엔티티로 변환하는데,이걸원하지않으면 
+		=대신 !=를 사용하면됨
+		
+		반복문은
+			each i in 배열
+				li=i
+		이렇게 작성함
+		인덱스가져올땐
+			each i,index in 배열
+				li=index+i	
+		이렇게하면됨
+		
+		조건문은
+			if TF값
+				내용
+			else
+				내용
+		케이스문은
+			case 변수명
+				when '값1'
+					내용
+				when '값2'
+					내용	
+				default
+					내용
+		
+		그리고 다른 퍼그나 html파일도 넣을수있음
+		즉 모듈화시켜서 조립할수있음
+			include 파일명
+		으로 그자리에 파일을 추가하는식으로 작동함
+			include 파일명1
+			내 작성내용
+			include 파일명2
+		이런식
+		
+		레이아웃을 정할수도있음
+		레이아웃을 만들어두고
+			extends 레이아웃파일명
+			내용
+			block 블록명
+				내용
+			block 블록명2
+				내용	
+		블록은 레이아웃에서 특정한 레이아웃을 블록별로 만들고,그 블록에만 적용시킬수있음(이름으로 매칭)
+	2.넌적스
+		넌적스는 좀 더 html과 가까운 템플릿엔진임
+		여기는 <h1></h1>으로 구분하고,변수사용시엔 {{변수}}로 사용
+		변수선언시엔 {% set 변수='값'%}
+		이스케이프안할떈 {{변수 | safe}}
+		
+		반복문은 
+			{% for item in 배열%}
+			<li>{{item}}</li>
+			{%endfor%}
+		이렇게 for문과 endfor 사이에 두면됨
+		인덱스는
+			{% for item in 배열%}
+			<li>{{item}{loop.index}}</li>
+			{%endfor%}	
+		이렇게 loop.index를 사용하면됨
+		
+		조건문은
+			{% if TF값%}
+			내용
+			{%else%}
+			내용
+			{%endif%}
+		케이스는 없고,elif는 있으니 이거로분기해야함
 	
 	
+		include는
+			{%include "파일명"%}
+		으로 넣고,
+		레이아웃은
+			{%extends '파일명'%}
+		으로 관리할수있음
+		블록은
+			{%block 블록명%}
+			{%endblock%}
+		로 관리 
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+7.mysql	
 	
 	
 	

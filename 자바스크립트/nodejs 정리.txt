@@ -976,6 +976,270 @@
 	
 	
 7.mysql	
+	설치스킵
+	테이블생성스킵
+	crud스킵
+1.시퀄라이즈 사용
+	시퀄라이즈는,mysql과 노드js의 or mapper라이브러리임
+	mysql만 지원하는건아니고,마리아,mssql,sqlite등도 지원함
+	
+	orm은 js구문을 자동으로 sql로 바꿔주고,js객체를 db테이블과 동기화시켜줌
+	그래서 만들어진 객체배열에 추가하고 빼는거만으로 insert와 delete를 자동으로 할수있음
+	
+	시퀄라이저 sync시에,force매개변수를 true로 주면,서버 실행시마다 테이블을 재생성하고,false로주면 그냥 있는거사용함
+	그리고 연동시엔 config/config.json안에 설정을 넣어두고,그걸가져다가 사용함(id,패스워드등)
+	
+	접속이 됐으면,mysql에서 정의한 테이블을 시퀄라이즈에서도 정의해야함
+		module.exports=class 클래스명1 extends Sequelize.Model{
+			static init(sequelize){
+				return super.init({
+					컬럼1:{
+						type:Sequelize.STRING(20),
+						notnull:true,
+						unique:true
+					},
+					컬럼2:{
+						type:Sequelize.INTEHER,
+						notnull:true,
+						unique:true
+					},					
+					...
+				},{
+					sequelize,
+					timestamps:false, //true면 createdAt와 updatedAt컬럼을 추가함
+					underscored:false, //createdAt이걸 created_At이런식으로 만들어줌
+					modelName:'클래스명1',//모델의 이름
+					tanleName:'mysql테이블명', //만들테이블의 이름,이미 만든테이블있으면 똑같이만들어주면됨
+					paranoid:false, //삭제시 deletedAt에 표시하는식으로 삭제함
+					charset:'utf8',  //인코딩
+					collate:'utf8_general_ci' //인코딩
+					
+				
+				})
+				static associate(db){}
+			
+			}
+		
+		}
+	이런식으로 init에 컬럼 전부 나열한 테이블 만들고,옵션과 연결데이터(테이블명같은)거 주고
+	associate에 다른모델과의 관계를 적으면됨
+	그리고 varchar이 string임
+	
+	사용할 테이블모델을 다만들었으면,db커넥트하는 코드모듈에서 전부 임포트하고 init,associate하면됨
+		db.sequelize=sequelize
+		user.init(sequelize)
+		comment.init(sequelize)
+		user.associate(db)
+		comment.associate(db)
+		module.exports=db
+	
+	
+	시퀄라이즈에서 관계는,1대1,1대다,다대다가 있음
+	일대일은 사용자와 사용자정보테이블을 예로 들수있고,
+	다대다는 게시글과 해시태그를 예로들수있음(같은해시태그가 여러게시글에달리고,게시글내에서 여러해시태그를 달수있음)
+	일대다는 사용자의 댓글작성목록을 예로들수있음
+	
+	기본적으로 sql에선 join으로 여러테이블간의 관계를 파악해서 결과를 도출함
+	시퀄라이즈는 이 join도 알아서 구현하는데,일단 테이블간에 어떤관계가있는지는 알려줘야함
+	
+	일대다의 경우엔 hasMany,belongsTo라는 메소드로 표현함
+	가져오는쪽에(시전자)hasMany를 넣고,가져가지는쪽에(피대상자)belongsTo를 넣음
+	시전자에 hasMany를 associate에 넣고
+		static associate(db){
+			db.user.hasMany(db.Comment,{foreignKey:'commer',sourceKey:'id'})
+		}
+	이렇게 hasmany를 콜하고,연결할 모델,내가 저장할이름(foreignKey),가져올대상이름(sourceKey)으로 하면됨
+	피대상자에
+		static associate(db){
+			db.Comment.belongsTo(db.user,{foreignKey:'commer',targetKey:'id'})
+		}
+	이렇게 똑같이 넣어주면됨
+	이러면 user이 comment를 참조해서,코멘트의 id를 가져온 컬럼을 생성함
+	만약 foreignKey를 지정하지않으면,모델명+기본키인 컬럼이 시전자쪽에 추가됨(기본 프라이머리키)
+	
+	이렇게 넣어주고 npm start로 서버를 시작하면 알아서 쿼리날림
+	
+	
+	일대일관계에선 hasOne와 belongsTo를 사용해서 똑같이하면됨
+	다대다에선 양쪽다 belongsToMany를 사용하면됨
+		db.post.belongsToMany(db.hashtag,{through:'PostHashTag'})
+		db.hashtag.belongsToMany(db.post,{through:'PostHashTag'})
+	이러면 양쪽의 키를 딴 새로운 테이블이 만들어짐(through가 테이블이름임)
+	이경우엔 필연적으로 데이터조회시 여러단계를 거쳐야함
+	방식은,원하는 로우를 찾고,그 로우의 키로 키합성테이블에 조회한후,받은키로 다시 다음테이블에 조회하는식
+	
+	
+	시퀄라이즈로 crud를 하려면,시퀄라이즈쿼리를 먼저 알아야함
+	기본적으로 자바스크립트로 생성하고,프로미스를 반환하므로,then을 붙여 받을수있고,async/await와도 같이쓸수있음
+	insert는
+		user.create({
+			컬럼명1:데이터,
+			컬럼명2:데이터,
+		})
+	이렇게 넣으면됨,이때 주의점은 mysql자료형이 아닌,시퀄라이즈모델에 정의한 자료형대로 넣어야함,이걸 시퀄라이즈가 알아서 mysql자료형으로 바꿈
+	select는
+		user.findall({}) //전체검색,일반select
+		user.findOne({})//1개검색
+	원하는 컬럼만 가져올때(sql에서 *대신 컬럼적고싶을떄)
+		user.findall({attributes:['name','age']})
+	where문 넣을때
+		user.findall({attributes:['name','age'],where:{married:true,age:{[op.gt]:30}}})
+	기본적으로 자바스크립트로 해야해서,<>같은걸 못써서 저런 코드로 대체함
+		Op.gt: >
+		Op.gte: >=
+		Op.lt: <
+		Op.lte: <=
+		Op.ne: !=
+		Op.or: or
+		Op.in:배열에 포함
+		Op.notin:배열에 포함안됨
+	등이 있음
+	or을 쓰는법은	
+	where:{[Op.or]:[ married:true,age:{[op.gt]:30}]}
+	이렇게 or처리할걸 묶어서 안에넣으면됨
+	정렬은
+		user.findall({attributes:['name','age'],where:{married:true,age:{[op.gt]:30}},order:[['age']]})
+	이때 배열2개임,여러개쓸수도있으니까 기본적으로 배열안에배열임
+	그리고 findall안에 
+		limit:숫자  
+	를 적으면 그 갯수만큼 리턴함(findone에서 갯수선택가능)
+	offset도 똑같이하면됨
+	
+	업데이트는
+		user.update({
+			컬럼명:바꿀내용
+		}{
+			where:{조건}
+		})
+	이렇게하면됨
+	삭제는
+		user.destory({
+			where:{조건}
+		})
+	이렇게
+	
+	
+	기본적으로 find를 하면 프로미스의 결과로 모델을 반환함
+	이때 바로 모델의 정보에 접근할수도 있지만,관계쿼리도 지원함(join같은)
+	만약 특정 사용자를 가져오면서 그사람의 댓글까지 가져오고싶으면 include를 사용하면됨
+		user.findall({include:[{model:Comment}]})	
+	이건 서로간의 관계(hasMany같은)가 맺어져있어야지만 동작함
+	어떤 모델과 관계가 있는지를 include배열에 넣으면,
+	user.comments로 접근하던가 user.getComments()로 접근할수있음
+	get,set,add,remove를 지원함
+	동사뒤에 모델명을 붙이면됨
+	그리고 동사뒤에 모델명을 바꾸고싶으면,
+	hasmany같은데 foreignKey있는곳에 as:'별명'넣으면됨
+	getComments같은데도 where나 attrubute를 사용할수있음
+	
+		co=await user.getComments({
+			where:{
+				id:1
+			},
+			attributes:['id']
+		})
+	이렇게하면 id가 1인거만 가져오고,컬럼도 id컬럼만 가져옴
+	
+	그리고 만약 sql을 날리고싶으면,
+		a=sequelize.query('sql')
+	이렇게 쿼리를 날릴수도있음
+	
+	
+	
+8.mongodb	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	

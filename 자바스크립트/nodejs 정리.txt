@@ -1257,17 +1257,98 @@
 	
 9.익스프레스로 sns서비스 만들기
 	
+	라우터는 express.router()쓰면되고
+	기타등등프론트엔드는 패스하고
+	
+	db는 mysql과 시퀄라이즈로 모델들을 생성하고,associate에 각 모델간의 관계를 정의하고,
+	그리고 같은모델에서도 서로간 n:m관계를 가질수있음
+	이경우엔 두필드를 전부 belongsToMany해주면됨,그리고 이경우엔 as가 필수임,구분안되니까
+	
+	그리고 시퀄라이즈에는 config.json을 읽어서 자동으로 db를 생성해주는 기능이 있음
+	여기서 아이디패스워드,db명을 넣고 dialect를 mysql로 설정해주고,
+		npx sequelize db:create
+	하면됨
+	그리고 이걸 sequelize.sync로 연결하면됨
+	
+	
+	
+1.passport모듈
+	패스포트모듈은 세션,쿠키처리등을 처리해주는 검증된 모듈임
+		임포트하고
+		app.use(passport.initialize()) //req객체에 passport설정을 심음
+		app.use(passport.session())  //req.session객체에 passport정보를 저장함
+	하면됨
+	req.session은 express-session에서 생성하므로,이거보다 뒤에있어야함
+	
+	그리고 passport/index.js에서
+		const passport=require('passport')
+		const local=require('./localStrategy')
+		const kakao=require('./kakaoStrategy')
+		const user=require('../models/user')
+	이렇게 임포트하고,
+		module.exports=()=>{
+			passport.serializeUser((user,done)=>{  //로그인시 실행
+				done(null,user.id)
+			
+			})
+			passport.deserualizeUser((id,done)=>{ //매요청시 실행,passport.session미들웨어가 호출함
+				User.findOne({where:{id}})
+				.then(user=>done(null,user))
+				.catch(err=>done(err))
+			})
+			local();
+			kakao();
+		}
+	serializeUser는 로그인시 실행되고,매개변수로 유저를 받아서,유저의아이디를 done에 넘겨줌
+	
+	done의 첫함수는 에러시에 사용하고,두번째에 넣고싶은걸 넣으면됨
+	
+	deserualizeUser는 매요청시 실행되고,passport.session이 호출함
+	done의 두번째로 넣었던인수가 여기서의 매개변수가되고,그걸가지고 db에서 사용자정보를 조회함
+	그걸 req.user에 저장하므로(then의 done(null,넣을곳이름)),거기서 사용자정보를 가져올수있음
+	
+	로컬로그인시엔 passport-local모듈이 필요함
+	로컬로그인을 할땐,로그인이 필요한곳,로그인이 필요없는곳,로그인 안해야하는곳으로 나누고,거기에 맞는 라우터를 거쳐가게하면됨
+	이 미들웨어는
+		exports.isLoggedIn=(req,res,next)=>{
+			if (req.isAuthenticated()){
+				next()
+			}else{
+				res.status(403).send('로그인필요')
+			}
+			
+		}
+		exports.isNotLoggedIn=(req,res,next)=>{
+			if (!req.isAuthenticated()){
+				next()
+			}else{
+				res.status(403).send('로그인한상태')
+				res.redirect(`/?error=${message}`)
+			}
+			
+		}
+	이렇게 req.isAuthenticated로 로그인한지 안한지 확인하고(이건 패스포트가 req에 자동으로추가함),그거보고 루틴들어가면됨
+	이 미들웨어를 필요한 주소라우터에 넣는식
+		router.get('/profile',isLoggedIn,(req,res)=>{
+			res.render('profile',{title:'내 정보'})
+		
+		})
+	이렇게 미들웨어를 거쳐서 true여야 넘어가게(next나와야넘어가니까)
+	이거말고도 팔로잉여부,관리자여부등의 미들웨어를 만들어서 사용할수있음
+	res.locals.user속성에 req.user을 넣어서,넌적스에서 user객체를 통해 사용자정보에 접근할수있음
+	
+	카카오로그인시엔,처음로그인할때(검색결과가없을때)는 회원가입처리하고,있을땐 그대로로그인해주면됨
+	
+	
+2.multer로 이미지업로드
+	기본적으로 multer로 위치와 파일을 받은다음에  upload.single('img')미들웨어로 던지면됨
 	
 	
 	
 	
 	
-	
-	
-	
-	
-	
-	
+
+10.웹 api서버 만들기
 	
 	
 	

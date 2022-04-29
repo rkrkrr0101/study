@@ -1349,26 +1349,114 @@
 	
 
 10.웹 api서버 만들기
+	api서버를 만들때,요청을 보낸사람을 체크할때,키와 도메인같이 그정도는 일치시켜야 도용의 위험을 막을수있음,아니면 그냥 키주고 관리는 알아서하라고하던가
+	그리고 시퀄라이즈의 enum타입은,정해진 값만 넣을수있게 하는 타입임(a,b,c만 가능하게,d들어오면 에러)
+1.jwt토큰	
+	요청의 키는 jwt토큰을 사용할수있음
+	이건
+		헤더:토큰종류와 해시알고리즘정보가 들어있음
+		페이로드:토큰내용물이 인코딩된부분
+		시그니처:토큰변조확인하기위한 부분
+	시그니처는 jwt비밀키로 만들어지는데,이게 노출되면 토큰을 위조할수있게되니까 철저히 숨겨야함
+	시그니처는 안숨겨도됨,그리고 jwt는 공개되니까 민감한내용을 넣으면안됨(페이로드와 헤더가 암호화되지않기때문)
+	
+	이건 받는쪽이 변조가 없었는지를 확인하기위해 사용하는거라서(+로,랜덤문자열로 이게누군지 확인하는절차가 없어짐),
+	내용물을 믿고 사용할수있음(변조된지안된지),즉 사용자id,권한같은걸 넣어두고 서치하기좋음
+	암호화안되니까 비밀번호같은건 넣으면안됨
+	
+	단점으론 용량이 큼,내용물을 그대로 보내니까 그만큼 데이터량이 정량으로 나오게됨
+	
+	이걸 쓸땐 jsonwebtoken을 설치하고 임포트하고,
+	jwt_secret설정하고
+		const jwt=require('jsonwebtoken')
+		...
+		exports.verifyToken=(req,res,next)=>{
+		try{
+			req.decoded=jwt.verify(req.headers.authorization,
+			process.env.JWT_SECRET)  //req.headers.authorization에 있는 토큰으로 검증,process.env.JWT_SECRET는 키
+			return next()
+		}catch(error){
+			if (error.name==='TokenExpiredError'){
+				return res.status(419.json)({
+					code:419,
+					message:'토큰만료'
+				})
+			}
+			return res.status(401).json({
+				code:401,
+				message:'유효하지않은토큰'
+			})
+		}
+		}
+	
+	이렇게 사용함
+	인증에 성공하면 토큰내용이 반황되어서 req.decoded에 저장됨
+	토큰 생성도 라우터api로 만들어서 사용하면됨
+	토큰생성은
+		const token=jwt.sign({
+			id:domain.user.id,
+			nick:domain.user.nick
+		}),process.env.JWT_SECRET,{
+			expiresIn:'1m',//유효기간
+			issuer:'발급자명'
+		}
+	이렇게 jwt.sign(토큰내용,키,토큰설정)으로 생성하면됨
+
+2.다른서비스에서 호출
+	다른서비스에서 호출할땐,
+	토큰을 발급받고,
+	받고나서 해당주소로 get같은걸 날리고(result=await axios.get('주소',{headers:{authorization:req.session.jwt}})),
+	header에 jwt토큰을 준다음
+	result.data로 받으면됨
+	
+	이때 만약 토큰이 없으면 토큰발급을 해서 넣고,있으면 그냥 그대로 진행사는식으로 if문돌리는게좋음(만료시도 동일)
+	
+3.사용량제한
+	특정 사용자마다 사용량을 제한할땐 express-rate-limit를 사용하면됨
+	이걸 설치하고
+		const ratelimit=require('express-rate-limit')
+		exports.apuLimiter=new ratelimit({
+			windowMs:60*1000//1분,
+			max:1,
+			handler(req,res){
+				res.status(this.statusCode).json({
+					code:this.statusCode,//기본값 429
+					message:'1분에한번'
+				})
+			}
+		})
+	
+	이런식으로 미들웨어를 만들어서 라우터에 넣으면됨
+	만약 사용량이 넘으면 핸들러가 발동하고 next로 안가는식임
 	
 	
 	
+4.cors
+	cors는,브라우저와 서버의 도메인이 일치하지않을때 요청이 차단되는현상임
+	이걸 cors라고 부름,이건 브라우저에서 서버로 보낼때만 발생하고,서버에서 서버로갈땐 발생하지않음
+
+	이걸 해결할떈 cors모듈을 설치하고,api서버쪽에
+		router.use(cors({
+			credentials:true //다른도메인간 쿠키공유,이거없으면 다른도메인간 로그인안됨
+		}))
+	해주면됨
+	이렇게하면 요청을 보내는 주체가 클라이언트라서,비밀키가 모두에게 노출되는데,이거때문에 도메인일치를 한거
+	보통 상용에서는,tls같은거로 암호화할거같긴함 공개키비밀키로
+	만약 도메인으로 거르려면
+		if (domain){
+			router.use(cors({
+				credentials:true, //다른도메인간 쿠키공유,이거없으면 다른도메인간 로그인안됨
+				origin:req.get('origin')
+			})(req,res,next))	
+		} else(){
+			next()
+		}
+	이렇게 클라도메인과 호스트일치확인하고 일치하면 cors를 허용해서 다음으로,아니면 그냥 다음으로 보내는식으로 동작
+	origin은 와일드카드가 아닌,저 도메인만 허용한다는거,여러개를 넣고싶으면 배열로 넣으면됨
 	
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+11.노드서비스 테스트	
 	
 	
 	

@@ -1546,24 +1546,149 @@
 	
 	
 12.웹소켓 데이터전송
+	웹소켓은 실시간 양방향 데이터전송기술임
+	기본적으론 ws모듈이 지원하고,ws모델을 업그레이드한 Socket.io를 주로 사용함
+1.ws모듈사용
+	이거도 소켓열고 소켓에 이벤트를 받는(on,off로)식으로 작동함
+	
+		const wss= new WebSocket.Server({server})
+		module.exports=(server)=>{
+			wss.on('connection',(ws,req)=>{
+				const ip=req.headers['x-forwarded-for'] || req.connection.remoteAddress //ip받는 베이직한방법
+				ws.on('message',(message)=>{
+					메시지받았을때 처리
+				})
+				ws.on('error', ...)//에러처리
+				ws.on('close',()=>{ //연결종료처리
+					clearInterval(ws.interval) //인터벌정리,안하면 메모리누수남
+					연결종료처리
+				})
+				ws.interval=setInterval(()=>{
+					if (ws.readyState===ws.open){
+						ws.send('서버 2 클라')
+					}
+				},3000)
+				
+			})
+		}
+	이런식으로 한다음에
+	저걸 불어와서 콜하고,listen한 서버를 매개변수로 넣어줘서 사용하면됨
+	일단 on으로 이벤트리스너를 연결하고,클로즈시엔 열려있는 인터벌같은걸 정리하고 함
+	이건 서버고,클라이언트에서 웹소켓을 사용해야함(양방향이니)
+	html 스크립트에서 
+		const websocket=new WebSocket('ws://localhost:8005')
+		websocket.onopen=function(){
+			console.log('연결성공')
+		}
+		websocket.onmessage=function(event){
+			console.log('event.data')
+			websocket.send('클라2서버')
+		}
+	이런식으로 열어주면됨	
+	여기서도 이벤트기반으로 작동함,연결이되면 onopen이 작동하고,메시지가오면 onmessage가 작동함
+	
+
+2.socket.io사용
+	ws는 기본적인 기능은 다 제공하지만,socket.io쓰는게 좋음
+	이거도 ws랑 비슷하게
+		
+		module.exports=(server)=>{
+			const io= SocketIo(server,{path:'/socket.io'})
+			io.on('connection',(socket)=>{
+				const req=socket.request
+				const ip=req.headers['x-forwarded-for'] || req.connection.remoteAddress //ip받는 베이직한방법
+				console.log('새클라접속',ip,socket.id,req.ip)
+				socket.on('reply',(data)=>{
+					메시지받았을때 처리
+				})
+				socket.on('error', ...)//에러처리
+				socket.on('disconnect',()=>{ //연결종료처리
+					clearInterval(socket.interval) //인터벌정리,안하면 메모리누수남
+					연결종료처리
+				})
+				socket.interval=setInterval(()=>{
+					socket.emit('news','내용') //emit(이벤트명,데이터)
+				}
+				},3000)
+				
+			})
+		}		
+	클라부분은
+		const socket=new io.conncet('http://localhost:8005'.{path:'/socket.io'})
+		socket.on('news',function(data){
+			console.log(data)
+			socket.emit('reply','hello')
+		})
+	이렇게 열고 메시지보내면됨
+	여기선 news로 뭐가 들어오면,에코로 emit를 날리는구조임
+	
+	socketio는 기본적으로 폴링방식으로 서버와 연결하고(그래서 http로 연결),연결후에 소켓연결이 가능하면 웹소켓으로 바꿈
+	그래서 웹소켓을 지원하지않아도 통신을 할수있음
+	
+	그리고
+		io.conncet('http://localhost:8005/abcd'.{path:'/socket.io'})
+	이렇게 주소뒤에 /네임스페이스 를 붙이면 같은 네임스페이스를 통해 보낸데이터만 받을수있음,즉 데이터분류가 가능해짐
+	
+		app.set('io',io) //io를 라우터에서 접근할수있게해줌(req.app.get('io'))
+		
+		const room=io.of('/room')//of는 io에 네임스페이스를 부여함
+		const chat=io.of('/chat')
+		
+		room.on('connection',(socket)=>{ //각 네임스페이스에 이벤트리스너를 붙일수있음
+			console.log('룸접속')
+			socket.on('disconnect',()=>{
+				console.log('룸접속해제')
+			})
+		})
+		chat.on('connection',(socket)=>{
+			console.log('chat접속')
+			const req=socket.request
+			const {headers:{referer}}=req
+			const roomid=referer  //받은거 정규표현식으로 가공
+			.split('/')[referer.split('/').length-1]
+			.replace(/\?.+,'')
+			
+			socket.join(roomid) //네임스페이스 접속
+			socket.on('disconnect',()=>{
+				console.log('chat접속해제')
+				socket.leave(roomid) //네임스페이스접속해제
+			})
+		})
+	소켓io에는 네임스페이스보다 세부적인개념으로 방이 있는데,이걸 사용하면 같은 네임스페이스안에서도 같은방에 들어온 소켓끼리만 통신할수있음
+	이걸쓸때 join과 leave를 사용함,얘들은 방의 아이디를 인수로 받음(그래서 url에서 방아이디를 추출해서 그걸 키로사용)
+	
+	
+3.미들웨어와 소켓연결
+	기본적으로는 소켓io 에서는 세션에 접근할수없음,그래서 세션에 접근하려면 추가작업이 필요함
+	이경우엔,소켓io도 미들웨어를 사용할수 있으므로 express-session을 공유하면됨
+	메인코드에서 세션을 변수로 만들고,그걸 use한다음에 websocket에 매개변수로 넘겨주면됨
+	그리고 소켓쪽에서도 매개변수 추가하고 그대로 사용하면됨
+	그리고
+		io.use((socket,next)=>{
+			세션객체(socket.request,socket.request.res,next)
+		})
+	이렇게 사용한다음에
+		socket.to(roomid).emit('join',{
+			user:'system',
+			chat:`${req.session.color}`
+		})
+	이렇게 불러다가 쓰면됨
+	
+	그리고 방이 계속 쌓이면 그거대로 메모리누수니까,한사람 나갈때마다 체크해서 접속자가 0이면
+		const currentroom=socket.adapter.rooms[roomid]		
+		const usercount=currentroom?currentroom.length:0
+		if(userCount===0){
+			axios.delete(`http://localhost:8005/room/${roomId}`)
+		}
+	이렇게 삭제하면됨
+	
+	그리고 소켓에서 axios를 보낼땐 요청자가 누구인지가 들어있지않음,그래서 express-session이 판단하게하려면 직접 요청헤더에 세션쿠키를 넣어야함
+	
+	그리고 라우터에서 db와 소켓을 둘다 접근해서 처리하면됨
 	
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+13.실시간 경매시스템	
 	
 	
 	

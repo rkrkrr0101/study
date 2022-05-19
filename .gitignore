@@ -9,3 +9,5 @@ GAN/gans-in-action-master.zip
 **/node_modules
 **/config.json
 **/schemas
+**/.env
+.env

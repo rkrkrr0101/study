@@ -8,7 +8,7 @@ const router = express.Router();
 router.post("/join", isNotLoggedIn, async (req, res, next) => {
   const { email, nick, password } = req.body;
   try {
-    const exUser = await User.findOne({ where: email });
+    const exUser = await User.findOne({ where: { email } });
     if (exUser) {
       return res.redirect("/join?error=exist");
     }
@@ -21,7 +21,7 @@ router.post("/join", isNotLoggedIn, async (req, res, next) => {
     return res.redirect("/");
   } catch (e) {
     console.error(e);
-    return next(error);
+    return next(e);
   }
 });
 router.post("/login", isNotLoggedIn, (req, res, next) => {

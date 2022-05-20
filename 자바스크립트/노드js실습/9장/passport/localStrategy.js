@@ -11,7 +11,7 @@ module.exports = () => {
         usernameField: "email",
         passwordField: "password",
       },
-      async (email, password, dond) => {
+      async (email, password, done) => {
         try {
           const exUser = await User.findOne({ where: { email } });
           if (exUser) {

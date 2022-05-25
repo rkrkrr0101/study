@@ -1,24 +1,58 @@
 const SocketIO = require("socket.io");
+const axios = require("axios");
 
-module.exports = (server) => {
+module.exports = (server, app, sessionMiddleware) => {
   const io = new SocketIO(server, { path: "/socket.io" });
+  app.set("io", io);
+  const room = io.of("/room");
+  const chat = io.of("/chat");
 
-  io.on("connection", (socket) => {
-    const req = socket.request;
-    const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-    console.log("새클라접속", ip, socket.id, req.ip);
-    socket.on("reply", (data) => {
-      console.log(data);
-    });
-    socket.on("error", (error) => {
-      console.error(error);
-    });
+  io.use((socket, next) => {
+    sessionMiddleware(socket.request, socket.request.res, next);
+  });
+
+  room.on("connection", (socket) => {
+    console.log("room접속");
     socket.on("disconnect", () => {
-      console.log("클라접속해제", ip, socket.id);
-      clearInterval(socket.interval);
+      console.log("room접속해제");
     });
-    socket.interval = setInterval(() => {
-      socket.emit("news", "hellosocketio");
-    }, 3000);
+  });
+
+  chat.on("connection", (socket) => {
+    console.log("chat접속");
+    const req = socket.request;
+    const {
+      headers: { referer },
+    } = req;
+    const roomId = referer
+      .split("/")
+      [referer.split("/").length - 1].replace(/\?.+/, "");
+    socket.join(roomId);
+    socket.to(roomId).emit("join", {
+      user: "system",
+      chat: `${req.session.color}님이 입장`,
+    });
+
+    socket.on("disconnect", () => {
+      console.log("chat접속해제");
+      socket.leave(roomId);
+      const currentRoom = socket.adapter.rooms[roomId];
+      const userCount = currentRoom ? currentRoom.length : 0;
+      if (userCount === 0) {
+        axios
+          .delete(`http://localhost:3000/room/${roomId}`)
+          .then(() => {
+            console.log("방제거요청성공");
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+      } else {
+        socket.to(roomId).emit("exit", {
+          user: "system",
+          chat: `${req.session.color}님이 퇴장`,
+        });
+      }
+    });
   });
 };

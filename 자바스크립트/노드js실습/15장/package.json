@@ -4,7 +4,8 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "cross-env NODE_ENV=production PORT=80 pm2 start server.js -i 0",
+    "abcstart": "cross-env NODE_ENV=production PORT=80 pm2 start server.js -i 0",
+    "start":"node server.js",
     "test": "jest",
     "coverage": "jest --coverage",
     "dev": "nodemon server"

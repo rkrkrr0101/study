@@ -2,3 +2,5 @@
 {"level":"error","message":"GET/tete라우터없음 "}
 {"level":"info","message":"hello"}
 {"level":"error","message":"GET/favicon.ico라우터없음 "}
+{"level":"info","message":"hello"}
+{"level":"error","message":"GET/favicon.ico라우터없음 "}

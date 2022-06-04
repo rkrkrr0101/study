@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>시퀄라이즈 서버</title>
+    <style>
+      table { border: 1px solid black; border-collapse: collapse; }
+      table th, table td { border: 1px solid black; }
+    </style>
+  </head>
+  <body>
+    <div>
+      <form id="user-form">
+        <fieldset>
+          <legend>사용자 등록</legend>
+          <table id="user-list">
+            <thead>
+            <tr>
+              <th>1</th>
+              <th>2</th>
+              <th>3</th>
+              <th>4</th>
+              <th>5</th>
+              <th>6</th>
+              <th>7</th>
+              <th>8</th>
+              <th>9</th>
+              <th>10</th>
+              
+            </tr>
+            </thead>
+            <tbody>
+              {% for log in logs %}
+              <tr>
+                <td>{{log.na_one}}</td>
+                <td>{{log.na_two}}</td>
+                <td>{{log.na_three}}</td>
+                <td>{{log.na_four}}</td>
+                <td>{{log.na_five}}</td>
+                <td>{{log.na_six}}</td>
+                <td>{{log.na_seven}}</td>
+                <td>{{log.na_eight}}</td>
+                <td>{{log.na_nine}}</td>
+                <td>{{log.na_ten}}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </fieldset>
+      </form>
+    </div>
+    <br>
+    <!-- <table id="user-list">
+      <thead>
+      <tr>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>5</th>
+        <th>6</th>
+        <th>7</th>
+        <th>8</th>
+        <th>9</th>
+        <th>10</th>
+        
+      </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{log.na_one}}</td>
+          <td>{{log.na_two}}</td>
+          <td>{{log.na_three}}</td>
+          <td>{{log.na_four}}</td>
+          <td>{{log.na_five}}</td>
+          <td>{{log.na_six}}</td>
+          <td>{{log.na_seven}}</td>
+          <td>{{log.na_eight}}</td>
+          <td>{{log.na_nine}}</td>
+          <td>{{log.na_ten}}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table> -->
+    <br>
+    <div>
+      <form id="user-form">
+        <fieldset>
+          <legend>댓글 등록</legend>
+          <table id="user-listds">
+            <thead>
+            <tr>
+              <th>1</th>
+              <th>2</th>
+              <th>3</th>
+              <th>4</th>
+              <th>5</th>
+              <th>6</th>
+              <th>7</th>
+              <th>8</th>
+              <th>9</th>
+              <th>10</th>
+              
+            </tr>
+            </thead>
+            <tbody>
+              {% for log in logs %}
+              <tr>
+                <td>{{log.na_one}}</td>
+                <td>{{log.na_two}}</td>
+                <td>{{log.na_three}}</td>
+                <td>{{log.na_four}}</td>
+                <td>{{log.na_five}}</td>
+                <td>{{log.na_six}}</td>
+                <td>{{log.na_seven}}</td>
+                <td>{{log.na_eight}}</td>
+                <td>{{log.na_nine}}</td>
+                <td>{{log.na_ten}}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </fieldset>
+      </form>
+    </div>
+    <br>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="/sequelize.js"></script>
+  </body>
+</html>

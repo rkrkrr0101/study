@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: namusearch-deployment
+  labels:
+    app: namusearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: namusearch
+  template:
+    metadata:
+      labels:
+        app: namusearch
+    spec:
+      containers:
+      - name: namusearch
+        image: gcr.io/second-form-351817/namusearch
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - configMapRef:
+            name: dbconfig
+               
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: namusearchsvc
+spec:
+  type: LoadBalancer
+  selector:
+    app: namusearch
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000

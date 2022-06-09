@@ -1,4 +1,5 @@
 const express = require("express");
+const Log = require("../models/log");
 
 const router = express.Router();
 

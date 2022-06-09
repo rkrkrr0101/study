@@ -18,6 +18,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 import pymysql
 import os
 
@@ -29,8 +30,6 @@ import os
 
 
 # In[11]:
-
-
 #크롤링설정
 options=webdriver.ChromeOptions()
 #options.add_argument('window-size=1920,1080')
@@ -39,24 +38,45 @@ options.add_argument('window-size=1920x1080')
 options.add_argument("disable-gpu")
 options.add_argument('--no-sandbox')
 options.add_argument('--disable-dev-shm-usage')
-
 #유저에이전트로 크롤링인거속이기
 options.add_argument(f'user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.87 Safari/537.36')
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 #크롤링시작
-driver.get("https://namu.wiki/w/%EB%82%98%EB%AC%B4%EC%9C%84%ED%82%A4:%EB%8C%80%EB%AC%B8")
+driver.get("https://search.namu.wiki/api/ranking")
 #선택클릭
-driver.find_element(by=By.XPATH,value='//*[@placeholder="Search"]').click()
+#driver.find_element(by=By.XPATH,value='//*[@placeholder="Search"]').click()
+#driver.find_element(by=By.XPATH,value='/html/body').send_keys(Keys.TAB)
+#driver.send_keys(Keys.TAB)
 #대기5초
 driver.implicitly_wait(time_to_wait=5)
 #값받아오기
-ta=driver.find_element(by=By.XPATH,value='/html/body/div/div/div[1]/nav/form/div/div/div')
+try:
+    ta=driver.find_element(by=By.XPATH,value='/html/body/pre')
+except:
+    ht=driver.page_source
+    driver.close()
+    db = pymysql.connect(
+        user=os.environ.get('db_user') , 
+        passwd=os.environ.get('db_pw'), 
+        host=os.environ.get('db_host','127.0.0.1'), 
+        db=os.environ.get('db_db'), 
+        charset='utf8'
+    )
+    cursor = db.cursor(pymysql.cursors.DictCursor)
+    sql="""insert into  test 
+    (new_tablecol)
+    values(%s)
+    """
+    cursor.execute(sql,ht)
+    db.commit()
+    quit()
 #결과값자르기
-res=ta.text.split('\n')
+res=ta.text.replace('[','')
+res=res.replace(']','')
+res=res.replace('"','')
+res=res.split(',')
 #드라이버닫기
 driver.close()
-
-
 # In[2]:
 
 
@@ -95,7 +115,7 @@ db.commit()
 
 #한달치 데이터 긁어오기
 sql="""select * from namu_log
-order by na_time DESC LIMIT 8640
+order by na_time DESC LIMIT 2160
 """
 cursor.execute(sql)
 logres=cursor.fetchall()
@@ -122,7 +142,7 @@ values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
 """
 #count=[3,4,5,12]
 #여기적힌거갯수일때 작동
-count=[12,288,2016,8640]
+count=[3,72,504,2160]
 countkind=['hour','day','week','month']
 
 #1시간 하루 이렇게 갯수세서 캐시에 넣기

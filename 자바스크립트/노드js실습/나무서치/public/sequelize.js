@@ -1,42 +1,43 @@
-async function getLog() {
+async function getNamuData(kind, selector) {
   try {
-    const res = await axios.get("/logs");
-    const logs = res.data;
-    //console.log(logs);
-    const tbody = document.querySelector("#user-list tbody");
+    const res = await axios.get(`/logs/${kind}`);
+    const NamuDatas = res.data;
+    //console.log(selector);
+    //user-list tbody
+    const tbody = document.querySelector(selector);
     tbody.innerHTML = "";
-    logs.map(function (log) {
+    NamuDatas.map(function (NamuData) {
       const row = document.createElement("tr");
       // 로우 셀 추가
       let td = document.createElement("td");
-      td.textContent = log.na_one;
+      td.textContent = NamuData.nd_one;
       row.appendChild(td);
       td = document.createElement("td");
-      td.textContent = log.na_two;
+      td.textContent = NamuData.nd_two;
       row.appendChild(td);
       td = document.createElement("td");
-      td.textContent = log.na_three;
+      td.textContent = NamuData.nd_three;
       row.appendChild(td);
       td = document.createElement("td");
-      td.textContent = log.na_four;
+      td.textContent = NamuData.nd_four;
       row.appendChild(td);
       td = document.createElement("td");
-      td.textContent = log.na_five;
+      td.textContent = NamuData.nd_five;
       row.appendChild(td);
       td = document.createElement("td");
-      td.textContent = log.na_six;
+      td.textContent = NamuData.nd_six;
       row.appendChild(td);
       td = document.createElement("td");
-      td.textContent = log.na_seven;
+      td.textContent = NamuData.nd_seven;
       row.appendChild(td);
       td = document.createElement("td");
-      td.textContent = log.na_eight;
+      td.textContent = NamuData.nd_eight;
       row.appendChild(td);
       td = document.createElement("td");
-      td.textContent = log.na_nine;
+      td.textContent = NamuData.nd_nine;
       row.appendChild(td);
       td = document.createElement("td");
-      td.textContent = log.na_ten;
+      td.textContent = NamuData.nd_ten;
       row.appendChild(td);
       tbody.appendChild(row);
     });
@@ -44,54 +45,11 @@ async function getLog() {
     console.error(err);
   }
 }
-async function getLoga() {
-  try {
-    const res = await axios.get("/logs/today");
-    const logs = res.data;
-    //console.log(logs);
-    const tbody = document.querySelector("#user-listds tbody");
-    tbody.innerHTML = "";
-    logs.map(function (log) {
-      const row = document.createElement("tr");
-      // 로우 셀 추가
-      let td = document.createElement("td");
-      td.textContent = log.na_one;
-      row.appendChild(td);
-      td = document.createElement("td");
-      td.textContent = log.na_two;
-      row.appendChild(td);
-      td = document.createElement("td");
-      td.textContent = log.na_three;
-      row.appendChild(td);
-      td = document.createElement("td");
-      td.textContent = log.na_four;
-      row.appendChild(td);
-      td = document.createElement("td");
-      td.textContent = log.na_five;
-      row.appendChild(td);
-      td = document.createElement("td");
-      td.textContent = log.na_six;
-      row.appendChild(td);
-      td = document.createElement("td");
-      td.textContent = log.na_seven;
-      row.appendChild(td);
-      td = document.createElement("td");
-      td.textContent = log.na_eight;
-      row.appendChild(td);
-      td = document.createElement("td");
-      td.textContent = log.na_nine;
-      row.appendChild(td);
-      td = document.createElement("td");
-      td.textContent = log.na_ten;
-      row.appendChild(td);
-      tbody.appendChild(row);
-    });
-  } catch (err) {
-    console.error(err);
-  }
-}
+
 // 댓글 로딩
 
 // 사용자 등록 시
-getLog();
-getLoga();
+getNamuData("hour", "#hour tbody");
+getNamuData("day", "#day tbody");
+getNamuData("week", "#week tbody");
+getNamuData("month", "#month tbody");

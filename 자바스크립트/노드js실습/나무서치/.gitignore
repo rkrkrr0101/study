@@ -1,0 +1,14 @@
+리액트/yarn.lock
+리액트/hello-react/node_modules
+리액트/react_test
+hello-react/node_modules
+ocr/yolo/YOLOv3/train.txt
+msko CT.txt
+GAN/gans-in-action-master
+GAN/gans-in-action-master.zip
+**/node_modules
+**/config.json
+**/schemas
+**/.env
+.env
+**/uploads/

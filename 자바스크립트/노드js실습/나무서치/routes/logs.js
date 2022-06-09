@@ -1,27 +1,58 @@
 const express = require("express");
-const Log = require("../models/log");
+const Namu_Data = require("../models/data");
 const router = express.Router();
 
-router.route("/").get(async (req, res, next) => {
+router.route("/hour").get(async (req, res, next) => {
   try {
-    const logs = await Log.findAll({
-      limit: 2,
-      order: [["na_time"]],
+    const Namu_Datas = await Namu_Data.findAll({
+      where: {
+        nd_kind: "hour",
+      },
     });
 
-    res.json(logs);
+    res.json(Namu_Datas);
   } catch (e) {
     console.error(e);
     next(e);
   }
 });
-router.route("/today").get(async (req, res, next) => {
+router.route("/day").get(async (req, res, next) => {
   try {
-    const logs = await Log.findAll({
-      limit: 2,
-      order: [["na_time", "DESC"]],
+    const Namu_Datas = await Namu_Data.findAll({
+      where: {
+        nd_kind: "day",
+      },
     });
-    res.json(logs);
+
+    res.json(Namu_Datas);
+  } catch (e) {
+    console.error(e);
+    next(e);
+  }
+});
+router.route("/week").get(async (req, res, next) => {
+  try {
+    const Namu_Datas = await Namu_Data.findAll({
+      where: {
+        nd_kind: "week",
+      },
+    });
+
+    res.json(Namu_Datas);
+  } catch (e) {
+    console.error(e);
+    next(e);
+  }
+});
+router.route("/month").get(async (req, res, next) => {
+  try {
+    const Namu_Datas = await Namu_Data.findAll({
+      where: {
+        nd_kind: "month",
+      },
+    });
+
+    res.json(Namu_Datas);
   } catch (e) {
     console.error(e);
     next(e);

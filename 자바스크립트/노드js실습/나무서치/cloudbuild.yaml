@@ -1,0 +1,18 @@
+steps:
+  # build the container image
+- name: "gcr.io/cloud-builders/docker"
+  args: ["build", "-t", "gcr.io/second-form-351817/namusearch:1.0.0", "."]
+  # push container image
+- name: "gcr.io/cloud-builders/docker"
+  args: ["push", "gcr.io/second-form-351817/namusearch:1.0.0"]
+  # deploy container image to GKE
+- name: "gcr.io/cloud-builders/gke-deploy"
+  args:
+  - run
+  - --filename=namusearchdeploy.yaml
+#  - --filename=namutestpod.yaml
+  - --image=gcr.io/second-form-351817/namusearch:1.0.0
+  - --location=us-central1
+  - --cluster=autopilot-cluster-1
+
+

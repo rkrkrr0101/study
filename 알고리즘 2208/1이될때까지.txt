@@ -1,0 +1,14 @@
+무한루프돌리고 mod쳐서 0나오면 나누고 아니면-1 1이면 브레이크
+
+
+n=26
+k=5
+res=0
+while(True):
+    if n==1:
+        break
+    if n % k==0:
+        n=n/k
+    else:
+        n=n-1
+    res+=1

@@ -1,0 +1,17 @@
+m=8
+k=3
+coin=[2,4,5,4,6]
+coin.sort(reverse=True)
+res=0
+tempk=k
+while True:
+    if m==0:
+        break;
+    if tempk!=0:
+        tempk=tempk-1
+        res=res+coin[0]
+    else:
+        res=res+coin[1]
+        tempk=k
+    m=m-1
+print(res)

@@ -1,0 +1,16 @@
+dxdy넣고 a~h까지 받고 숫자로 변경해서 x,y에 넣고
+3까지 반복문돌리고 현재xy+dxdy한다음에 0이하나오면 컨티뉴,아니면 res+1
+
+n="a1"
+x=ord(n[0])-96
+y=int(n[1])
+
+dx=[-2,-2,2,2,1,1,-1,-1]
+dy=[1,-1,1,-1,-2,2,-2,2]
+res=0
+for i in range(7):
+    if dx[i]+x<=0 or dx[i]+x>8:
+        continue
+    if dy[i]+y<=0 or dy[i]+y>8:
+        continue
+    res+=1

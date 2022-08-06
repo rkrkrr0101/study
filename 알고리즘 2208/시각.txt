@@ -1,0 +1,14 @@
+xyz3중반복문돌리고 n은 x에 넣고 x 60 60 돌려서 3있으면 res+1
+
+
+n=5
+x=n
+y=60
+z=60
+res=0
+for i in range(x):
+    for j in range(y):
+        for k in range(z):
+            
+            if str(i).find('3')+str(j).find('3')+str(k).find('3')!=-3:
+                res=res+1

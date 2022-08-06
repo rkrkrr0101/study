@@ -1,0 +1,24 @@
+dxdy배열만들고 lrud각각 0123으로 매칭하고(인덱스)현재위치랑 더해서 1~n이면 통과 아니면 무시
+
+
+
+
+
+n=5
+x=1
+y=1
+dx=[0,0,-1,1]
+dy=[-1,1,0,0]
+com=["l","r","u","d"]
+
+comlist=["r","r","r","u","d","d"]
+
+for i in comlist:
+    if x+dx[com.index(i)]<1 or x+dx[com.index(i)]>n:
+        continue
+    
+    if y+dy[com.index(i)]<1 or y+dy[com.index(i)]>n:
+        continue
+    
+    x=x+dx[com.index(i)]
+    y=y+dy[com.index(i)]

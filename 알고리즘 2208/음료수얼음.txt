@@ -1,0 +1,25 @@
+배열전체돌면서 현재위치 0이면 상하좌우로 dfs돌리기
+리턴값이 0일때 1일때 다르게하고 1이면 res+1하는식
+
+
+arr =[[0,0,1,1,0],[0,0,0,1,1],[1,1,1,1,1],[0,0,0,0,0]]
+res=0
+n=4
+m=5
+
+def dfs(x,y):
+    if x<0 or x>n-1 or y<0 or y>m-1:
+        return 0
+    if arr[x][y]==0:
+        arr[x][y]=1
+        dfs(x+1,y)
+        dfs(x-1,y)
+        dfs(x,y+1)
+        dfs(x,y-1)
+        return 1
+    else:
+        return 0
+        
+for i in range(n):
+    for j in range(m):
+        res+=dfs(i,j)

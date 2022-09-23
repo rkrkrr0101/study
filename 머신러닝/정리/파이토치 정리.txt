@@ -48,3 +48,44 @@ bt=lt==3 이런 논리문을 텐서에 걸면,각 위치마다 t,f를 넣은 byt
 
 cpu디바이스텐서와 gpu디바이스텐서를 연산하면 에러남
 gpu+gpu경우에도 다른디바이스면 에러남
+
+선형모델은 가장 모델과 맞는 직선을 찾음
+w는 가중치 b는 편향
+w=torch.zeros(1,requires_grad=True)
+b=torch.zeros(1,requires_grad=True) requires_grad=True는 학습할거라고 명시하는것
+hypothesis=x_train*w +b
+
+
+선형모델에서 로스펑션은 mse사용
+cost=torch.mean((hypothesis=y_train)**2) //mse
+
+optimizer=optim.SGD([w,b],lr=0.01) //w,b는 학습할텐서들
+
+optimizer.zero_grad() //기울기초기화
+cost.backward() //기울기계산
+optimizer.step() //스텝으로 개선(진행)
+
+즉 
+xtrain=adada
+ytrain=adadad
+w=torch.zeros(1,requires_grad=True)
+b=torch.zeros(1,requires_grad=True) requires_grad=True는 학습할거라고 명시하는것
+
+
+optimizer=optim.SGD([w,b],lr=0.01) //w,b는 학습할텐서들
+//여기까진 한번만
+
+
+for epoch in range(1,30):
+    hypothesis=x_train*w +b    //계산
+	cost=torch.mean((hypothesis=y_train)**2) //mse
+	
+	optimizer.zero_grad() //기울기초기화
+	cost.backward() //기울기계산
+	optimizer.step() //스텝으로 개선(진행)
+이런식으로 진행됨
+
+
+
+
+

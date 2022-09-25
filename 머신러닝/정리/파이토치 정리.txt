@@ -85,6 +85,64 @@ for epoch in range(1,30):
 	optimizer.step() //스텝으로 개선(진행)
 이런식으로 진행됨
 
+비용함수는 0일때 가장 좋음
+그래서 그레이디언트는 0에 수렴하게 만들어야함->학습을 해당방향의 기울기x학습률만큼 이동(빼는)하는식으로 함
+
+기본적으로 파이토치에선,옵티마이저를 선언하고(설정하고)
+옵티마이저를 초기화하고 코스트펑션으로 기울기를 계산한후에 optimizer.step로 경사하강법을 진행하는식으로 간략화되어있음
+	optimizer.zero_grad() //기울기초기화
+	cost.backward() //기울기계산
+	optimizer.step() //스텝으로 개선(진행)
+이거임
+즉,옵티마이저에 설정된 파라미터만 저장해서,그걸 계산하고 연산해서 경사하강법을 진행하는거임
+
+
+만약 입력 파라미터갯수가 여러개일경우
+	w=torch.zeros((3,1),requires_grad=True)
+	hypothesis=x_train[0]*w[0] +x_train[1]*w[1]+x_train[2]*w[2] +b 
+이런식으로 됨
+근데 이게 파라미터가 많아지면 다적기힘드니까
+	hypothesis=x_train.matmal(w)+b
+로 사용함(x_train과 w의 같은항을 묶어서 계산)
+이경우에도 비용함수의 계산식은 동일하고
+	cost=torch.mean((hypothesis=y_train)**2)
+옵티마이저도 동일함
+	optimizer=optim.SGD([w,b],lr=0.01) //w,b는 학습할텐서들
+
+	optimizer.zero_grad() //기울기초기화
+	cost.backward() //기울기계산
+	optimizer.step() //스텝으로 개선(진행)
+
+근데 이 
+		hypothesis=x_train.matmal(w)+b
+이거도 귀찮으니까,보통은 
+	class aamodel(nn.module):
+		def __init__(self):
+			super().__init__()
+			self.linear=nn.Linear(3,1)  //레이어쌓기
+			
+		def forward(self,x):
+			return self.linear(x)
+			
+	model=aamodel()		
+	hypothesis=model(x_train)
+	optimizer=optim.SGD(model.parameters(),lr=0.01) //w,b는 학습할텐서들
+	for epoch in range(20+1):
+		optimizer.zero_grad() //기울기초기화
+		cost.backward() //기울기계산
+		optimizer.step() //스텝으로 개선(진행)
+		
+		
+이런식으로 forward를 정의하면 hypothesis를 계산해주고,gradient계산은 backward()를 정의하면 파이토치가 알아서해줌
+
+그리고 파이토치 자체에서 비용함수를 제공함
+	import torch.nn.functional as F
+	
+	cost=F.mse_loss(prediction,y_train)
+이렇게
+
+
+
 
 
 

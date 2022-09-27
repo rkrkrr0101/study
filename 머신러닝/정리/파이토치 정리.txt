@@ -142,6 +142,72 @@ for epoch in range(1,30):
 이렇게
 
 
+데이터가 많아서 메모리에 들어가지않을경우엔,미니배치를 사용해서 데이터를 떼서 조금씩 역전파하는식으로 하고,
+데이터를 전부사용하면 한 에포크가 지나는식으로 할수있음(이게 미니배치임)
+장점은
+	학습이 빠름
+	메모리에 다 넣을수있고,저장공간이 덜필요
+단점은
+	잘못된 학습이 될수있음(좀 학습값이 튐)
+
+미니배치를 파이토치에서 구현할땐
+	from torch.utils.data import Dataset
+	class cuDataset(Dataset):
+		def __init__(self):
+			self.x_data= 데이터값
+			self.y_data= 데이터레이블값
+			
+		def __len__(self):
+			return len(self.x_data)
+			
+		def __getitem__(self,idx):
+			x=torch.FloatTensor(self.x_data[idx])
+			y=torch.FloatTensor(self.y_data[idx])
+			return x,y
+	
+	dataset=cuDataset()
+이렇게 init에 데이터넣고 len과 getitem을 구현하고
+	from torch.utils.data import DataLoader
+	
+	dataloader=DataLoader(dataset,batch_size=2,shuffle=True)//데이터셋넣고,배치사이즈 지정하고(보통 2의제곱수),
+															//셔플은 에포크마다 데이터 섞는거
+
+그리고 이렇게 한뒤에 학습하는건
+	for epoch in range(21):
+		for batch_idx,samples in enumerate(dataloader):
+			x_train,y_train=samples
+			
+			prediction=model(x_train)
+			
+			cost=F.mse_loss(prediction,y_train)
+			
+			optimizer.zero_grad() //기울기초기화
+			cost.backward() //기울기계산
+			optimizer.step() //스텝으로 개선(진행)			
+			
+			print('epoch {:4d} batch{}/{} Cost:{:.6f}'.format(
+				epoch,21,batch_idx+1,len(dataloader),cost.item()))
+이렇게 순전파를하고 코스트를 구하고 기울기를 계산하고 스탭을 밟음
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

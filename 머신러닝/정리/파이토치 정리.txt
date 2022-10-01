@@ -36,6 +36,8 @@ touch
 	touch.zeros_like(x) x를 0로채운 텐서 리턴
 	t.mul(2) 전체x2를 함(새로운 메모리선언하고,원본값은 바뀌지않음)
 	t.mul_(2)전체x2를 함(원래 메모리에 덮어씀,깊은복사,즉 원본값이 바뀜) 사실쓸일없을듯
+	torch.matmul(w) 텐서간(행렬) 곱
+	x_train.matmul(w) xtrain과 w를 곱함
 같은 크기의 텐서를 더하거나 빼면 같은위치에서 변동일어나고
 텐서에 벡터(단일크기같은)를 더하면 그방향으로 같은값이 복사되어서 텐서로 변경된다음에 더해짐
 크기가 다른벡터는 양쪽으로 값을 복사해서(1x2+2x1 ->2x2+2x2) 연산이 진행됨
@@ -190,26 +192,127 @@ for epoch in range(1,30):
 이렇게 순전파를하고 코스트를 구하고 기울기를 계산하고 스탭을 밟음
 
 
+로지스틱회귀는 0~1의 값을 뽑아내는 회귀문제임,이걸 0.5으로 잘라서 클래시피케이션하면 분류문제가 되는것
+그래서 이진분류할때 시그모이드를 사용함(보통 이진분류의 마지막층에서 사용)
+
+이경우
+	w=w-lr*미분값(그레이디언트)*cost(w) 
+이렇게 학습이 일어남
+
+h(가설함수,y=wx+b 같은,w와 b의 값을 찾을때의 뼈대,레이어에서의 함수랑 같은거임)는
+ h=1/(1+torch.exp(-(x_train.matmul(w)+b))->h=torch.sigmoid(x_train.matmal(w)+b)
+비용함수는 이진크로스엔트로피
+	losses=-(y_train*torch.log(h)+(1-y_train)*torch.log(1-h))
+	cost=losses.mean()
+이런식
+내부함수쓰면
+	F.binary_cross_entropy(h,y_train)
+	
+실제구현은
+	w=torch.zeros((2,1),requires_grad=True)
+	b=torch.zeros(1,requires_grad=True)
+	optimizer=optim.SGD([w,b],lr=1)
+	for epoch in range(21):
 
 
+			h=torch.sigmoid(x_train.matmal(w)+b)
+			cost=F.binary_cross_entropy(h,x_train)
+			
+			optimizer.zero_grad() //기울기초기화
+			cost.backward() //기울기계산
+			optimizer.step() //스텝으로 개선(진행)			
+			
+			print('epoch {:4d} batch{}/{} Cost:{:.6f}'.format(
+				epoch,21,batch_idx+1,len(dataloader),cost.item()))
+
+이렇게만 하면 회귀고,
+prediction=hypothesis>=torch.FloatTensor([0.5])
+하면 1아니면 0으로 나옴
+그리고
+corrent_pre=prediction.float()==y_train
+으로 정답확인을 하고,저걸 평균내면 acc(정확도)가 나옴
+즉 다더하고 len으로 나누고 100곱하면됨
+
+실제로 구현할땐
+	class binaryClassifier(nn.module):
+		def __init__(self):
+			super().__init__()
+			self.liner=nn.Linear(2,1)
+			self.sigmoid=nn.Sigmoid()
+		def forward(self,x):
+			return self.sigmoid(self.linear(x))
+이런식으로 레이어를 구현함
+
+다중분류에선 softmax를 사용함
+이산확률분포는 1,2,3,4,5,6처럼 .5가 나오지않는것
+연속확률분포는 연속적으로 1.1,1.2이렇게 연속적으로 분포하는것
+소프트맥스는 이산확률분포를 연속확률분포처럼 근사할수있음(1,2,3일때 0.09,0.25,0.67 이런식으로 잘라서 이산적으로 처리)
+	F.softmax(z,dim=0)//나올것의 갯수가들어있는 텐서(1,2,3),그텐서에서 차원 선택
+크로스엔트로피는 현재가설분포에서  역전파분포값만큼을 빼는식으로 이상적인가설에 다가가는식
+
+원핫을 만들땐
+	yonehot=torch.zeros_like(h)
+	yonehot.scatter_(1,y.unsqueeze(1),1)//dim1차원
+
+그리고 크로스엔트로피 비용함수는
+	cost=(yonehot * -torch.log(h)).sum(dim=1).mean()
+	        3,5           3,5         3,1        1,1
+이렇게 나옴
+이건 행렬에대해 연산을하고,그걸 더해서 (x,1)로 줄인다음,그걸 평균내서 스칼라값으로 뽑아내는것
+파이토치에서 소프트맥스는
+	F.softmax(z,dim=0)
+	F.log_softmax(z,dim=1)
+로 제공함
+크로스엔트로피는
+	F.nll_loss(F.log_softmax(z,dim=1),y)//z==h y==y_train
+	F.cross_entropy(z,y) //z==h  y==y_train
+이렇게 사용할수있음
+실제구현은
+	w=torch.zeros((4,3),requires_grad=True)//입력4 출력3
+	b=torch.zeros(1,requires_grad=True)
+	optimizer=optim.SGD([w,b],lr=1)
+	for epoch in range(21):
 
 
+			z=x_train.matmal(w)+b
+			cost=F.cross_entropy(z,y_train)
+			
+			optimizer.zero_grad() //기울기초기화
+			cost.backward() //기울기계산
+			optimizer.step() //스텝으로 개선(진행)			
+			
+			print('epoch {:4d} batch{}/{} Cost:{:.6f}'.format(
+				epoch,21,batch_idx+1,len(dataloader),cost.item()))
+
+레이어(모델)로 만들땐
+	class softmaxClassifierModel(nn.module):
+		def __init__(self):
+			super().__init__()
+			self.liner=nn.Linear(4,3)//입력값이4 출력값이3
+			
+		def forward(self,x):
+			return self.linear(x)
+
+model=softmaxClassifierModel()
+하면됨
+모델을사용할떄 구현은
+	model=softmaxClassifierModel()
+	optimizer=optim.SGD(model.parameters,lr=0.1)
+	for epoch in range(21):
 
 
+			prediction=model(x_train)  //xtrain=(m,4) prediction=(m,3)
+			
+			cost=F.cross_entropy(prediction,y_train)  //y_train=(m,1)
+			
+			optimizer.zero_grad() //기울기초기화
+			cost.backward() //기울기계산
+			optimizer.step() //스텝으로 개선(진행)			
+			
+			print('epoch {:4d} batch{}/{} Cost:{:.6f}'.format(
+				epoch,21,batch_idx+1,len(dataloader),cost.item()))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+보통 다중분류에선 소프트맥스(마지막층함수),크로스 엔트로피(손실함수) 이진분류에선 바이너리 크로스 엔트로피(손실),시그모이드(마지막층함수)를 사용함
 
 

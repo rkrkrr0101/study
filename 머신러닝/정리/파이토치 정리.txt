@@ -455,8 +455,20 @@ model.eval()에선 드롭아웃을 끔
 	model=torch.nn.Sequential(l1,relu,dropout,l2,relu,dropout,l3,relu,dropout,l4).to(device)//
 이런식으로 그냥 레이어처럼 사용하면됨
 
+batch normalization은 기울기소실과 폭주를 어느정도 막기위해 생긴,정규화임
+즉,각 층의 값들을 일정한 범위안으로 넣어버림으로써 항상 미분했을때 값이 일정크기내에서 나오게 만듬
+보통 각 층에다가 기본적으로 박아넣음,안넣는게 특이한거
+이건 각 미니배치에서의 최대값과 최소값을 1~0으로 잡고 그사이에 넣는거
 
+배치노말라이제이션도 트레인에선 동작하고,예측에선 동작하지않음
+이유는,각 배치를 기준으로 잡는거라서,미니배치크기가 작아지면 오차가 커질수있어서 예측에서빼버림(같은샘플이라도 다른값이 나올수있음)
 
-
-
+파이토치에서 쓸땐
+	dropout=torch.nn.DropOut(p=drop_prob)//몇퍼센트를 끌건지
+	bn1=torch.nn.BatchNorm1d(32)//32는 입력값갯수
+	bn1=torch.nn.BatchNorm1d(32)//32는 입력값갯수
+	relu=torch.nn.ReLU()
+	model=torch.nn.Sequential(l1,bn1,relu,dropout,l2,bn1,relu,dropout,l3,bn2,relu,dropout,l4).to(device)//
+이런식으로 그냥 레이어처럼 사용하면됨
+보통 레이어,배치정규화,활성화함수,드롭아웃 순으로 두면됨
 

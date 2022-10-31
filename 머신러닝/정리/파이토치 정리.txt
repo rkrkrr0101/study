@@ -472,3 +472,112 @@ batch normalization은 기울기소실과 폭주를 어느정도 막기위해 �
 이런식으로 그냥 레이어처럼 사용하면됨
 보통 레이어,배치정규화,활성화함수,드롭아웃 순으로 두면됨
 
+
+conv에서 stride는 필터를 이동시키는 픽셀수(1이면 한칸씩,2면 두칸씩)
+패딩은,이미지의 겉에 모든값이 0인 픽셀을 추가하는데,1이면 한칸씩,2면 두칸씩 추가됨
+
+파이토치에선
+	torch.nn.Conv2d(입력채널수(rgb같은),출력채널수(rgb같은),커널사이즈,스트라이드,패딩,bias)//커널사이즈는 필터의 크기 bias는 TF값
+로 사용할수있음
+그리고 conv의 인풋타입은 torch.Tensor이고,
+차원은 배치사이즈x채널(rgb같은)x높이x넓이
+로 구성되어야함
+그리고 아웃풋사이즈 구하는건
+	(인풋사이즈-필터사이즈+(2*패딩)/스트라이드) + 1 //인풋사이즈가 가로세로동일할떄는 한번만하면 되고,다르면 양쪽으로 해줘야함,소수점은 버림
+									   //값이 30이면 30x30,(17,7)이면 17x7,값이 27.5면 27x27
+임
+conv는,필터를 학습시켜서 가장 나은 값을 뽑아내는거임,학습대상은 필터와 bias임
+필터는 각 채널마다 하나씩 존재함
+풀링은 필터내에 평균이나 맥스나 정해진 조건으로 필터크기만큼을 압축시키는거임
+	torch.nn.MaxPool2d(커널사이즈,스트라이드,패딩)//스트라이드와 패딩은 기본값이있어서 maxpool2d(2)만 해도됨 기본값쓰려면
+으로 사용할수있음
+
+
+학습할때 optimizer.zero_grad()를 안해주면 학습안됨
+
+visdom은
+	pip install visdom
+으로 설치할수있음
+서버킬땐
+	python -m visdom.server
+로 킬수있음
+텍스트띄울땐
+	vis.text("텍스트",env="main")//env는 그 환경변수를 가지고있는걸한번에끌때 사용함
+이미지는
+	a=torch.randn(3,200,200)
+	vis.image(a)
+이미지여러개는
+	vis.images(torch.Tensor(3,3,28,28))
+이렇게 한번에 넣을수있음(입력값 텐서,텐서들의 배열이면됨)
+그래프는
+	y_data=torch.randn(5)
+	plt=vis.line(Y-y_data)
+이렇게 그릴수있음
+주의점은 x축을 안넣으면,x축은 0~1이 됨
+x축을 넣으려면
+	x_data=torch.Tensor([1,2,3,4,5])
+	plt=vis.line(Y=y_data,X=x_data)//vis.line(y축,x축)
+이렇게하면됨
+
+그래프 업데이트할땐
+	vis.line(Y값,x값,vin=업데이트할그래프이름,update="append")
+
+창을 닫을떈
+	vis.close(env="main")//main인걸 다끔
+
+그래프하나에 선두개그릴땐
+	num=torch.Tensor(list(range(0,10)))
+	num=num.view(-1,1)
+	num=torch.cat((num,num),dim=1)
+	
+	plt=vis.line(Y=torch.randn(10,2),X=num)
+이렇게 차원수 맞추면됨
+선 설명넣을땐
+	vis.line(Y=y_data,X=x_data,opts=dict(title="test",legend=['1번','2번'],showlegend=True))
+이렇게하면됨,딕셔너리 형태로 넣으면됨
+보통 num과 loss_value를 받는 함수형태로 만들어서 학습할때 마지막에 뱉으면됨
+
+토치에서 이미지데이터 불러올땐,imagefolder로 하면됨
+데이터는,각 클래스별로 폴더로 구분해서 넣고
+	origin
+		gray
+		red
+		blue
+이런식으로
+그리고 cnn돌릴때 이미지크면 너무오래걸리고,램도 많이드니까 전처리로 이미지를 줄여서 처리하는게 좋음
+imagefolder는
+	torchvision.datasets.imageFolder(root='경로',transform=None)
+사진이미지 줄일땐
+	trans=tranfforms.Compose([
+		transforms.Resize((64,128))
+	])
+	torchvision.datasets.imageFolder(root='경로',transform=trans)
+이렇게 적용하면됨
+그리고 전처리한거 저장하려면
+	for num,value in enumerate(train_data):
+		data,label=value
+		if (label==0):
+			data.save('저장경로/클래스별0/%d_%d.jpg'%(num,label))
+		else if (label==1)
+			data.save('저장경로/클래스별1/%d_%d.jpg'%(num,label))
+이렇게 저장하면됨
+
+
+모델저장할땐
+	torch.save(모델.state_dict(),"저장경로")
+로 저장하면됨
+로드할땐
+	새모델.load_state_dict(torch.load(저장경로))
+당연히 레이어는 같아야함
+
+
+
+
+
+
+
+
+
+
+
+

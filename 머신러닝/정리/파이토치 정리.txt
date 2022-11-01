@@ -569,8 +569,17 @@ imagefolder는
 로드할땐
 	새모델.load_state_dict(torch.load(저장경로))
 당연히 레이어는 같아야함
+이미있는모델 사용하려면(유명한거)
+	torchvision.models.vgg
+이런거 가져다쓸수있음
 
+보통 가져온모델은 중간은닉층이니,피쳐랑 최종출력층은 직접넣어줘야함
+그리고 피쳐층(맨위층)도 make_layers 함수같은거만들어서 배열넣어서 자동으로 생성하면편함
+이때 중요한게,입력채널수를 이전층출력갯수를 들고있다가 입력에 넣어줘야함
 
+lr스케줄러 사용할땐
+	lrsche=optim.lr_scheduler.StepLR(optimizer,step_size=5,gamma=0.9)//5스텝마다 0.9를 곱해라
+저렇게 쓰고(스케줄러종류는 알아서찾아보고)
 
 
 

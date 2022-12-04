@@ -1,0 +1,30 @@
+def dfs(array,v,visit,target):
+	visit[v]=true
+	for x in array[v]:
+		if visit[x] not true:
+			dfs(array,x,visit,target)
+	
+def bfs(array,start,visit):
+	que=deque([start])
+	
+	visit[start]=true
+	
+	while que:
+		v=que.popleft()
+		for i in array[v]:
+			if visit[i]!=true:
+				que.append(i)
+				visit[i]=true
+				
+
+추적기본
+def tracer(v,cou,stri):
+    if v==[-1,-1]:#시작점일떄
+        return [cou,stri]
+    else:
+        cou=cou+1#카운트플러스1
+        
+        stri=stri+str(v)#현재위치 추가
+        cou,stri=tracer(trace[v[0]][v[1]],cou,stri)#다음위치 재귀
+        return [cou,stri]
+			

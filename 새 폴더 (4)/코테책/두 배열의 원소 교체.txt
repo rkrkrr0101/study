@@ -1,0 +1,12 @@
+그냥 배열두개 정렬하고나서 a[0]이랑 b[4]랑 바꾸고 루프돌리면될듯 중간에 비교만 해주면됨
+
+firarray=[1,2,5,4,3]
+secarray=[5,5,6,6,5]
+n,k=5,3
+firarray.sort()
+secarray.sort()
+
+for i in range(k):
+    if firarray[i]<secarray[n-1-i]:
+        firarray[i],secarray[n-1-i]=secarray[n-1-i],firarray[i]
+print(firarray)

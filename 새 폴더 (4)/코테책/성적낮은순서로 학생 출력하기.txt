@@ -1,0 +1,5 @@
+이차원배열에서 키값잡아서 정렬 출력할수있는지 물어보는문제
+
+array=[['a',95],['b',50],['c',77]]
+
+print(sorted(array,key=lambda x:x[1]))

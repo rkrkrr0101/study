@@ -1151,6 +1151,8 @@ spilt count 같이쓸땐
 이렇게하면 각 작업공간마다 하나씩의 tfstate영역이 있는,tfstate.d폴더내의 작업공간명파일로 생성이 됨
 
 
+aws events list-targets-by-rule --rule pipeline-noti 이거로 트리거룰타겟의 타겟id를 받아올수있음 cmd에서
+
 끝
 
 

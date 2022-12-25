@@ -1,0 +1,59 @@
+1.설치
+	보통 요즘 스프링은 
+		http://start.spring.io
+	에서 만든다고함
+	저기서 디펜던시에서
+		spring web(restapi나 아파치톰켓같은게 들어가있음)
+		thymeleaf(html엔진인데,딴거써도된대)
+	선택해서 다운받고 압축풀기
+	그리고 인텔리제이에서 build.gradle를 선택하고 열면됨
+	
+	build.gradle는 빌드데이터들(플러그인,디펜던시등)을 나열한거
+	
+	H2 데이터베이스를 2.1.214 버전이상사용
+	
+	static/index.html에 넣어두면 저게 기본페이지임
+	
+	검색할때 spring.io에서 프로젝트->스프링부트->런->버전
+	여기서 비슷해보이는거 찾으면됨
+	사실 구글링하면나올듯 ㅋㅋ
+	
+	템플릿엔진을 사용하면,정적 페이지가 아닌 코드형식으로 html을 변경할수있음(리액트생각하면됨)
+	
+	html에서 
+		<html xmlns:th="http://www.thymeleaf.org">
+	한건 th(타임리프)를 선언한거
+	
+	컨트롤러에서(mvc에서 c,컨트롤러에도 @Controller붙여줘야함) @getMapping를 붙인 Model model을 받는 함수를 만들고,
+		model.addAttribute("html변수명","변경할값")
+	을 하면,해당 html페이지의 해당변수명이
+		<body><p th:text="'안녕하세요. ' + ${data}">안녕하세요. 손님</p></body>
+		<body><p th:text="'안녕하세요. ' + 변경한값">안녕하세요. 손님</p></body>
+	이렇게 치환됨
+	
+	즉,톰캣이 컨트롤러가 있나 확인하고,있으면 그 컨트롤러의 매핑된 메소드를 실행시킨다음,렌더링된 html을 리턴함
+	매핑된걸 스프링이 확인하는방법은,리턴값임
+		resources->templates->{리턴값}.html
+	을 있나 찾고,있으면 그걸 대입하는식임
+	즉,컨트롤러가 리턴값으로 문자를 반환하면,뷰리졸버가 뷰를 찾아서 처리함
+	
+	spring-boot-devtools추가하면,html만 컴파일해주면 서버 재시작없이 view변경이 가능함
+	
+	
+	빌드할때 빌드된 파일 위치는,프로젝트루트폴더/build/libs에 저장됨
+	실행은,
+		java -jar 파일명.jar
+	하면됨
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		

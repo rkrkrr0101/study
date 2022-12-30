@@ -186,20 +186,80 @@
 			this.memberRepository = memberRepository;
     }
 	
+4.스프링 빈과 의존관계
+	스프링 컨테이너가 실행되면,모든 컨트롤러 어노테이션이 붙은 모든 클래스를 생성해서 가지고있고,거기에 맞는 url이 들어오면 거기다가 줌
+	그리고 그래서 컨트롤러에선,new로 객체(서비스)를 생성하는게 아닌,객체를 받아서 사용해야함
+	이건 만약 여러 컨트롤러가 같은 서비스를 공유해야하면,의존성주입으로 해결해야하기때문
+	그래서 의존성주입패턴(생성자로 생성하는것)으로 처리하고,위에
+		private final AaaService aaaService;
+		@autowired
+		public 컨트롤러이름(AaaService aaaService){
+			this.aaaService=aaaService
+		}
+	이런식으로 중간에 autowired를 붙여서 처리하면됨
+	이러면(autowired를 붙이면) 스프링컨테이너가 자동으로 싱글톤으로 해당 객체를 하나 만들어서,같은객체를 필요로하는 모든곳에 넣어줌
+	이때도 해당 객체도 스프링빈(어노테이션)으로 선언되어있어야함
+	서비스의 경우엔
+		@Service
+		public class AaaService{
+		...
+		}
+	해주면됨(컨트롤러랑 같음)
+	리포지토리도 동일(인터페이스가 아닌 구현체에 가야함)
+		@Repository
+		public class aaaRepository implements aRepository{
+		...
+		}
+	이건 진짜 정형화된 패턴(컨트롤러로 외부요청을 받아서 서비스에서 비즈니스로직을 돌리고 리포지토리에서 저장등)이라,자주써서 빈도 다 있는거
+	일반적으론 @Component를 사용하면됨,@Service,@Controller,@Repository등은 @Component의 특수화된 케이스임
+	그래서 이런걸 컴포넌트 스캔이라고 부름,컴포넌트를 찾아서 이걸 전부 컨테이너에 등록하는식
+	일반적으로는 거의 다 스프링빈으로 등록해서 사용하게됨
+	그리고 이 스프링빈은,실행위치의 루트부터 아래로 트리탐색을 하기때문에,루트랑 같은위치에 있거나 더 높은위치에 있으면 등록되지않음
+	그리고 스프링빈은 기본적으로 설정하지않으면 다 싱글톤으로 생성됨
 	
 	
+	컨트롤b는 해당 클래스,메소드위치로 이동
 	
+	이거말고 자바코드로 직접 스프링빈을 등록할수도있음
+	이때는 메인클래스와 같은위치에 클래스파일을 하나 만들고,
+		@Configuration
+		public class SpringConfig {
+			@Bean
+			public MemberService memberService() {
+				return new MemberService(memberRepository());
+			}
+
+			@Bean
+			public MemberRepository memberRepository() {
+				return new MemoryMemberRepo();
+			}
+		}
+	이런식으로 위에 configuration붙이고,생성할거 하나마다 @Bean붙이고 생성하면됨
+	생성할때 의존성필요하면 필요한 객체 생성자메소드 넣어주면됨
+	이경우에도 컨트롤러는 무조건 @Controller식으로 해야함,이게 제일 위라서 어쩔수없음
 	
+	코드로 스프링빈을 등록하는거와 어노테이션으로 등록하는거의 장단점은
 	
+	의존성주입(di)에는 필드주입,세터주입,생성자주입 이렇게 3가지방법이 있는데,보통은 생성자주입을 사용하는편
+		필드주입예제 @Autowired private final MemberService memberService;
+		세터주입예제
+			@autowired
+			public set컨트롤러이름(AaaService aaaService){
+				this.aaaService=aaaService
+			}
+		생성자주입예제
+			@autowired
+			public 컨트롤러이름(AaaService aaaService){
+				this.aaaService=aaaService
+		}
+	필드주입은 안쓰고,세터주입은 세터가 퍼블릭으로 열려있어야해서 잘안씀(사실 중간에 바꿔치기해야할 이유도 보통없음)
+	그래서 생성자로 사용하는편
 	
+	실무에서는 보통 컨트롤러,서비스,리포지토리를 컴포넌트스캔하고,정형화되지않거나 구현클래스를 상황에따라 변경해야하면 자바코드로 등록함
+	즉 인터페이스가 있으면 자바코드로 등록하는게 좋음
+	그러면 그냥 컨피그코드만 건드리면 되고,나머지는 안건드려도됨
 	
-	
-	
-	
-	
-	
-	
-	
+	그리고 @autowired는 스프링이 관리하는 객체에서만 동작함,즉 @controller같은거나 config파일설정이 없는곳에서 동작하지않음
 	
 	
 	

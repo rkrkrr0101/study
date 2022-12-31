@@ -262,7 +262,18 @@
 	그리고 @autowired는 스프링이 관리하는 객체에서만 동작함,즉 @controller같은거나 config파일설정이 없는곳에서 동작하지않음
 	
 	
+5.회원관리예제-웹mvc
+	mvc(템플릿엔진)와 스태틱간엔 mvc가 더 우선순위가 높아서,거기부터들려서,둘다있을경우엔 mvc가 우선임
+	postmapping에서
+		return "redirect:/"
+	이런식으로 다른 url로 보내버릴수가있음
 	
+	그리고 html의 form과 post가 받는 클래스에서 같은 이름(html의 name tag)이 있을경우엔 거기에 매칭이되어서 자동으로 삽입되게됨
+	(컨트롤러의 postmapping에서)
+	
+	템플릿엔진이 만약 리스트를 받고,html에서 th:each가 있으면 foreach를 돌아서 안에있는걸 전부 한개씩 만듬(타임리프문법)
+	
+6.스프링 db 접근 기술	
 	
 	
 	

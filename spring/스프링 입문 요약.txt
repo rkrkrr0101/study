@@ -274,8 +274,13 @@
 	템플릿엔진이 만약 리스트를 받고,html에서 th:each가 있으면 foreach를 돌아서 안에있는걸 전부 한개씩 만듬(타임리프문법)
 	
 6.스프링 db 접근 기술	
+	스프링에서 db추가할땐,application.properties에서
+		spring.datasource.url=jdbc:h2:tcp://localhost/~/test
+		spring.datasource.driver-class-name=org.h2.Driver
+	이렇게 경로랑 드라이버추가해주고,build.gradle에서 오른쪽위에 코끼리눌러주면 자동으로 임포트됨
+	저기다가 db아이디비번적으면됨
 	
-	
+	이때 레포지토리를 그냥 springconfig에서 구현체를 바꿔버리면됨(개방폐쇄원칙)
 	
 	
 	

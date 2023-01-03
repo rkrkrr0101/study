@@ -298,8 +298,91 @@
 	
 	알트엔터로 함수를 람다로 바꿀수있음
 	
+	jpa사용시엔 빌드그래들에 의존성추가하고
+		implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	어플리케이션 프로퍼티에서 설정추가
 	
+	jpa를 사용하면 알아서 테이블도만들어줌
+		spring.jpa.hibernate.ddl-auto=create
+	그리고 스프링부트 2.4이상일땐
+		spring.datasource.username=sa
+	가 있어야함
 	
+	jpa는 기본적으로 인터페이스고,그걸 각 업체에서 구현해서 배포함
+	jpa는 기본적으로 orm이고,사용할땐
+	해당 데이터클래스에
+		@Entity
+	넣으면,이 데이터클래스를 테이블로 잡고,스프링에서 관리하게됨
 	
+	그리고 오토 인크리즈되는 id같은건
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+	를 위에 붙여주면 됨,원래도 db가 알아서 생성해주는거일때 이거붙이면됨
+	
+	그리고 이미 테이블이 있을떄,컬럼과 변수를 매핑시킬땐
+		@Column(변수명="컬럼명")
+	붙여주면됨
+	
+	그리고 jpa는
+		private final EntityManager em;
+	이거로 모든게 동작하기때문에 jpa 레포지토리에 넣고,생성자로 di받아야함 스프링한테
+	
+	저장할땐
+		em.persist(member);
+	이거만 하면됨
+	조회할땐
+		Member member = em.find(Member.class, id);
+        return Optional.ofNullable(member);
+	
+	쉬프트알트컨트롤t는 리팩토링,이거로 변수리턴할때 두줄을 한줄로 합치거나하는걸 쉽게할수있음(변수인라인화)
+	
+	그리고 특수조회시엔
+		return em.createQuery("select m from Member m", Member.class).getResultList();
+	이런식으로 createQuery를 쓰는데,이건 표준sql이 아니라 객체를 대상으로 쿼리를 날리는거임(실제 구현상에선 sql을 쓰겠지만 윗단에서는)
+	그래서 엔티티를 대상으로 나가고 ,조회대상도(*자리에 들어간거) 자기자신임
+		
+	조건쓸떄도
+	    List<Member> res = em.createQuery("select m from Member m where m.name=:name", Member.class)
+            .setParameter("name", name).getResultList();
+        return res.stream().findAny();
+	이런식
+	이런 쿼리같은건 프라이머리키 대상이 아닌걸로 조회할때 적어야하고,프라이머리키면 그냥 find하면됨
+		
+	그리고 jpa를 쓸땐 항상 @Transactional이 있어야함
+	그래서 서비스객체에 이걸추가해야함
+	그리고 springconfig객체에서 em을 생성자로 받아야함
+	
+	스프링jpa는 레포지토리를 인터페이스로 설정하고,extends를
+		extends JpaRepository<Member, Long>,MemberRepository//사용객체와 pk의 타입
+	이렇게 인터페이스 다중상속을 받고
+		public interface SpringDataJpaMemberRepo extends JpaRepository<Member, Long>, MemberRepository {
+			@Override
+			Optional<Member> findByName(String name);
+		}	
+	
+	스프링jpa를 사용하면,인터페이스 구현체를 스프링이 만들어서,그냥 이렇게만 하면 crud와 서치가 자동으로 들어감
+	그래서 그냥 가져다쓰면됨
+	스프링컨피그에서 생성자로 di만 받고
+	    @Autowired
+		public SpringConfig(MemberRepository memberRepository) {
+			this.memberRepository = memberRepository;
+		}
+	그리고 리포지토리 bean으로 구현도 할필요없음
+	기본적으로 제공되는 메서드는
+		findall,findall(sort),findall(Iterable<id>)
+		save(이터레이터),
+		flush(),
+		saveAndFlush()
+		deleteInBatch(이터레이터)
+		deleteAllInBatch()
+		getOne(ID)
+	등이 있고,이외에 필요한건 직접 넣어야하는데,이때 함수의 이름을 가지고 알아서 구문분석 하는식으로
+		findByName(String name12)->findBy Name(String name12)->select m from Member m.name12
+	이런식으로 알아서 만듬
+	즉,이름을 만드는 규칙을 알아야함
+		
+	그리고 복잡한 동적쿼리같은경우엔 Querydsl을 사용함
+		
+		
+		
 		
 		

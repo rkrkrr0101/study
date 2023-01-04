@@ -383,6 +383,52 @@
 	그리고 복잡한 동적쿼리같은경우엔 Querydsl을 사용함
 		
 7.AOP		
-		
-		
+	얘는 만약 모든 메소드에서 호출해야 할경우같을때,앞뒤에 프록시를 두고
+		선딜프록시
+		실제 메소드실행
+		후딜프록시
+	이런식으로 실행하는거임
+	이러면 공통관심사항과 핵심관심사항을 분리할수있고,일단 모든메소드를 안건드려도됨
+	즉 메소드를 두고,걔를 들렀다가 가는거임
+	
+	Aop클래스엔 클래스위에
+		@Aspect
+	를 넣어줘야함,그리고 스프링빈에 등록해야하니 컨피그에서 등록하던가 컴포넌트스캔쓰면됨(@Component)
+	그리고 execute위에 @Around를 붙이고 적용범위를 패키지단위로 명시해주고
+		@Aspect
+		public class TimeTraceAop {
+			@Around("execution(* rkrk.rkrkspring..*(..))")
+			public Object execute(ProceedingJoinPoint joinPoint) throws Throwable {
+				long start = System.currentTimeMillis();
+				System.out.println("START:" + joinPoint.toString());
+				try {
+					//대상메인메소드실행
+					return joinPoint.proceed();
+				} finally {
+					long finish = System.currentTimeMillis();
+					long timems = finish = start;
+					System.out.println("END:" + joinPoint.toString() + " " + timems + "ms");
+				}
+
+
+			}
+		}
+	execute를 만들고 조인포인트를 받은다음에,
+		내가 할거 실행하고 
+		return joinPoint.proceed();로 메인 메소드 실행하고
+		aop남은거 실행하고
+	이런식으로 프록시처럼 동작함(실제로 프록시패턴으로 만들어진듯)
+	즉 가짜객체를 만든후 걔가 실제객체를 호출하는식으로 바뀌게됨
+	그래서 프록시에서 할수있던거(메인메소드 실행안되게 막는다던지)는 다 가능함
+	이게 di를 쓰니까 프록시도 쓸수있고 그런거
+	
+	
+8.다음으로	
+	
+	
+	
+	
+	
+	
+	
 		

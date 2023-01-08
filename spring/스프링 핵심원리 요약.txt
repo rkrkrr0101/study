@@ -51,6 +51,9 @@
 		Assertions.assertThat(member).isEqualTo(findmember);
 		
 		
+	알트insert에서 생성할때,tostring생성하면,현재 객체값전체를 리턴하는게 자동으로 나옴
+		
+		
 		
 		
 		

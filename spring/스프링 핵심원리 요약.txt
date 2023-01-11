@@ -77,12 +77,39 @@
 	
 	di를 사용하면 구현클래스를 의존하지않으니,새로운 구현클래스를 생성해도 실행영역에서의 변경은 일어나지않음,
 	appconfig같은 구성영역에서의 변경만 일어나게됨
+	
+	이런걸 프레임워크단에 전부 맡겨버리는걸(appconfig같은 생성영역이나 제어영역을)ioc(제어의역전)라고 하고,
+	보통 이렇게 하는게많은걸 프레임워크라고 함
+	즉 내가 만든 객체들은,로직을 실행하는 역할만 담당하고,다른 모든것(객체생성같은)들은 내가 안하고 다른애한테 요청함
 		
+	의존관계에는 정적인 클래스 의존관계와 동적인 객체 의존관계를 분리해서 생각해야함
+	정적 클래스 의존관계는,실제 인터페이스를 의존하는걸 말하고
+	동적 객체 의존관계는 실제 실행시점에서 실제로 생성된 객체를 의존하는 관계를 말함
+	
+	정적 클래스 의존관계에선 실제로 어떤 인터페이스를 구현한 객체가 실행될지 알수없음
+	
+	이렇게 외부에서 di를 해주는걸 ioc컨테이너,혹은 di컨테이너라고 함
+	이렇게 di를 사용하면,정적 클래스 의존관계를 전혀 건드리지않고,동적 객체 의존관계를 변경할수있음(ocp,dip)
 		
-		
-		
-		
-		
+	appconfig의 클래스에
+		@Configuration
+	추가하고
+	각 생성메서드마다
+		@Bean
+	추가
+	이러면 각 생성메서드들이 스프링컨테이너에 등록되고,
+	스프링을 시작할땐 퍼블릭스태틱보이드메인에서
+		ApplicationContext applicationContext=new AnnotationConfigApplicationContext(AppConfig.class);
+		MemberService memberService=applicationContext.getBean("memberService",MemberService.class);
+	추가하면,저 안에 있는 설정정보를 가지고 di컨테이너를 만들고,해당 스트링에 맞는 메서드를 실행해서 넣어줌
+		applicationContext.getBean("메서드명",메서드리턴값.class)
+	그러니까 appconfig처럼 applicationContext.getBean를 통해서만 생성시키면됨 앞으로는
+	그리고 일반적으로 디폴트값은 싱글톤이라,어디서해도 같은값을 줌 기본값은
+	
+	
+	ApplicationContext가 스프링 컨테이너고,얘는 @Configuration이 붙은걸 설정정보로 사용함
+	@Configuration안에서 @Bean이 붙은걸 전부 호출해서 미리 객체를 만들어두고,
+	만약 getBean이 오면 그 객체의 포인터값을 리턴해줌(그래서 싱글톤이됨)
 		
 		
 		

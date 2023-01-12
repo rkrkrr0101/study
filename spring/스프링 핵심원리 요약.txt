@@ -110,6 +110,68 @@
 	ApplicationContext가 스프링 컨테이너고,얘는 @Configuration이 붙은걸 설정정보로 사용함
 	@Configuration안에서 @Bean이 붙은걸 전부 호출해서 미리 객체를 만들어두고,
 	만약 getBean이 오면 그 객체의 포인터값을 리턴해줌(그래서 싱글톤이됨)
+	일단 기본적으로는 이렇고,보통 @autowired 생성자로 di했던거같음
 		
+
+
+4.스프링 컨테이너와 스프링 빈
+	빈의 이름은 기본적으로 메서드이름인데
+		@Bean(name="abc2")
+	이렇게 명명할수도 있음
+	단,이경우엔 모든 빈 이름이 하나도 겹치는게 있어선안됨
+	그래서 그냥 기본값(메소드명)으로 두고쓰는게좋음..
+	
+	그리고 각 메소드끼리의 의존관계가 있을경우 알아서 밑단부터 생성해서 연결함
+	정확히는 일단 다 생성을 하고나서 의존관계를 엮어서 주입함(물론 자바코드로 생성하면 메서드실행시켜야하니까 바로 생성하면서 엮이긴함)
+	모든빈이름 출력할땐
+		String[] beanDefinitionNames = ac.getBeanDefinitionNames();
+	그리고 foreach로 
+	iter하고 엔터치면 foreach자동으로 생성됨
+	그리고 object로 getBean받아서 출력해보면됨
+	사실 쓸일많진않을듯? 
+	
+	만약 내가 등록한거만 보고싶으면(시스템적으로 등록한거빼고)
+        String[] beanDefinitionNames = ac.getBeanDefinitionNames();
+        for (String beanDefinitionName : beanDefinitionNames) {
+            BeanDefinition beanDefinition=ac.getBeanDefinition(beanDefinitionName);
+            if(beanDefinition.getRole()==BeanDefinition.ROLE_APPLICATION){
+				...출력코드
+            }
+
+	이런식으로 if문돌리면됨
+	BeanDefinition.ROLE_APPLICATION이 내가만든거,BeanDefinition.ROLE_INFRASTRUCTURE가 스프링이 자체적으로 만든거
+
+	보통은 이렇게 다 출력할일은 없고,조회를 하게됨(getBean같은)
+	만약 getbean을 했을때 대상이 없으면,NoSuchBeanDefinitionException이 나게됨
+	
+	그리고 getBean에서 이름없이 타입으로만 조회할수도있음
+		MemberService memberService = ac.getBean( MemberService.class);
+	이경우 같은타입이 여러개일땐 오류가 발생함(NoUniqueBeanDefinitionException),이경우엔 이름을 넣어줘야함
+	이떄 ac.getBeansOfType으로 해당타입의 모든 이름을 리턴받아볼수있음
+		Map<String, MemberRepository> beansOfType = ac.getBeansOfType(MemberRepository.class);
+	그리고 인터페이스를 받아올수도있고,구체클래스를 받아올수도있음
+		MemberService memberService = ac.getBean("memberService", MemberServiceImpl.class);
+	같은거일경우 결과가 같음
+	기본적으로 실제반환타입을 보고 조회를 하기때문에,인터페이스나 구현체나 둘다 되는거(물론 구현체적는건 의존성생기니까 당연히 안좋음)
+	
+	테스트코드에서 예외테스트할땐 org.junit.jupiter.api의 Assertions.assertThrows를 쓰면됨
+		org.junit.jupiter.api.Assertions.assertThrows(NoSuchBeanDefinitionException.class,
+		()->ac.getBean("xxxx", MemberService.class));
+	이렇게 해당예외클래스와 람다식으로 해당예외를 만드는 코드를 던져주면됨
+
+	클래스에 static를 붙인다는건,내부클래스일때 스코프를 그 안에서만 사용하겠다는소리임
+
+	그리고 스프링빈을 조회할때,만약 상속관계인 타입이 있으면,부모타입으로 조회할경우 자식타입도 함께 조회함
+	그래서 object로 조회하면 모든 빈을 조회함
+	그래서 만약 자식타입이 두개이상있으면(인터페이스의 자식관계도 포함)중복예외가 발생하게됨
+	그래서 이름을 붙여야함
+	물론 하위타입으로 조회할수도있지만,안좋은방법임(인터페이스만 의존해야하니까)
+
+
+
+
+
+
+
 		
 		

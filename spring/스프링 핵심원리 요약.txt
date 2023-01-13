@@ -169,6 +169,103 @@
 
 
 
+	스프링 컨테이너의 상속구조는
+		BeanFactory
+		ApplicationContext
+		AnnotationConfigApplicationContext
+	순으로 상속되어있음
+	BeanFactory와ApplicationContext는 인터페이스임
+	ApplicationContext는 여러가지 인터페이스를 상속받고있는데,
+		BeanFactory->빈 관리조회
+		MessageSource->메시지위치에 따라 국제화(언어변경)기능,파일을 분리해서 처리하는식
+		EnvironmentCapable->환경변수
+		ApplicationEventPublisher->이벤트를 발행하고 구독하는 모델 지원
+		ResourceLoader->리소스를 편리하게 조회
+	등을 받고있음
+	
+	보통 BeanFactory를 직접사용할일은 없고,ApplicationContext를 사용하게됨
+	
+	그리고 ApplicationContext는 인터페이스니까,이걸 구현하는게 여러개로 나눠지는데,
+	이건 보통 해당 설정정보를 어떻게 받아올거냐(AppConfig.class,xml파일 등)으로 나눠지게됨
+	근데 보통 요즘은 보통 어노테이션 기반만 사용하고,xml같은거는 안씀,레거시에서나 사용함
+
+	
+	
+	이렇게 xml이든 자바코드이든,스프링은 BeanDefinition이라는 인터페이스로,
+	각각 구현체들이 xml이든뭐든 읽어서 같은 출력을 내게 만들어둔거임
+
+	beanDefinition의 메타정보들이 있긴한데,뭐 중요하진않은듯
+	이걸 뽑아서쓸일도 없음 ㅋㅋ
+
+
+
+5.싱글톤 컨테이너
+	기본적으로 스프링을 거치지않고 di를 하게되면 싱글톤으로 나오지않고,매번 새 객체를 생성시킴
+	
+	테스트시 같지않다 확인
+		Assertions.assertThat(memberService1).isNotSameAs(memberService2);
+
+	그래서 싱글톤을 적용해서(서비스나 레포지터리 구현체에서 적용하면됨,di랑은 상관없음)
+	di할때는 new를 안하고 getInstance하면되는거
+		private SingletonService(){
+
+		}
+	이런식으로 프라이빗으로 생성자를 만들어두면,외부에서의 접근을 막을수있음(안에 코드안넣고 프라이빗만 적용하는거)
+	
+	isEqualTo와 isSameAs의 차이는,same는 ==이고 equal은 =임,즉 싱글톤확인할땐 same를 써야함
+	
+	Assertions.assertThat(instance1).isSameAs(instance2)
+	Assertions.assertThat(instance1).isSameAs(instance2)
+	
+	싱글톤의 문제는
+		코드가 늘어남
+		dip를 위반함(구체클래스의존)
+		클라이언트가 구체클래스를 의존해서 ocp위반가능성이 높음
+		테스트하기어려움
+		자식클래스만들기 어려움
+		유연성이 떨어짐
+	
+	그런데 스프링을 사용하면 기본적으로 싱글톤 컨테이너로 관리해줌(바꿀수도있음,근데 보통은 싱글톤씀 99퍼는)
+	이러면 dip,ocp,테스트등이 자유로워짐
+
+	★싱글톤쓸때 주의점은(패턴이든 컨테이너든),무조건 스테이트리스로 설계해야함
+	당연히 객체가 유지되니까 거기에 뭘 남기면 안됨
+	그래서 db커넥션같은걸 주로 싱글톤으로 썼던거
+	그래서
+		특정 클라이언트에 의존적인 필드가 있으면안됨
+		특정 클라이언트가 값을 바꿀수있는 필드가 있으면안됨
+		어지간하면 읽기만 가능해야함
+		필드대신 자바에서 공유되지않는 지역변수,파라미터등을 사용해야함
+
+
+	그리고 @Configuration으로 AppConfig내에서 new를 여러개해도 모두 하나의객체임(여러객체에서 같은걸 생성해도 하나만생성됨)
+	무조건 싱글톤식으로 하나만 생성해서 그거 di하는식으로 동작함
+	@Configuration을 사용하면,스프링이 진짜 바이트코드를 치환해서 호출하는식으로 변경하는것(cglib라이브러리 사용함)
+	그 레지한 싱글톤 방식(코틀린에서 했던방식)으로 생성-호출방식으로 동작하는걸로 추정
+	
+	그래서 @Configuration을 사용하지않고 @Bean만 사용하면 싱글톤으로 동작하지않음
+	그리고 생성된애들도 스프링에서 관리하지않기때문에,그냥 bean취급도 받지않음(스프링컨테이너가 관리하지않음)
+	사실 안쓸이유도 없음
+	모든 설정정보는 @Configuration넣으면됨
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

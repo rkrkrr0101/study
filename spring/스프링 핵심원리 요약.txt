@@ -249,22 +249,88 @@
 	모든 설정정보는 @Configuration넣으면됨
 	
 
+6.컴포넌트 스캔
+	스프링은 설정정보가 없어도 자동으로 스프링빈을 등록하는 컴포넌트 스캔이라는 기능을 제공함
+	또 의존관계를 자동으로 주입하는 @Autowired라는 기능도 제공함
+	
+	컴포넌트 스캔을 사용할땐
+		@Configuration
+		@ComponentScan
+	이렇게 넣으면됨
+	컴포넌트스캔에서
+		@ComponentScan(
+				excludeFilters = @ComponentScan.Filter(type = FilterType.ANNOTATION,classes = abc.class)
+		)
+	이런식으로 해당필터에 있는걸 빼버릴수도있음
+	
+	shift2번으로 클래스검색을 할수있음
+	
+	컴포넌트스캔은 @Component가 붙은 모든걸 검색해서 스프링빈으로 등록함
+	그러니
+		@Configuration
+		@ComponentScan
+		public class AutoAppConfig {
+		}	
+	이런식으로 비워두고,현재 사용하는 구현체에 가서 @Component붙여주면됨
+	이경우 의존관계 주입은,의존관계주입이 필요한 해당 구현체의 생성자에 @Autowired 를 붙여주면됨(생성자주입 세터주입등 있지만 보통 생성자쓰니까)
+	
+	이 컴포넌트스캔은,기본값은,해당 appconfig파일(ComponentScan이 있는 위치)를 루트로 삼고,아래쪽으로 서치하기때문에,
+	어디 밑에있으면 자기 위로 올라가서 서치할순없음
+	
+	컴포넌트스캔을 하면 자기밑에있는 모든 @Component를 스프링빈으로등록함
+	이때 스프링빈의 기본이름은 클래스명을 사용하되,맨 앞자리를 소문자로 바꿈(MemberServiceImpl->memberServiceImpl)
+	만약 빈 이름을 직접 지정하고싶으면
+		@Component("빈이름")
+	하면됨
+	
+	컴포넌트스캔에서 위치를 지정하려면
+		@ComponentScan(
+				basePackages="패키지명"
+		)	
+	으로 루트패키지를 지정할수있음
+		@ComponentScan(
+				basePackages={"패키지명1","패키지명2"}
+		)
+	이렇게 여러개지정도 가능함
+		@ComponentScan(
+				basePackageClasses=MemberService.class
+		)
+	이렇게 클래스를 지정하고,해당 패키지를 루트로 삼을수도있음
+	근데 보통은 루트위치에 두고 패키지지정안하는게 관례인듯
 
+	컴포넌트 스캔의 대상은
+		@Component
+		@Controller(스프링 mvc컨트롤러로 인식)
+		@Service(아무것도안함,즉 Component와 같은데,그냥 개발자들이 여긴 비즈니스로직이라고 확인할수있게 이름만 다른거)
+		@Repository(스프링 데이터접근계층으로 인식하고,데이터계층의 예외를 스프링예외로 변환해줌)
+		@Configuration(스프링설정정보로 인식하고,싱글톤유지할수있게 추가처리해줌)
+	들이 있음,얘들은 @Component를 포함하고있기때문,괄호속에있는건 추가기능임 기본적으로 Component를 깔고감
 
+	
+	컴포넌트스캔에서 필터를 사용해서 특정대상들을 제외한거처럼,특정대상들을 추가할수도있음
+		includeFilters //포함
+		ExcludeFilters //제외
+	이렇게
+	
+	필터의 타입에는
+		FilterType.ANNOTATION //어노테이션 인식
+		FilterType.ASSIGN_TYPE //지정한 타입과 자식타입을 인식
+		FilterType.ASPECTJ //안씀
+		FilterType.REGEX//정규표현식
+		FilterType.CUSTOM//TypeFilter라는 인터페이스 구현하는식으로 커스텀할수있는거,안씀
+	가 있음
+	
+	어지간하면 이런 대상 제외나 추가같은건 안넣는게 좋음
+	
+	
+	컨트롤누르면 해당대상으로 이동가능
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+	
+	만약 빈 이름이 충돌날때 상황따라 다르게 동작함
+	자동빈이 2개일경우엔 예외가 발생함
+	수동빈vs자동빈일경우에는,수동빈이 자동빈을 이기고 자동빈을 오버라이드해버림
+	그래서 이건 조심해야함 예외가 안뜨니까..
+	그래서 최신 스프링부트의경우엔 이경우에도 예외를 띄움(스프링부트로 실행시켰을때)
 
 
 

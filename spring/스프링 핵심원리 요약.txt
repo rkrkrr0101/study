@@ -395,25 +395,67 @@
 	
 	
 	그리고 @RequiredArgsConstructor는,final이 붙은 필드를 전부 di받는 생성자를 자동으로 생성해줌
+	근데 이건 getBean(클래스.class)처럼 타입으로 조회하기때문에,조회된 빈이 2개이상일때 문제가 발생함
+	수동등록도 되긴하지만 권장하지않고,
+	방법은 3가지가 있는데
+		@Autowired 필드명매칭
+		@Quilifier
+		@Primary 사용
+	@Autowired는 타입매칭을 사용하고,중복이 있으면 필드이름이나 파라미터이름으로 빈 이름을 추가매칭함(즉 변수명에 명시를 하면 그거로 해줌 두개이상일때)
+	@Quilifier는 추가구분자를 붙여주는거,k8s에서 라벨이라고 생각하면됨
+	이건 빈 등록할때 붙여두고,
+		@Component
+		@Quilifier("mainDiscountPolicy")
+		public class RateDiscountPolicy implements DiscountPolicy{
+		}
+	이렇게 등록하고
+	받아올때 생성자에
+		public OrderServiceImpl(Aaa aaa,@Quilifier("mainDiscountPolicy") DiscountPolicy discountPolicy){
+		...
+		}
+	이렇게 어노테이션을 박아서 저 라벨을들고올수있음
+	
+	만약 저 라벨대상이 없으면,저 이름의 스프링빈으로 추가매칭을 하는데,이렇게 안되게 해야함,Quilifier는 무조건 라벨검색되게하는게 나중에 편함
 	
 	
+	@Primary는,우선순위를 정하는방법임
+	여러개가 매칭되면 이게 붙어있는애가 우선적으로 선택됨
+	
+	Quilifier의 경우엔 주입받는 모든 코드에 저걸 붙여줘야해서,@Primary를 주로 사용함
+	그리고 Quilifier와 Primary의 우선순위는,Quilifier가 더 높음
+	
+	그리고 Quilifier는 컴파일시 타입체크가 안된다는 단점이 있음
+	
+	그래서 이걸 어노테이션을 직접 만들어서 해결할수있음
+	그냥 상속받는다는느낌으로,해당 어노테이션을 붙이는식으로 만들면 쉽게만들수있음
+	
+	롬복을 사용할때도 그냥 맨위에 어노테이션 붙이면됨(Quilifier든 커스텀어노테이션이든)
+	커스텀어노테이션을 사용하면,컨트롤 b로 그 어노테이션을 사용하는 모든 위치를 확인하기편함
 	
 	
+	그리고 조회한 빈이 모두 필요할때도 있음(만약 클라이언트가 할인의 종류를 선택할수있어야할때)
+	이럴때는 전략패턴을 사용하면됨
+		@RequiredArgsConstructor
+	    static class DiscountService{
+			private final Map<String , DiscountPolicy> policyMap;
+			
+			public int discount(Member member, int price, String discountCode) {
+				DiscountPolicy discountPolicy=policyMap.get(discountCode);
+				return discountPolicy.discount(member,price);
+			}
+		}			
+	이렇게 Map<String,타입>으로 받으면,해당타입인걸 전부 스프링이 map에 넣어줌
+	그리고 그 맵에서 해당하는값을 꺼내다가(매개변수로 스트링 받아서)그 대상의 메소드 사용하면됨(어짜피 인터페이스구현이니 메소드는 같을테니까)
 	
+	기본적으로는 업무로직빈에선 컴포넌트스캔과 자동주입을 사용하고(컨트롤러,서비스,리포지토리등),
+	기술지원빈에선 수동빈을 사용하면좋음(aop를 사용한 로그,데이터베이스연결등)
 	
+	보통 기술지원빈은 수도 적고,명시적으로 드러나지않는 경우가 많기때문에 명확히 들어내는게 좋음
+	그래서 얘들은 appconfig에 명시하는게 좋음
+	특히 aop사용하면 영향을 너무 많이주기때문에..
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	그리고 비즈니스로직에서도 다형성을 적극 활용할때는 각각 패키지(인터페이스+모든구현체)로 묶어두거나 수동빈등록을 하는게 좋음
+	수동빈등록을 하면 그 인터페이스에 뭐가있는지가 한눈에 보이니까..
 
 
 		

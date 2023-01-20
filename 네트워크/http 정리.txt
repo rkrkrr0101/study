@@ -17,3 +17,54 @@
 	udp는,그냥 막 던짐,ip와 거의같은데 port와 체크섬정도만 있음
 	
 2.uri와 웹브라우저 요청 흐름
+	uri와 url,url의 차이는
+		uri가 기본,리소스 판별자
+		url=uri+로케이터 ,즉 리소스 위치
+		urn=uri+name ,즉 리소스 이름
+	
+	uri는
+		U:리소스 식별하는 통일된 방식
+		R:리소스,uri로 식별할수있는 모든것(제한없음,파일이나 웹사이트나)
+		I:다른항목과 구분할때 필요한정보(파일의 위치라던가,도메인네임(ip포트))
+	
+	url의 L은 Locator,즉 리소스가 있는 위치를 지정
+		foo://abcd.com:3000/over/there?name=abcd#nose
+		
+	urn의 N은 name,즉 리소스의 이름을 부여
+		urn:example:animal:ferret:nose
+		
+	위치는 변할수있지만 이름은 변하지않음(그래서 책 isbn같은건 urn임)
+		
+	보통 url을 사용하게됨
+	url은,scheme://userinfo@host:port/path?query#fragment 구성임
+		https://www.google.com/search?q=hello&hi=ko
+		
+		프로토콜 https:
+		호스트명 www.google.com
+		패스(라우트) /search
+		쿼리 ?q=hello&hi=ko
+	
+	유저인포는 거의 사용하지않고,포트는 80,443은 생략
+	path는 리소스의 경로,라우트할때 그거맞음
+	쿼리는
+		key=value형태
+		?로 시작하고,&로 추가가능(q=hello&hi=ko)
+		쿼리 파라메터,쿼리스트링으로 불림,웹서버에 제공하는 파라미터
+		
+	fragment는 거의 사용하지않음,보통 위키같은데서 내부에서 이동할떄 #로 이동할때 사용함,서버로 전송하지않음	
+		
+		
+	브라우저에서 접속을하면,
+		1.http요청메시지를 생성함
+			get /search?q=hello&hi=ko HTTP/1.1  //라우트와 쿼리,http버전정보
+			Host:www.google.com                 //도메인정보
+		2.이 메시지는	소켓 라이브러리를 통해 os계층의 tcp/ip로 전달함 
+		3.os의 tcp는 해당서버와 연결하고(3웨이핸드쉐이크),데이터를 전달함(여기에 http메시지가 들어있음)
+		
+	받을땐,
+		tcp패킷을 까서,
+		http메시지를 꺼낸다음에,그걸 해석하고,
+		http응답메시지를 만들어서 전달함(위랑같음)
+		
+	그리고 content-type는,컨텐츠의 타입	
+		

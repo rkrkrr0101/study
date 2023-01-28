@@ -57,36 +57,116 @@
 	jsp->타임리프로 넘어옴
 
 2.서블릿
+	스프링부트는 서블릿을 등록할수있게 @ServletComponentScan을 지원함(쓸일은없을듯)
+	서블릿 등록은 
+		@WebServlet(name = "helloServlet",urlPatterns = "/hello")
+		컨트롤o의 서비스(자물쇠잠긴거)등록후 내부에구현
+	붙이면됨
+	
+	request.getParameter("abc")로 쿼리파라미터 조회가능
+	res추가시엔
+	    response.setContentType("text/plain");
+        response.setCharacterEncoding("utf-8");
+        response.getWriter().write("hello"+abc);
+	이렇게 컨텐츠타입 정하고,텍스트면 인코딩정하고,저렇게 바디에 적으면됨
+
+	main/resources/application.properties에서
+		logging.level.org.apache.coyote.http11=debug
+	넣어주면 로그를 디버그레벨로 올려서,http요청메시지볼수있음
+	물론 운영서버는 저렇게하면안되고,개발환경에서만
+	
+	그리고 content-length같은건 was가 알아서 넣어줌
+	
+	서블릿은,http요청메시지를 파싱해서 httpservletRequest객체에 넣어서 제공해줌
+	그리고 추가적으로,해당 http요청이 시작하고,끝날때까지 유지되는 임시저장소로 사용할수도 있음
+		request.setAttribute(name,value)
+		request.getAttribute(name)
+	이렇게 저장,조회하는거,이렇게 지역변수가 할일을 싱글톤상태에서 사용할수있음
+	세션관리기능도 있음
+		request.getSession(create:true)
+	그리고 httpservletRequest,httpservletResponse 둘 다 http요청,응답메시지를 기반으로 어댑팅된거니까 요청응답메시지를 알아야함
+
+	req읽어올땐
+		req.getMethod()
+		req.getRequestURI()
+		
+	이런식으로 들고오면됨
+	헤더전체읽을땐
+		req.getHeaderNames().asIterator().
+			forEachRemaining(headerName -> System.out.println("h = " + headerName));
+	이렇게 이터레이터써서 읽으면됨
+	그리고 값 가져오는건
+		req.getServerName()
+		req.getServerPort()
+	로 호스트를 파싱해서 꺼낼수있고,
+		req.getLocale()
+	로 최우선적으로 원하는 언어(accept-Language)를 꺼낼수있음
+	전부다꺼내려면
+		req.getLocales().asIterator().
+			forEachRemaining(headerName -> System.out.println("h = " + headerName));
+	이렇게 getLocales를 사용하면 다 꺼낼수있음
+	
+	쿠키조회는
+		Cookie cookie:req.getCookies()
+	로 꺼내고
+		cookie.getName()
+		cookie.getValue()
+	로 이름과 값을 읽을수있음
+	쿠키는 getCookies() s붙었으니까 여러개가 들어오니까,여기서 자기가만든거 골라쓰면됨
+	
+	컨텐츠정보는
+		req.getContentType()
+		req.GetContentLength()
+		req.getCharaterEncoding()
+	로 받아올수있음
+
+	물론 그냥
+		req.getHeader("host")
+	이렇게 getHeader로 꺼내는게 젤편하긴할듯
 
 
+	req데이터에서 정보전달방식은
+		get-쿼리파라미터
+			/url?키1=값1&키2=값2
+			검색,필터,페이징등에서 사용
+		post-html form
+			content-type:application/x-www-form-urlencodded
+			메시지바디에 쿼리파라미터(키1=값1&키2=값2) 형식으로 전달
+			회원가입,상품주문등에서 html form으로 사용
+		http message body에 직접 데이터를 담아서 요청
+			http api에서 주로 사용,json,xml,text
+			데이터형식은 주로 json 사용
+			post,put,patch
 
 
+	쿼리파라미터는 URL에 ?를 시작으로 보내고,추가파라미터는 &로 구분하면됨
+	쿼리파라미터를 전부꺼내려면
+		req.getParameterNames()
+	하면되고
+	
+	전체출력할땐
+		parameterNames.asIterator().
+			forEachRemaining(h -> System.out.println(h + "=" + req.getParameter(h)));
+	이렇게 하면됨
+		req.getParameter(h)
+	로 해당파라미터이름을 꺼낼수있음
 
 
+	그리고 ?username=hello&age=20&username=hello2
+	이렇게 같은 이름으로 2개를 넣을수도있음
+	이걸 뽑을땐
+		req.getParameterValues("username")[1]
+	이걸써서 이렇게 배열로뽑을수있음
+	근데  이렇게 쓰면 헷갈리는데 이렇게쓰진않을거같다
+	일단 이렇게됐을때 getParameter를 쓰면,처음넣은걸 반환하는듯
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	html form이랑 쿼리파라미터랑은 서로 호환이 돼서,form도
+		req.getParameter
+	로 다꺼내면됨
+	
+	즉,클라입장에선 둘이 다른데,서버입장에선 둘다 똑같이 처리할수있음
+	이 둘을 구분해야하면,content-type이 있나없나로 구분하면됨
+	get은 바디가 없으니 content-type이 없고,form은 바디에 넣으니 content-type이 'application/x-www-form-urlencodded'임
 
 
 

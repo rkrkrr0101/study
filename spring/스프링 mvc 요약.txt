@@ -168,6 +168,94 @@
 	이 둘을 구분해야하면,content-type이 있나없나로 구분하면됨
 	get은 바디가 없으니 content-type이 없고,form은 바디에 넣으니 content-type이 'application/x-www-form-urlencodded'임
 
+	요청메시지바디에 데이터 담아서보낼땐,보통 json사용
+	post,put,patch에서 주로 사용됨()
+	
+	바디에서 단순텍스트를 받고,이걸 꺼낼땐
+	    ServletInputStream inputStream = req.getInputStream();
+        String messageBody = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+	이렇게 getInputStream으로 받아서,StreamUtils.copyToString로 스트링으로 바꿔주면됨
+	
+	json을 받고,꺼낼땐,
+	보통 json은 데이터클래스를 만들어서(도메인 클래스)사용함
+	일단 텍스트로 그냥 받고꺼낼땐
+	    ServletInputStream inputStream = req.getInputStream();
+        String messageBody = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+	이렇게 똑같이꺼내면되고(어짜피 텍스트니까)
+
+	데이터클래스로 꺼낼땐
+		private ObjectMapper objectMapper = new ObjectMapper();
+		HelloData helloData = objectMapper.readValue(messagebody, HelloData.class);
+	이런식으로 꺼낼수있음(readValue의 2번째 매개변수에 클래스를넣으면,거기맞는 게터세터형식으로 넣어서 나옴)		
+
+
+	httpservletResponse객체는
+		응답메시지를 생성해주고(응답코드지정,헤더생성,바디생성)
+		편의기능(content-type,쿠키,리다이렉트)
+	등을 쉽게 지정할수있음
+	
+	응답코드지정은
+		resp.setStatus(200);
+		resp.setStatus(HttpServletResponse.SC_OK); //200상수
+	이런식으로 넣을수있음
+	컨텐츠타입은
+		resp.setContentType("text/plain");
+		resp.setCharacterEncoding("UTF-8");
+	그외 각종 헤더입력은
+		resp.setHeader("Cache-Control", "no-cache,no-store,must-revalidate");
+		resp.setHeader("헤더명", "헤더값");
+	사용자 지정 헤더도
+		resp.setHeader("abcd123", "ttt123");
+	이렇게 넣으면됨
+	
+	쿠키는
+		Cookie cookie=new Cookie("mycookie","good")
+		cookie.setMaxAge(600);
+		resp.addCookie(cookie)
+	이렇게 넣을수있음
+	
+	리다이렉트(location헤더+302상태코드)는
+		resp.sendRedirect("/basic/hello-form.html");
+	로 넣을수있음
+	
+	메시지바디에 뭐 적을땐
+		resp.getWriter().println("ㅎㅇ요");
+	이렇게 적으면됨
+	
+	
+	html 응답메시지도
+		단순텍스트응답(resp.getWriter().println(""))
+		HTML응답
+		HTTP API-messageBody json 응답
+	이렇게 있음
+	
+	html보낼땐
+		resp.setContentType("text/html"); //컨텐츠타입 html로
+        resp.setCharacterEncoding("UTF-8");//인코딩정하고
+
+        PrintWriter writer = resp.getWriter();
+        writer.println("<html>");
+		... html작성
+	이렇게 보내면됨
+	
+	json으로 보낼땐
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+
+        HelloData helloData = new HelloData();
+        helloData.setUsername("afa");
+        helloData.setAge(30);
+
+        String result = objectMapper.writeValueAsString(helloData);
+        resp.getWriter().write(result);	
+	이렇게 객체생성하고,오브젝트매퍼로 스트링으로바꿔서 적으면됨(이러면 변수명을 getter콜해서 키값으로 만들어서 json형식으로 만듬)
+
+
+
+3.서블릿,jsp,mvc패턴
+
+
+
 
 
 

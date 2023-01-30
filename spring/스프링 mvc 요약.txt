@@ -253,12 +253,38 @@
 
 
 3.서블릿,jsp,mvc패턴
+	이렇게하면
+		public List<Member> findAll() {
+			return new ArrayList<>(store.values());
+		}
+	저걸 조작해도 스토어엔 영향을 안줌(DTO)
+	
+	배열안에 있는 멤버들 검증할땐
+		List<Member> result = memberRepository.findAll();
+		Assertions.assertThat(result).contains(member1, member2);
 
+	서블릿에서 html보내는건 진짜불편하다->템플릿엔진의 등장
+		템플릿엔진=html에 코드넣기
+		서블릿은 코드에 html넣기
+	대표적 템플릿엔진에 jsp,타임리프등이 있음
+	
+	jsp는
+		<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+	가 맨위에 꼭 있어야함
+	jsp에서 코드실행시킬땐 <% %>사이에 넣으면되고
+	코드를 출력할땐
+		<%= %>
+	사이에 넣으면됨
+	임포트는 맨위에 
+		<%@ page import="hello.servlet.domain.member.Member" %>
+	그리고 jsp에서는 request,response가 이 단어 그대로 문법상으로 지원이 됨
+	out도 예약어
+		out.write(<head>)
 
-
-
-
-
+	jsp는 서블릿보다 나아지긴했는데,일단 html이랑 코드랑 붙어있는게 불편하고(관심사의 분리가 안됨)
+	컨트롤러와 뷰가 붙어있어야하는거도 불편함
+	
+	이래서 나온게 mvc패턴
 
 
 

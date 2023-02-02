@@ -446,7 +446,117 @@
 	즉 어댑터를 사용하면,입출력형식을 맞출수있어서,여러 컨트롤러를 쓰고싶은걸 골라쓸수있어짐
 	즉,핸들러어댑터의 인터페이스에만 의존하니까 구현클래스변경이 쉬워짐
 	
+5.스프링mvc 구조이해
+	스프링에서 이름은
+		프론트컨트롤러->DispatcherServlet
+		handlerMappingMap->HandlerMapping
+		ModelView->ModelAndView
+	중요한건 DispatcherServlet
+	얘도 프론트컨트롤러패턴이고,얘가 스프링mvc의 핵심임
+	스프링부트는,DispatcherServlet을 서블릿으로 자동등록하면서,
+	urlPatterns="/"에 매핑함(더 자세하게적은게 우선순위가 높아서 다른서블릿도 작동하는거)
 	
+	그리고 DispatcherServlet의 부모에 가보면,service를 오버라이드 해둬서,
+	이걸시작으로 여러메소드가 호출되면서 DispatcherServlet.doDispatch()가 호출됨
+	얘가 핵심인데,얘는 우리가 만들었던 프론트컨트롤러랑 비슷하게 동작함
+		핸들러조회
+		핸들러어댑터조회
+		핸들러어댑터실행->어댑터를통해 핸들러실행->모델앤뷰 반환
+		뷰 렌더링호출->뷰 리졸버로 뷰찾기->뷰 반환
+		뷰 렌더링
+	순서임
+	
+	스프링mvc의 가장 큰 강점은,DispatcherServlet을 변환하지않고 원하는 기능을 변경하거나 확장할수있음
+	대부분이 인터페이스로 돼있어서,이 인터페이스를 구현해서 DispatcherServlet에 등록하면,커스텀 컨트롤러생성이 쉬움(커스텀이니까 안하는게좋지만)
+	
+	컨트롤러가 호출되려면
+		핸들러매핑에서 컨트롤러를 찾고(스프링빈의 이름으로 핸들러를 찾을수있는 핸들러 매핑이 필요)
+		핸들러매핑으로 찾은 핸들러를 실행할수있는 핸들러 어댑터가 필요(해당 인터페이스를 실행할수있는 어댑터를 찾아서 실행)
+	
+	스프링부트를 쓰면,자동으로 등록하는 핸들러매핑과 어댑터는(위부터 우선순위높음)
+	핸들러매핑은
+		RequestMappingHandlerMapping// 애노테이션기반의 컨트롤러인 @RequestMapping에서 사용
+		BeanNameUrlHandlerMapping //스프링빈이름으로 핸들러찾음
+	BeanNameUrlHandler는,@Component("/url") 저 이름으로 스프링빈이 등록되면,저 이름의 스프링빈을 찾는거(url이름의)
+	핸들러 어댑터는(위부터 우선순위높음)
+		RequestMappingHandlerAdapter// 애노테이션기반의 컨트롤러인 @RequestMapping에서 사용
+		HttpRequestHandlerAdapter //httpRequestHandler 처리
+		SimpleControllerHandlerAdapter //Controller 인터페이스(어노테이션이 아닌 과거에 쓰던거)처리
+	
+	즉 실행순서는
+		1.핸들러 매핑의 우선순위대로 실행해서 핸들러를 찾고
+		2.찾은 핸들러를 가지고 핸들러어댑터의 supports를 우선순위대로 신행해서 맞는걸 찾고
+		3.핸들러어댑터에 핸들러를 들고 실행후 결과반환(디스패쳐서블릿이)
+	
+	뭐 실제로 쓰는건 @RequestMapping이겠지만
+	
+	뷰 리졸버는,application.properties에서
+		spring.mvc.view.prefix=/WEB-INF/views/
+		spring.mvc.view.suffix=.jsp
+	를 추가해주면,기본 뷰리졸버가 modelandview에서 논리이름 앞뒤에 저걸 붙여서 거기로 던져줌
+	즉
+		return new ModelAndView("new-form");
+	이거만해도 자동으로 뷰리졸버를 타고 
+		/WEB-INF/views/new-form.jsp
+	가 되는거임
+	
+	여기서 뷰리졸버는 (위부터 우선순위높음)
+		BeanNameViewResolver //빈 이름으로 뷰를 찾아서 반환(엑셀파일생성등에 사용)
+		InternalResourceViewResolver //jsp를 처리할수있는 뷰를 반환
+	
+	
+	즉 실제로쓸땐 @RequestMapping만 쓰는데,
+	얘는 @Controller로 어노테이션기반의 컨트롤러(@RequestMapping이 있으면,RequestMappingHandlerMapping을 사용하라는거)라고
+	스프링빈으로 자동등록한뒤,
+	그 안에서 @RequestMapping을 찾아서,그거의 url기반으로 핸들러를 찾아서 돌리는거
+	이때는 어노테이션을 기반으로,어노테이션이 붙은 메서드를 동작시키기때문에,메서드의 이름은 아무거나써도됨
+	그리고 이때 ModelAndView를 반환하면,모델을 뷰에 넣어서 그 화면을 그려줌
+	
+	즉,RequestMappingHandlerMapping은 스프링빈중에서 @RequestMapping이나 @Controller가 클래스레벨에 붙어있으면,
+	매핑정보로 인식(자기가 처리하는 핸들러로 인식)
+	
+	모델앤뷰에 모델에 데이터추가할땐
+		mv.addObject("member", member);
+	키값으로 넣으면됨
+	
+	그리고 한 리소스에 대한 url들은 한군데 모아두는게 관리가 쉬움
+	그리고
+		@Controller
+		@RequestMapping("/springmvc/v2/members")
+		Class ...
+	이런식으로 컨트롤러밑에 리퀘스트매핑으로,url공통부분을 묶어줄수있음
+	
+	그리고 리퀘스트매핑에서,루트출력할땐
+		@RequestMapping
+	이렇게 뒤에 아무것도안적으면됨
+	
+	그리고 스프링어노테이션 기반의 컨트롤러는,모델앤뷰를 반환해도되고,스트링을 반환해도,해당하는 스트링의 뷰를 찾아서 그걸 사용함(모델앤뷰만들필요없음)
+	
+	그리고 req와 res를 직접받지않고,거기서 req대신 파라미터만 떼서받을수도있고,res대신 모델을 받아서 거기다 값을 추가해줄수있음
+	    public String save(@RequestParam("username") String username,
+						   @RequestParam("age") int age,
+                           Model model) {
+			...
+			model.addAttribute("member",member)
+			return "뷰논리경로이름"
+		}
+	이경우 타입캐스팅도 알아서해줌
+	
+	즉,
+		req대신 @RequestParam(얘는 쿼리파라미터와 post form을 지원)
+		res대신 Model
+		ModelAndView대신 스트링
+	이렇게 처리할수있음
+	즉,뷰리졸버는 스트링을 리턴하면 ModelAndView(스트링)가 자동으로 들어가고,만약 프리픽스 서픽스가 프로퍼티에 선언됐으면 경로앞뒤에 그걸붙이는식
+	
+	그리고 @RequestMapping에서 메서드 를 안넣어주면,get과 post 둘다받아먹음
+	이걸 원하는 메서드로 지정할땐
+		@RequestMapping(value = "/new-form", method = RequestMethod.GET)
+		@RequestMapping(value = "/save",method = RequestMethod.POST)
+	아니면 그냥
+		@GetMapping ("/new-form")
+		@PostMapping(value = "/save")
+	써도됨
 	
 	
 	

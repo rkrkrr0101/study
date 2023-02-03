@@ -620,5 +620,113 @@
 		성능도 soutv보다 좋음(내부버퍼링,멀티쓰레드)
 
 	
+	스프링에서 리퀘스트매핑은,기본적으로는
+		@RequestMapping("/hello-basic")
+	이렇게 할수있음
+	
+	리퀘스트매핑의 속성들은 배열을 지원해서,여러 url을 하나의 메서드로 묶을수있음
+		@RequestMapping({"/hello-basic", "/hello-go"})
+	그리고 스프링부트 3.0부터는
+		http://127.0.0.1:8080/hello-basic
+		http://127.0.0.1:8080/hello-basic/
+	를 다른 url로 인식해서,저걸 배열로 같이 넣어주는게좋음
+	
+	그리고 userid같은 값을 받아올땐,pathvariable를 사용하는데,그 나무서치에서 kind받을때 썼던 그거
+		@GetMapping("/mapping/{userId}")
+		public String mappingPath(@PathVariable("userId")String data){
+			...
+		}
+	이렇게쓰면됨
+	만약 변수명과 경로변수명이 같으면 @PathVariable의 뭘받아올지 명시하는걸 생략할수있음
+		@GetMapping("/mapping/{userId}")
+		public String mappingPath(@PathVariable String userId){
+			...
+		}	
+	다중으로 받아올땐
+		@GetMapping("/mapping/{userId}")
+		public String mappingPath(@PathVariable String userId){
+			...
+		}	
+	
+	잘 쓰진않는데,특정파라미터를 조건걸어서 url 호출을 막거나 할수있음(예제는,/mapping-param?mode=debug 가 있어야 호출됨)
+	    @GetMapping(value = "/mapping-param", params = "mode=debug")
+		public String mappingParam() {
+			log.info("mappingParam");
+			return "ok";
+		}
+	특정 헤더를 조건걸어서 url호출을 막을수있음
+	    @GetMapping(value = "/mapping-param", headers = "mode=debug")
+		public String mappingHeader() {
+			log.info("mappingHeader");
+			return "ok";
+		}
+	없을경우 404가 나옴
+	이 조건들은,
+		headers = "mode"
+		headers = "!mode"
+		headers = "mode=debug"
+		headers = "mode!=debug"
+		headers = {"mode=debug","data=good"}
+	이런조건들이 있음
+	
+	컨텐츠타입도 있음
+	이건,url을 하나만두고,컨텐츠타입별로 각기 다른 메소드로 분리하는식으로(오버로드처럼) 할때 사용됨
+	    @PostMapping(value = "/mapping-consume", consumes = "application/json")
+		public String mappingConsumes() {
+			log.info("mappingHeader");
+			return "ok";
+		}	
+	헤더로 해도될거같지만,얘는 이걸쓰면 스프링에서 처리해주는게있어서 컨텐츠타입은 이걸쓰는게좋음
+	얘가 대상이 없을땐 415를 반환(미디어타입을 지원하지않음 에러코드)
+	여기 조건은
+		/** * Content-Type 헤더기반추가매핑 Media Type 
+		* consumes="application/json" 
+		* consumes="!application/json" 
+		* consumes="application/*" 
+		* consumes="*\/*" 
+		* MediaType.APPLICATION_JSON_VALUE //그냥 스트링을 상수로 정해둔거,404같은 http코드랑 같은방식
+		*/
+	가 있음,내부적으로 와일드카드를 쓸수있는게 특이점
+	이건 req에서의 content-type과 매칭하는거고,
+	브라우저에서의 accept와 매칭되는(내가 원하는 컨텐츠타입 지정하는거)는 produce임
+	    @PostMapping(value = "/mapping-produce", produces = "text/html")
+		public String mappingProduces() {
+			log.info("mappingProduces");
+			return "ok";
+		}
+	얘는 틀리면 406이 나옴
+	조건은 consumes와 같음
+	
+	
+	보통
+		회원목록조회: GET      /users
+		회원등록:   POST    /users
+		회원조회:   GET     /users/{userId}
+		회원수정:   PATCH  /users/{userId}
+		회원삭제:   DELETE/users/{userId}
+	이런식으로 url을 많이 짬 
+	
+	실제로 컨트롤러의 클래스레벨에서 url을 매핑해두고,밑에서는 상세만 받아가는식으로 설계를 많이 함
+		@RequestMapping("/mapping/users")
+	이러면 리소스단위로 되니까,알아보기도 쉬움
+	
+	매핑할때 매개변수는
+	    @RequestMapping("/headers")
+    public String headers(HttpServletRequest req,
+                          HttpServletResponse res,
+                          HttpMethod httpMethod, //get,post
+                          Locale locale,         //언어설정의 locale,가장 높은우선순위를 반환
+                          @RequestHeader MultiValueMap<String, String> headerMap, //헤더전체받기(맵으로던지면)
+                          @RequestHeader("host") String host, //단일헤더받기
+                          @CookieValue(value = "myCookie", required = false) String cookie //value명의 쿠키받기
+						  ){}
+	
+	이렇게 받을수있음
+	이외엔 InputStream,OutputStream(req,res메시지바디 접근)등이 있음
+	
+	MultiValueMap은,하나의 키에 여러 값을 받을수있음
+		key1=["abc","bcd"]
+	
+	
 	
 	

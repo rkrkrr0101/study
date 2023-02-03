@@ -558,6 +558,67 @@
 		@PostMapping(value = "/save")
 	써도됨
 	
+
+
+6.스프링mvc-기본기능
+	war과 jar의 차이는,jar을 사용하면 내장서버를 사용하고 webapp도 사용하지않음,보통 이걸씀
+	war은 내장서버(톰캣)도 가능하지만,주로 외부서버배포목적임,jsp쓰려면 war써야함
+	요즘은 도커라이징해서 포트포워딩해서 돌리기때문에 jar을 쓰는듯
+
+	스프링부트에 jar을 사용하면
+		/resources/static/index.html
+	경로에 index.html파일을 두면,저걸 웰컴페이지로 처리해줌
+	
+	스프링부트를 쓰면 기본적으로 로깅라이브러리가 있음
+	slf4j(인터페이스),logback(구현체)
+	보통 logback사용함
+	
+	Logger의 인터페이스는 slf4j이기때문에,임포트를 slf4j.Logger을 선택해야함
+		private final Logger log = LoggerFactory.getLogger(getClass());
+	로그쓸땐
+        log.trace("trace log={}", name);
+        log.debug("debug log={}",name);
+        log.info("info log={}", name);
+        log.warn("warn log={}",name);
+        log.error("err log={}",name);
+	이렇게 {}안에 뒤에 변수가 들어감(위에서부터 순서대로 로그레벨임)
+	로그레벨설정은 application.properties에서
+		logging.level.hello.springmvc=trace
+		logging.level.root=info //이건 전체프로젝트 로그레벨설정,해당패키지 상세설정있으면 그거우선
+	이런식으로 설정가능
+	기본값은 info임
+	보통 로컬,데브에선 debug,프로덕션에선 info를 사용
+
+
+	@RestController를 사용하면,원래 @Controller를 사용하면 리턴값이 기본적으로 뷰의 이름이라고 인식하는데
+	RestController는 리턴값이 그냥 스트링으로 반환됨(res 메시지바디에 입력됨),즉 뷰가 없을때 사용할수있음(restapi만들때 사용)
+	
+	로거로 찍으면,형식을 갖춰서 뱉어주기때문에
+		2023-02-03T09:28:45.427+09:00  INFO 14796 --- [nio-8080-exec-1] h.springmvc.basic.LogTestController      : info log=Spring
+	파싱해서 색입힐수도있고,조회같은게 편해짐
+	대충
+		시간 로그타입 쓰레드 컨트롤러명 메시지
+	이렇게 다 넣어줌
+	실무에선 로거사용해야함
+	
+	롬복도 사용가능한데 @Slf4j로 바꾸면됨
+	log선언을 빼버리고,
+		log.info("info log={}", name);
+	그대로쓰면됨(생성자로 쓰는거처럼)
+	
+	실무에서 로그쓸땐
+		log.info("info log="+ name)
+	이렇게써도 들어가긴하는데,이렇게하면 스트링합연산이 일어나서 비효율적임(출력안하는 로그도 일단 자바레벨에서 스트링변경은 미리 진행을 해버림)
+	메서드 호출전에 스트링합연산부터 진행을 해야 메서드 호출을 할수있으니까 이걸 진행을 해버리는게 문제
+		log.info("info log={}", name);
+	이렇게쓰면 연산이 안일어나서(스트링합연산이 없고,단순메서드호출),이렇게 써야함
+
+	로그를 쓰면,
+		부가정보를 볼수있고
+		로그레벨에 따라 로그를 상황에 맞게 조절가능
+		표준입출력만 아니라 파일출력,외부네트워크출력등도 가능함,파일출력은 분할도 가능
+		성능도 soutv보다 좋음(내부버퍼링,멀티쓰레드)
+
 	
 	
 	

@@ -726,6 +726,203 @@
 	
 	MultiValueMap은,하나의 키에 여러 값을 받을수있음
 		key1=["abc","bcd"]
+		
+	http req로 데이터보내는건,퀴리파라미터,form,메시지바디 3가지 방법으로만 보낼수있음
+	백엔드입장에선 쿼리파라미터와 form은 동일하게 취급할수있음(이걸 통틀어 요청파라미터 조회라고 함),
+	
+	html같은 리소스는
+		resources/static/
+	에 두면 전체공개됨,그리고 jar을 사용하면,webapp경로를 사용할수없음,그래서 정적리소스도 클래스경로에 함께 포함해야함
+	그리고,html에서
+		action="/request-param-v1"
+	이렇게 액션을 붙이면,저러면
+		http://127.0.0.1:8080/request-param-v1
+	에 가게됨
+	
+	요청파라미터조회방식은 뭐 제일 예전에썼던건
+		HttpServletRequest //요즘은 안씀
+		@requestParam("헤더이름") String username
+		@ModelAttribute
+	
+	그리고 @Controller클래스 안에서 @RestController처럼 리턴하고싶으면,해당 메서드에
+		@ResponseBody
+	붙이면됨
+	
+	그리고 @RequestParam 도 없애고싶으면,헤더이름이 요청파라미터 이름과 같으면,저것도 없앨수있음
+		@requestParam("username") String username
+		@requestParam String username
+		String username
+	즉 이 3개는 다 같은거
+	단,@RequestParam생략하려면,String,int같은거만 가능함
+	@RequestParam정도는 붙이는게 보기편할거같다
+	
+	그리고 필수파라미터를 설정하려면(없으면 400대에러)
+		@RequestParam(required = false) String username
+	이렇게 하면됨(기본값은 true,false면 없어도됨)
+	
+	자바에선 int(기본형)은 null이 없음,그래서 int에 널을 넣고싶으면 Integer을 사용하거나,defaultValue를 사용해야함
+	defaultValue는
+		@RequestParam(defaultValue = "0") int age
+	이렇게 사용하면됨
+	저렇게 받아서 if로 거르면될듯
+	그리고 defaultValue를 사용하면 required가 의미없어짐
+	
+	그리고 주의해야할건,
+		?username=
+	이렇게해도 일단 들어오긴했으니(null은 아니고 빈문자니)에러가 뜨지않음
+	그리고 defaultValue를 사용하면,빈문자도 디폴트로 변경해줌
+	
+	파라미터를 맵으로 조회할수도 있음(전체 다 받기)
+		public String requestParamMap(@RequestParam Map<String, Object> paramMap)
+	이러면 저 맵안에 req가 다 들어감
+	그리고 모든헤더가 단일값인게 확실하다면 Map를 써도되지만,아닐가능성이 있으면 MultiValueMap을 써야함
+	근데 보통은 헤더는 단일값이어야함,아니게 설계하는게 이상한거
+	
+	
+	@ModelAttribute는,보통 개발을 할땐 req를 받아서 객체를 만들고,그 객체에 값을 넣어줘야하는데,이걸 자동화해줌
+	
+	@Data(롬복기능)는 데이터객체에,
+	@Getter,@Setter,@ToString,@EqualsAndHashCode,@RequiredArgsConstrictor을 묶어둔거
+	
+	그리고 @ModelAttribute는
+		public String modelAttributeV1(@ModelAttribute HelloData helloData)
+	이렇게쓰면 저 데이터 안의 변수들의 이름이 헤더에 있으면,해당값들을 set해줌
+	즉
+		private String username
+	이면
+		setUsername(req.getParameter("username"))
+	하는걸 자동으로 해준다는거
+	
+	그리고 @ModelAttribute에서 int가 들어가야하는데 string이 들어오면,Bind익셉션이 나옴,이건 검증부분에서 처리해야함
+	
+	그리고 모델애트리뷰트도 생략이 가능한데
+		public String modelAttributeV1( HelloData helloData)
+	동작자체는 똑같이 동작함,근데 명시하는게 더 깔끔해보임
+	스프링은
+		string,int,integer같은 기본타입은 @RequestParam
+		그 외는 @ModelAttribute로 추론함(argument resolver로 여기서 제외하고 @RequestParam에 붙일수있음)
+		
+	즉,모델애트리뷰트에서의 데이터객체의 이름이나 클래스는 중요하지않고,그 안에 속성의 이름이랑 req헤더랑 맞으면 매칭시킨다고 이해하면될거같음
+	
+	
+	헤더말고 바디에서 데이터를 받을땐,보통 json을 사용함
+	요청 파라미터와 다르게,바디에서 받을땐 @RequsetParam이나 @ModelAttribute를 사용할수없음(form 제외)
+	
+	가장 기본적으로 받을땐
+		ServletInputStream inputStream = req.getInputStream();
+        
+	이렇게 받았고
+	스트림2스트링할땐
+		String messageBody= StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+	이렇게 할수있음
+	
+		 public void reqBodyV2(InputStream inputStream, Writer responseWriter) throws IOException {
+	이렇게도 받을수있음
+	
+	이거도 귀찮으면 http컨버터를 사용해서
+		@PostMapping("/request-body-string-v3")
+		public HttpEntity<String> reqBodyString(HttpEntity<String> httpEntity) throws IOException {
+			String body = httpEntity.getBody();
+			log.info("messageBody={}", body);
+			return new HttpEntity<>("ok");
+		}	
+	이런식으로 httpEntity에 모든걸 때려박고,거기서 다 꺼내고,res도 새로운 http를 생성해서 던지는식으로 처리가능
+	즉 httpEntity가 말 그대로 http객체라고 생각하고,그렇게 쓰는거임
+		httpEntity.getBody()
+		httpEntity.getHeaders()
+	막 이런식으로 쓰는거
+	얘는,메시지바디정보를 직접 조회하는거,요청파라미터조회랑은 아무연관없음
+	그리고 이건 응답에도 쓸수있는데,이걸 응답에 쓰면	
+		메시지바디정보 직접 반환
+		헤더정보 포함가능
+		view 조회x
+	그리고 이걸 상속받은
+		RequestEntity //httpMethod,url정보가 추가,요청에서 사용
+		ResponseEntity//http상태코드설정가능,응답에서 사용
+	도 있음
+	
+	스프링mvc내부에서 http메시지바디를 읽어서 문자나 객체로 변환해서 전달해주는데,이때 http메시지컨버터라는 기능을 사용함
+	
+	이거도 귀찮아서 나온게 어노테이션기반임
+		 public String reqBodyString(@RequestBody String messageBody) throws IOException {
+	이렇게 받으면 저기안에 req바디를 그대로 넣어줌
+	그래서 아까 썻던 @ResponseBody도 이거랑 짝이되는거
+		@ResponseBody
+		...
+			return "ok"
+	이거
+	즉 res바디를 직접 리턴값으로 매핑해버리는거니까
+	그리고 헤더도 필요하면 @RequestHeader도 같이쓰면됨
+	
+	
+	json을 받을땐
+		private ObjectMapper objectMapper = new ObjectMapper();
+	를 전역생성해두고
+        ServletInputStream inputStream = req.getInputStream();
+        String s = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+        log.info(s);
+        HelloData helloData = objectMapper.readValue(s, HelloData.class);
+        log.info(helloData.toString());
+        res.getWriter().write("ok");	
+	이렇게 하는게 원시적인 방식
+		@ResponseBody
+		@PostMapping("/request-bodt-json-v2")
+		public String requestBodyJsonV2(@RequestBody String messagebody) throws IOException {
+
+			log.info(messagebody);
+			HelloData helloData = objectMapper.readValue(messagebody, HelloData.class);
+			log.info(helloData.toString());
+			return "ok";
+
+		}
+	이렇게 어노테이션을 쓸수있고,
+		@ResponseBody
+		@PostMapping("/request-bodt-json-v3")
+		public String requestBodyJsonV3(@RequestBody HelloData helloData) throws IOException {
+			
+			log.info(helloData.toString());
+			return "ok";
+
+		}
+	아예 데이터모델로 받을수도있음
+	여기서 @RequestBody에 json이 들어오면,데이터객체와 json의 이름같은걸 매핑해서 set해줌
+	이경우엔 @RequestBody는 생략불가(생략하면 모델애트리뷰트로 들어오니까..)
+	
+	그리고 content-type이 application/json이어야함
+	
+	뭐 물론 HttpEntity를 사용해도 되긴함
+		@ResponseBody
+		@PostMapping("/request-bodt-json-v4")
+		public String requestBodyJsonV4(HttpEntity<HelloData> helloData) throws IOException {
+
+			log.info(helloData.getBody().toString());
+			return "ok";
+
+		}	
+	둘은 선택
+	
+	그리고 받을때만 @RequestBody로 메시지컨버터를 하는게아닌,응답에도 가능함
+	@ResponseBody가 있을때
+		@ResponseBody
+		public HelloData ...{
+		
+			return new HelloData(username="aa",age=10)
+		}
+	이렇게도 알아서 메시지바디에 저걸 json으로 넣어서 전달함
+	
+	즉,@RequestBody를 사용하면
+		json요청->http메시지컨버터->객체
+	를 스프링이 처리해주고
+	@ResponseBody를 사용하면(accept가 application/json일때)
+		객체->http메시지컨버터->json응답
+	을 스프링이 자동으로 처리해줌
+		
+	
+	
+	
+	
+	
+	
 	
 	
 	

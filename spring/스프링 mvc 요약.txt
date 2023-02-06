@@ -914,9 +914,133 @@
 		json요청->http메시지컨버터->객체
 	를 스프링이 처리해주고
 	@ResponseBody를 사용하면(accept가 application/json일때)
-		객체->http메시지컨버터->json응답
+		객체->http메시지컨버터->json응답 
 	을 스프링이 자동으로 처리해줌
 		
+	
+	http응답방식은,정적리소스,뷰템플릿,http메시지 가 있음
+	
+	정적리소스는,바뀌지않는 정적인 html,css,js를 제공할때 사용함
+	뷰템플릿은 동적인 html을 제공할때 사용되고
+	http메시지는 api를 제공할때,html이 아니라 데이터를 전달해야하므로,메시지바디에 json같은 형식으로 데이터를 실어보냄
+	
+	스프링부트의 정적리소스의 경로는
+		/static
+		/public
+		/resources
+		/META_INF/resources
+	에 넣어두면,경로로 인식함
+	즉
+		/static/basic/hello-form.html
+	일경우
+		127.0.0.1:8080/basic/hello-form.html
+	로 접근할수있음
+	
+	스프링부트의 동적리소스의 경로는
+		/resources/templates
+	임,즉 static은 정적,/templates은 동적이라고 생각하면될듯(앞의 /resources,.html은 프리픽스서픽스를 스프링이 디폴트로 등록해서 생략가능)
+	
+	타임리프쓸땐
+	맨위에
+		<!DOCTYPE html>
+		<html xmlns:th="http://www.thymeleaf.org">
+	를 넣고(고정)
+		<body><p th:text="${data}">empty</p></body>
+	이런식으로 th:text="${data}" 하면,저거와 안의 값(empty)를 치환해줌 렌더링시기에
+	저기다 값을 집어넣는건,
+	        ModelAndView mav = new ModelAndView("response/hello")
+                .addObject("data","hello");
+	이렇게 컨트롤러에서 넣으면됨(addObject)
+	모델쓰면
+		@RequestMapping("/response-view-v2")
+		public String responseViewV2(Model model) {
+			model.addAttribute("data", "hello!!");
+			return "response/hello";
+		}
+	이러면되고
+	
+	그리고 컨트롤러의 url경로이름과,뷰의 경로가 이름이 같으면 거기로 매핑해주는데 리턴값없어도(void),안쓴대 헷갈려서
+	
+	@RequestBody나 httpEntity를사용하면,뷰리졸버(템플릿)가 아닌 메시지바디에 값을 적으니 주의
+	
+	
+	그리고 api의경우엔,바디에 json을 담아서보냄(뷰템플릿같은거도 담아서보내긴하지만..)
+	이건
+		res.getWriter().write("ok");
+		
+		return new ResponseEntity<>("ok", HttpStatus.OK);
+		
+		@ResponseBody
+		메서드
+			return "ok";
+	텍스트 처리는 이런식으로 처리함(마지막어노테이션이 제일많이쓰임)
+	json에서 객체2json 리턴은
+		HelloData helloData = new HelloData();
+		return new ResponseEntity<HelloData>(helloData, HttpStatus.OK);
+	
+		@ResponseStatus(HttpStatus.OK)
+		@ResponseBody
+		메서드
+			return helloData;
+	이런식으로 처리
+	어노테이션기반의 상태코드는,저건 동적으로 설정할수없음,그래서 동적인게 필요하면 ResponseEntity를써야함
+	
+	말고 그냥 클래스에 @RestController를 써도됨
+	
+	뷰템플릿으로 html을 생성해서 응답하는게 아닌,api처럼 json을 바디에서 직접 읽거나 쓸땐,http메시지컨버터를 사용하면 편함
+	@ResponseBody를 사용하면,뷰리졸버대신 http메시지컨버터가 동작하는데,
+	바이트면 ByteArrayHttpMessageConverter
+	문자면 StringHttpMessageConverter
+	객체면 MappongJackson2HttpMessageConverter
+	
+	가 동작하고,위부터 우선순위,이거말고도 더 많이 있음
+	
+	응답의경우 클라이언트의 accept헤더와 서버의 컨트롤러반환타입등을 조합해서 메시지컨버터를 선택함
+	
+	이거도 인터페이스로 구현돼있고,응답과요청 둘 다 사용됨
+	canRead,canWrite로 클래스,미디어타입을 지원하는지 체크하고(반복문돌려서),통과하면 그거 필해서 씀
+	즉 핸들러어댑터랑 비슷한모양임
+	
+		ByteArrayHttpMessageConverter:byte[]를 처리
+			클래스타입 byte[] 미디어타입 */*
+		StringHttpMessageConverter:문자데이터를 처리
+			클래스타입 String 미디어타입 */*
+		MappongJackson2HttpMessageConverter:json을 처리
+			클래스타입 객체 or hashmap 미디어타입 application/json
+			
+	메시지컨버터는 이렇게 클래스타입 미디어타입을 둘다 만족해야하고,양방향이라 req나 res나 똑같이 만족해야함
+	물론 입력과 출력에 두개쓸수있으니까,동시에 둘다 만족할필요는없음
+	
+	요청은 저 조건(클래스타입,content-type)을 만족하면(canRead),read를 호출해서 객체생성하고 반환
+	응답은 저 조건(클래스타입,요청의 accept)을 만족하면(canWrite),write를 호출해서 응답메시지바디에 데이터 생성
+	
+	http메시지컨버터의 동작위치는,핸들러어댑터에서,즉 RequestMappingHandlerAdapter(요청매핑핸들러어댑터)에서 콜돼서 사용됨
+	정확히는 RequestMappingHandlerAdapter가 콜한 ArgumentResolver가 콜함
+		RequestMappingHandlerAdapter-> ArgumentResolver->HttpMessageConverter
+		Controller->ReturnValueHandler->HttpMessageConverter
+	얘는 
+		어노테이션과 파라미터를 보고,
+		그걸 기반으로 req등을 변환해서 전달데이터를 생성한뒤에(ArgumentResolver),
+		그걸 대신넣고 컨트롤러를 호출한다음,
+		컨트롤러의 반환값을 다시 변환해서 res메시지로 바꾸고(ReturnValueHandler)
+		디스패쳐서블릿에 전달
+	하는 방식으로 동작함
+	여기서 이렇게 파라미터를 유연하게 처리할수있게 하는게 ArgumentResolver임
+	요청매핑핸들러어댑터는,아규맨트리졸버를 호출해서,컨트롤러가 필요로하는 다양한 파라미터값(객체)를 생성함,
+	이건 종류가 엄청많음(각각마다 다 대응해줘야하니까..)
+	
+	그리고 리턴할때도 ReturnValueHandler를 호출해서 ArgumentResolver랑 비슷하게 동작해서 리턴값을 만들어줌
+	
+	
+	컨트롤알트쉬프트u(현재 클래스 관계도)
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	

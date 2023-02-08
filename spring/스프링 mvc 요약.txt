@@ -1101,7 +1101,110 @@
 		->localhost:8080/basic/items/1?query=text
 	이렇게 생성시킬수있음
 	
+	만약 th:action 이렇게만 던지면,현재url에 해당하는 메서드로 던짐
+	즉 이렇게해서,메소드만 바꾸는식으로 같은url로 깔끔하게 등록폼과 등록처리를 해결할수있음
+	
+	타임리프에서 if문쓸떈
+		<h2 th:if="${param.status}" th:text="'저장완료'"></h2>
+	이렇게 쓸수있고,param은 쿼리파라미터에서 값 꺼내는거임
+	원래는 컨트롤러에서 모델에 값을 담아서,그걸 꺼내써야하지만,그냥 쿼리파라미터정도는 많이쓰니까 타임리프에서 지원해주는거임
+	
+	그리고 폼데이터의 이름은, 해당html의 name값을따름
+	
+	post하고 html에서 그 값을 가져다써야하면 model사용
+	
+	모델애트리뷰트쓸땐,해당하는 헤더값과,모델애트리뷰트에서 지정한클래스속의 변수들이 이름이 같으면 자동매핑
+		public String addItemV2(@ModelAttribute("item") Item item,
+                            Model model) {
+			itemRepository.save(item);	
+	모델애트리뷰트에 네임속성을(@ModelAttribute("item")) 넣으면,
+	저이름으로 저 매개변수를 model에 넣어줌(그래서 저 Model model도 생략가능)
+	즉
+		model.addAttribute("item", item);
+	까지 자동화해줌
+	그러니까 
+		헤더값을 기반으로 도메인객체를 생성+해당객체를 이름을 적어두면 모델에 넣어줌(만약 이름을 안적어두면,클래스명에 첫글자소문자로 바꿔서 넣는게 디폴트)
+		Item->item
+		NamuData->namuData
+	두가지 일을 함 @ModelAttribute는
+	즉
+		요청파라미터처리
+		모델 추가
+	두가지임
+	
+	그러니까 model도 생략가능하고,객체같은 복잡한거면 @ModelAttribute도 생략하면 저거로 동작하니까
+		@PostMapping("/add")
+		public String addItemV4(Item item) {
+			itemRepository.save(item);
 
+			return "basic/item";
+
+		}
+	그냥 이렇게만 넣어도 된다는거임,이래도 애드모텔애트리뷰트도 동작하고,요청파라미터읽기도 동작한다는거,디폴트가 @ModelAttribute니까
+	근데 @ModelAttribute는 넣는게 편할거같다
+	
+	스프링에서 리다이렉트할땐
+		return "redirect:/basic/items/{itemId}";
+	리턴하면됨
+	리다이렉트를 하면 위에 url적는데의 url이 바뀜
+	
+	html form은,get post만 사용할수있음
+	put patch는 api전송시에 사용함
+	
+	post를 하고나서 새로고침을 하면,post가 계속 반복됨
+	그래서 사용하는게 prg
+	post를 날린다음엔,리다이렉트를 꼭 걸어줘야함
+	즉,리다이렉트를 하지않으면(내부호출을 하면),post가 마지막url로 남아있기때문에,매번 post가 나가는거임
+	(정확히는,post로 요청을하고 그 메서드의 리턴값이 현재 url이니까)
+	새로고침은 마지막 url을 날리는거기때문
+	그래서 저걸 덮어써주는게 리다이렉트임
+	
+	post에서(멱등성이 없는거) 뷰를 던질려면 무조건 prg를 써줘야함
+	
+	url에서는
+		"redirect:/basic/items/" + item.getId()
+	이렇게 직접 변수를 더해서 넣는건 url인코딩이 안돼서 위험함
+	그래서 사용하는게 RedirectAttributes
+	얘는 여러기능이 있음
+		url인코딩
+	
+	사용법은
+		@PostMapping("/add")
+		public String addItemV5(Item item, RedirectAttributes redirectAttributes) {
+			Item saveItem = itemRepository.save(item);
+			redirectAttributes.addAttribute("itemId", saveItem.getItemName());
+			redirectAttributes.addAttribute("status", true);
+
+			return "redirect:/basic/items/{itemId}";
+
+		}	
+	이런식으로 사용함
+	RedirectAttributes를 받아서 거기다가 값을 넣으면,리다이렉트후에도 사용할수있음(뷰에서도 사용가능)
+	기본적으로,리턴에 있는 {}안에 있는값과 이름같은게있으면 우선적으로 치환하고,나머지들은 쿼리파라미터로 붙음
+	
+	
+	
+	
+	
+8.다음으로
+	스킵
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	

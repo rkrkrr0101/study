@@ -1,0 +1,22 @@
+@PathVariable  -> @DeleteMapping("/{userId}") 이거 받는거,매개변수앞에 붙이고 받으면됨
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,162 @@
+1.타임리프-기본기능
+	타임리프의 특징은
+		서버사이드렌더링(html동적렌더링)
+		네츄럴 템플릿
+		스프링통합지원
+	같은 특징이 있음
+	
+	타임리프 쓸땐
+		<hthml xmlns:th="http://www.thymeleaf.org">
+	를 맨위에 넣어주고,th를 불러가며 사용하면됨
+		th:onclick= ...
+	이렇게
+	
+	타임리프에서 텍스트속성정의할땐
+		th:text="${data}"
+	하면됨
+	그리고 태그의 속성이 아니라,콘텐츠영역안에서 하고싶으면
+		[[$(data)}]]
+	이렇게하면됨
+		<li>th:text사용<span th:text="${data}"></span></li>
+		<li>컨텐츠안에서 직접출력 =[[${data}]]</li>	
+	이런식으로
+	html에서 뷰템플릿으로 생성할땐,특수문자를 주의해야함
+	기본적으로 뷰템플릿속에선 <b>이런 태그가 먹지않음(타임리프가 자동으로 바꿔줌)
+	이걸 이스케이프라고 함
+	
+	이걸 사용하고싶지않으면 th:utext를 사용하거나,태그텍스트부분에선 [(${data})] 이렇게 사용하면됨		
+	기본적으로는,이스케이프를 써야하고,정 안될때만 언이스케이프같은거 써야함
+	
+	타임리프에서 변수는,${...}이렇게 사용하고,스프링에서 지원하는springEL을 사용할수있음
+	스프링el은,헤더에있는(모델에 담으면 헤더에적히니)값들을 불러올때
+	오브젝트
+		${user.username}
+		${user['username']}
+		${user.getUsername()}
+	리스트
+		${users[0].username}
+		${users[0]['username']}
+		${users[0].getUsername()}
+	맵
+		${userMap['userB'].username}
+		${userMap['userA']['age']}
+		${userMap['userA'].getUsername()}
+	이런식으로 받을수있음
+	즉,해당 헤더 안에 뭐가 들어있으면(1차원이 아닌 2차원이상으로),거기서 그냥 프로퍼티접근으로 꺼낼수있다는거임
+	
+	그리고 타임리프에서 지역변수는
+		th:with="abc=bcd"		
+	저기에 값을 넣고,
+		th:text="${abc}"
+	이렇게 꺼내면됨
+	당연히 객체도 들어가고
+		th:with="first=${user[0]}"
+		th:text="${first.username}"
+	다됨
+	그리고 이 지역변수는,선언한 태그 안에서만(<div>같은거면 그 안에서만)사용할수있음,그 스코프밖으로 퍼지진않음
+	
+	스프링부트 3.0부터는
+		${#request}
+		${#response}
+		${#session}
+		${#sevletContext}
+	를 지원하지않고,남은건
+		${#locate}
+	만 남음
+	그래서 3.0부터는 직접 모델에 넣어줘서 거기서꺼내든가해야함
+	저거외에 편의기능은
+		${param.paramData} //쿼리파라미터읽기
+		${session.sessionData} //세션데이터읽기
+		${@helloBean.hello('Spring!')} //스프링빈호출,${@빈이름.호출메소드(매개변수)}
+	이 있음
+	
+	타임리프의 유틸리티객체는
+		#message:메시지,국제화처리
+		#urls:url이스케이프 지원
+		#dates:java.util.Date 서식 지원
+		#calenders:java.util.Calendar서식지원
+		#temporals:자바8날짜서식지원
+		#numbers:숫자서식지원
+		#strings:문자관련편의기능
+		#objects:객체관련기능제공
+		#bools:bool관련기능제공
+		#arrays:배열관련기능제공
+		#lists,#sets,#maps:각각 컬렉션기능제공
+		#ids:아이디처리관련기능제공
+	등등 있음,생각했던거에서 대충 범주들어가는거 공식도큐찾아보면 잇음
+
+	타임리프에서 자바8날짜인 LocalDate류,Instant등을 사용하려면 추가라이브러리가 필요함
+	스프링부트 타임리프를 사용하면,해당 라이브러리가 자동으로 추가되고 통합됨
+	사용방법은
+		th:text"${#temporals.format(받을헤더명,'yyyy-MM-dd HH:mm:ss')}
+	#temporals이 날짜서식을 지원하는 유틸객체임	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

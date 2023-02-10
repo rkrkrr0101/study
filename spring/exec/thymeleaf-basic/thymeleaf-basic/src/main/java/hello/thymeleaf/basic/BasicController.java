@@ -69,6 +69,60 @@ public class BasicController {
         return "basic/date";
     }
 
+    @GetMapping("/literal")
+    public String literal(Model model) {
+        model.addAttribute("data", "Spring!");
+        return "basic/literal";
+    }
+
+    @GetMapping("/operation")
+    public String operation(Model model) {
+        model.addAttribute("nullData", null);
+        model.addAttribute("data", "Spring!");
+        return "basic/operation";
+    }
+
+    @GetMapping("/attribute")
+    public String attribute() {
+        return "basic/attribute";
+    }
+
+
+    @GetMapping("/link")
+    public String link(Model model) {
+        model.addAttribute("param1", "data1");
+        model.addAttribute("param2", "data2");
+        return "basic/link";
+
+
+    }
+
+    @GetMapping("/each")
+    public String each(Model model) {
+        addUsers(model);
+        return "basic/each";
+    }
+
+    @GetMapping("/condition")
+    public String condition(Model model) {
+        addUsers(model);
+        return "basic/condition";
+    }
+
+    @GetMapping("/comments")
+    public String comment(Model model) {
+        model.addAttribute("data", "ssd!");
+        return "basic/comments";
+    }
+
+    private void addUsers(Model model) {
+        ArrayList<User> list = new ArrayList<>();
+        list.add(new User("UserA", 10));
+        list.add(new User("UserB", 11));
+        list.add(new User("UserC", 12));
+        model.addAttribute("users", list);
+    }
+
     @Data
     static class User {
         private String username;

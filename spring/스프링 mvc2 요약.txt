@@ -191,22 +191,100 @@
 	타임리프 프로토타입주석은,타임리프로 랜더링 되면 실제 태그가 적힘(주석이아님),그냥 경로로 html불러오면 주석처리됨,안쓸거같음ㅋㅋ
 		<!--/*/ ㄹㄴㅇㄹㄴ /*/-->
 	
+	
+	타임리프에서 유일하게 태그를 추가하는게 <th:block>임
+	이건 안에서 두개이상div에서 루프를 돌리거나 하고싶을때 사용됨(div2개이상을 묶고싶을때)
+	얘는 랜더링될떄 사라짐,즉 each만으로 해결하기 어려울때 사용됨(태그하나에 속성변경으로 처리하기 애매할경우에)
+	
+	js인라인은 js에서 타임리프를 사용할때 좀더 편리해짐
+		<script th:inline="javascript">
+	이걸 사용하면 문자타입일경우 ""를 싸서주고,문제될만한 문자가 있으면 이스케이프처리도 해줌("->\")
+	
+	그리고 html파일을 그대로 열어도되는 내추럴템플릿에서,이걸사용해서 주석을 활용해서 이기능을 사용할수있음(js도 내추럴템플릿을 사용할수있음)
+		var username2 =/*[[${user.username}]]*/"test username";
+	이렇게 변수부분을 주석처리해두면,타임리프로 열면 뒤에를 지우고 주석을벗기고,직접열면 저게 주석이니까 무시돼서 내추럴로 동작할수있게해줌
+	
+	객체를 넣으면,json으로 바꿔줌
+		var user =[[${user}]];
+	이렇게 넣으면
+		var user ={"username":"userA","age":10};
+	이렇게 나옴
+	
+	그리고 이안에서도 each를 사용할수있음
+		[# th:each="user,stat :${users}]
+		var user[[${stat.count}]]=[[${user}]]
+		[/]
+	이렇게 사용할수있음
+	이러면
+		var user1 ={"username":"userA","age":10};
+		var user2 ={"username":"userB","age":20};
+		var user3 ={"username":"userC","age":30};
+	이렇게 나옴
+
+	타임리프는 웹페이지의 공통영역을 템플릿조각기능과 레이아웃기능으로 가져다쓸수있게 제공해줌
+	가져다 쓰는 대상(함수역할)html에서
+		<footer th:fragment="abcd">푸터자리입니다.</footer>
+	이런식으로 th:fragment="abcd"이렇게 선언해두고
+	메인에서
+		<div th:insert="~{template/fragment/footer :: abcd}"></div>
+	이렇게 insert를 하던가(th:insert="~{경로::이름}")
+		<div th:replace="~{template/fragment/footer :: abcd}"></div>
+	replace하던가
+		<div th:replace="template/fragment/footer :: abcd"></div>
+	이렇게하면 단순표현식(~{}를 빼도 단순하면 동작하는거,위랑 다른거없음)
+	
+	인서트는 현재 태그 내부에 해당 태그를 삽입함(div속성에 넣으면 div안에 추가함,<div><footer>)
+	리플레이스는 현재 태그를 해당 태그로 변경함(div속성에 넣으면 div를 제거하고 해당속성으로 변경 <div> -> <footer>)
+	
+	파라미터도 넣을수있음
+	함수html에서
+		<footer th:fragment="copyParam (param1, param2)"><p>파라미터자리입니다.</p>
+			<p th:text="${param1}"></p>
+			<p th:text="${param2}"></p></footer>
+	이렇게넣고
+		<div th:replace="~{template/fragment/footer :: abcd("1번파라미터",2번파라미터)}"></div>
+	이렇게 함수처럼 불러다쓸수있음
+	
+	이렇게 함수처럼 부르는거말고,코드조각을 레이아웃에 넘겨서 사용할수도 있음,이게 템플릿 레이아웃임
+	즉 헤더부분이나 푸터를 만들어두고,그걸 가져다가 쓰면서 뭘 좀 추가하거나 하고싶을때 사용
+	이건 th:replace를 헤드같은 엄청 html에서 큰덩어리에서 사용하는식으로 처리하면됨
+	거기서
+	위에서 공통부분을 처리한후에
+		<html xmlns:th="http://www.thymeleaf.org">
+		<head th:fragment="common_header(title,links)"><title th:replace="${title}">레이아웃타이틀</title>
+			<!-- 공통 -->
+			<link rel="stylesheet" type="text/css" media="all" th:href="@{/css/awesomeapp.css}">
+			<link rel="shortcut icon" th:href="@{/images/favicon.ico}">
+			<script type="text/javascript" th:src="@{/sh/scripts/codebase.js}"></script>
+			<!-- 추가 -->
+			<th:block th:replace="${links}"/>
+		</head>
+	밑에 블록을 넣어서
+		<head th:replace="template/layout/base :: common_header(~{::title},~{::link})"><title>메인타이틀</title>
+			<link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+			<link rel="stylesheet" th:href="@{/themes/smoothness/jquery-ui.css}">
+		</head>
+	이렇게 해당 이름의 태그들을 파라미터로 넘겨서 추가할수있음
+	즉 템플릿조각이랑 비슷한데(템플릿조각에서 파라미터에 스트링 다박아버려도 똑같긴할듯),
+	그냥 저걸 텍스트로 넘기기 너무기니까,태그로 서치해서 넘긴다고 생각하면될듯
+	
+	그리고 이걸 head같은정도에만 하는게 아니라,html태그에(전체에) 적용할수도있음
+	이거도 위랑 똑같은데,그냥 전체를 만들어두고,약간약간 바꿔가면서 쓸때 사용함
+		<html th:fragment="layout (title, content)" xmlns:th="http://www.thymeleaf.org">
+		<head><title th:replace="${title}">레이아웃타이틀</title></head>
+		<footer>레이아웃푸터</footer>
+	이렇게 필요한부분만 replace하면서(리플레이스안시킨데는 그대로 나옴,공통부분)
+		<html th:replace="~{template/layoutExtend/layoutFile :: layout(~{::title}, ~{::section})}"
+		<head><title>메인페이지타이틀</title></head>
+		<body>
+		<section><p>메인페이지컨텐츠</p>
+			<div>메인페이지포함내용</div>
+	이렇게 넣고 바꾸는거임,위랑똑같음
+	사실상 상속이랑 똑같아보여서 레이아웃 상속이라고 하는듯
+	상속처럼 막 비슷한페이지 100개 만들고 이럴때 사용하기편한듯
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+2.타임리프와 스프링통합과 폼
 
 
 

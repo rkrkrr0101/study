@@ -199,6 +199,7 @@
 	js인라인은 js에서 타임리프를 사용할때 좀더 편리해짐
 		<script th:inline="javascript">
 	이걸 사용하면 문자타입일경우 ""를 싸서주고,문제될만한 문자가 있으면 이스케이프처리도 해줌("->\")
+	그냥 <script>사용할땐 무지성으로 붙여도될듯
 	
 	그리고 html파일을 그대로 열어도되는 내추럴템플릿에서,이걸사용해서 주석을 활용해서 이기능을 사용할수있음(js도 내추럴템플릿을 사용할수있음)
 		var username2 =/*[[${user.username}]]*/"test username";
@@ -285,18 +286,75 @@
 
 
 2.타임리프와 스프링통합과 폼
+	타임리프는 타임리프기본도큐먼트와,스프링통합도큐먼트 두개를 제공함
+	이렇게 스프링통합을 하면 기능추가가 몇개되고,편해지는게 좀 있음
+	
+	예로
+		${@myBean.doSomething()} //스프링빈호출
+	폼관리를 위한 추가속성
+		th:object
+		th:field ,th:error,th:errorclass
+	폼컨포넌트기능
+		체크박스
+		라디오버튼
+		리스트
+	스프링 메시지,국제화기능 통합
+	스프링검증,오류처리 통합
+	스프링변환서비스 통합
+	
+	이렇게 통합하려면 타임리프템플릿엔진을 스프링빈에 등록하고 뭐 어쩌고해야하는데,스프링부트쓰면 알아서해줌(그 starter.thymeleaf 추가되면)
+	
+	
+	타임리프를 사용하면 폼처리가 많이 편해짐
+	타임리프로 폼을 쓰려면,무조건 모델을 생성하고,모델에 빈 객체이라도 만들어서 뭐라도 하나 넣어둬야함(변수생성이라고보면됨)
+		model.addAttribute("item", new Item());
+	그리고
+		<form action="item.html" th:action th:object="${item}" method="post">
+	이렇게 키를 받아서 커맨드객체에 넣고(저걸 커맨드객체라고 부름,쟤로 조종하니까)
+	값입력(input태그)에서
+		<input type="text" id="itemName" name="itemName" th:field="*{itemName}" class="form-control"
+                   placeholder="이름을 입력하세요">
+	이렇게	
+		th:field="*{itemName}"
+	*은 위에서 th:object를 줄인거(item. 을 생략,즉 위에 오브젝트에 속한거라는거)
+	이렇게 th:field가 있으면
+		<input type="text" th:field="*{itemName}" class="form-control"
+                   placeholder="이름을 입력하세요">
+	이렇게 id와 name도 생략하면,필드명으로 들어감(itemName)
+	
+	즉 th.field는,id,name,value를 합친거고
+	*{}는,앞에 위에서의 오브젝트의 객체를 붙이는거
+	그리고 th:field의 값이 없으면,예외를 던짐(item.itemNamexx가 없다거나)
+	
+	이게 좋은건 검증할때 엄청 편해짐
+	
+	
+	타임리프에서 체크박스,라디오버튼,셀렉트박스를 추가하는건
 
+	자바 enum은
+		public enum ItemType {
+			BOOK("도서"), FOOD("음식"), ETC("기타");
 
+			private final String description;
 
+			ItemType(String description) {
+				this.description = description;
+			}
+		}
+	그냥 이렇게만들면됨(description은 설명)
 
-
-
-
-
-
-
-
-
+	
+	만약 html만 가지고 체크박스를 만들면,체크를 했을땐 true를 리턴하는데(정확히는 on이 넘어가는데 스프링이 이걸 true로 바꿔줌),
+	체크를 안했을때 null이 반환됨(체크하지않으면 그 필드자체가 전송되지않음)
+	생성은 뭐 안들어왔네 하면되는데,수정의경우 문제가 될수있음
+	그래서 깡스프링에서는 앞에 타입히든에 언더바를 붙이는식으로 히든필드를 만들어서
+		<input type="checkbox" id="open" name="open" class="form-check-input">
+		<input type="hidden" name="_open" value="on"/> //다 고정이고,name만 체크박스와 통일하고 앞에 _붙이기
+	이렇게 그 체크박스가 있다는걸 확인하고(체크박스와 이름이같은 히든타입),
+	스프링이 false를 출력하는식으로 꼼수로 false를 받을수는 있는데,너무 귀찮음
+	
+	
+	그래서 타임리프를 사용하면
 
 
 

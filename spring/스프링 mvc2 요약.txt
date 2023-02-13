@@ -354,19 +354,60 @@
 	스프링이 false를 출력하는식으로 꼼수로 false를 받을수는 있는데,너무 귀찮음
 	
 	
-	그래서 타임리프를 사용하면
+	그래서 타임리프를 사용하면 알아서 해줌
+		<input type="checkbox" id="open" th:field="*{open}" name="open" class="form-check-input">
+	그냥 이렇게 th:field넣으면됨(이거도 똑같이 히든필드로 동작하는데,이걸 타임리프가 대행해주는거)
 
+	그리고 스프링에서
+		@ModelAttribute("regions")
+		public Map<String, String> regions() {
+			Map<String, String> regions = new LinkedHashMap<>();
+			regions.put("SEOUL", "서울");
+			regions.put("BUSAN", "부산");
+			regions.put("JEJU", "제주");
+			return regions;
+		}
+	이렇게 선언하면,그 컨트롤러를 호출할때에는 무조건 저 regions에 저값이 디폴트로 들어가있게됨
+	물론 성능최적화관점에선 static로 할수있으면 그렇게하는게 낫긴할듯
+	
+	멀티체크박스는
+	    <div>
+            <div>등록지역</div>
+            <div th:each="region : ${regions}" class="form-check form-check-inline">
+                <input type="checkbox"
+                       th:field="*{regions}"
+                       th:value="${region.key}"
+                       class="form-check-input">
+                <label th:for="${#ids.prev('regions')}" th:text="${region.value}"
+                       class="form-check-label">서울</label>
+            </div>
+        </div>
+	이렇게 돌리면됨(th:each의 regions는 모델애트리뷰트에서 받은거,th:field="*{regions}"는 item의 region값)
+	대충 value에 값이있으면 체크,없으면 비워두는걸 타임리프가 자동으로해줌
+	th:for="${#ids.prev('regions')}"은,텍스트를 클릭해도 체크가 되게하려면,
+	체크박스의 아이디를 라벨에서 알아야해서,for문의 직전의 id값을 받을수있음(어짜피 이거도 타임리프가 만드니까,id는 유니크해야하니)
+		${#ids.prev('regions')}
+	
+	자바에서 enum의 값을 전부 리턴하는건
+		ItemType.values()
+	하면 값을 전부리턴함(배열로 리턴)
+	
+	타임리프에서 라디오버튼은 위랑 똑같은데(셀렉트박스랑)
+		<input type="radio"
+	이거만 바뀜
+	그리고 얘는 체크를 안하면 null이 반환됨
+	
+	그리고 타임리프에서 enum을 직접접근할수있긴한데,컴파일오류를 못잡아서 추천하진않는대
+	
 
-
-
-
-
-
-
-
-
-
-
+	타임리프에서 셀렉트박스는
+		<select th:field="*{deliveryCode}" class="form-select">
+			<option value="">==배송방식선택==</option>
+			<option th:each="deliveryCode : ${deliveryCodes}" 
+					th:value="${deliveryCode.code}" th:text="${deliveryCode.displayName}">FAST
+			</option>
+		</select>
+	이런식으로 셀렉트박스를 만들고,옵션을 each돌리면됨
 
 
 

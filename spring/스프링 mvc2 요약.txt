@@ -410,13 +410,89 @@
 	이런식으로 셀렉트박스를 만들고,옵션을 each돌리면됨
 
 
+3.메시지-국제화
+	텍스트같은걸 한군데다 모아두면,수정하기가 편함,이게 메시지 기능임(파일에서 변수 불러다쓰는느낌)
+	이걸 사용해서 언어별로 만드는식으로(파일을 2개만들어서)언어별로 다른값을 내보내는게 국제화
+	accept-language같은거로 체크해서 다른걸 부르면됨
+	
+	그리고 스프링에서는 기본적으로 이런 메시지관리기능을 제공하고,타임리프도 이걸 통합해서 편하게쓸수있음
+	이걸 사용하려면,MessageSource를 스프링빈으로 등록하면되는데,이건 인터페이스임
+	그래서 ResourceBundleMessageSource를 스프링빈으로 등록하면됨
+	그리고 그 메시지소스에
+		messageSource.setBasenames("messages","errors")
+		messageSource.setDefaultEncoding("utf-8")
+	이렇게 디폴트이름을 정해주면,알아서
+		messages_ko.properties
+		messages_en.properties
+	이렇게 바꿔가면서읽음
+	파일의 위치는
+		/resources/messages.properties
+	에 두면되고,setBasenames에는 여러 파일을 한번에(지금도 메시지랑 에러 두개저장한거처럼)넣을수있음
+	
+	근데 스프링부트쓰면 자동으로 이걸 해줌
+	그래서 application.properties에
+		spring.messages.basename=messages //디폴트는 messages
+	이렇게 넣기만하면됨
+	디폴트값이 messages니까
+		messages_en.properties
+		messages_ko.properties
+		messages.properties
+	같은건 자동으로 인식함(모든언어지원안하면 messages.properties동작)
 
+	
+	@SpringBootTest
+	이거붙이면 테스트실행할때 의존성주입해주니까,필드로 주입받아서 테스트돌리면됨
+	    @Autowired
+		MessageSource messageSource;
 
-
-
-
-
-
-
-
+	메시지 받을땐
+		ms.getMessage("hello", null, null);
+		ms.getMessage(해당변수명, args, 국가값);
+	이렇게 받으면됨
+	그리고 해당 변수가 없어서 메시지를 못찾으면 NoSuchMessageException이 발생
+		Assertions.assertThatThrownBy(() -> ms.getMessage("no_code", null, null))
+		.isInstanceOf(NoSuchMessageException.class);
+	저상황에서 기본값을 받고싶으면
+		ms.getMessage("no_code", null, "기본메시지", null);
+	이렇게 3번째에넣으면됨
+	args사용시엔
+		hello.name=gd{0} //메시지.프로퍼티파일
+		
+		ms.getMessage("hello.name", new Object[]{"Spring"}, null);
+	이렇게 넣으면 gdSpring가 출력됨
+	
+	나라선택은
+		ms.getMessage("hello", null, Locale.ENGLISH)
+	이렇게 할수있음
+	
+	이 메시지를 타임리프에서 사용할땐
+		#{}
+		#{hello.name}
+	이런식으로 바로 접근할수있음
+	파라미터는
+		#{hello.name(${item.itemName})}
+		#{hello.name(1234)}
+	이렇게 괄호치고 바로넣으면됨
+	국제화는 그냥,_en,_ko같이 베이스네임에서 맞춰주기만하면 스프링이 알아서 accept-language같은거보고 호출함
+	이 선택을 직접한다던가식으로 바꾸고싶으면,구현체를 변경해주면됨
+	인터페이스는 LocaleResolver고
+	기본적으론 AcceptHeaderLocaleResolver을 사용하는데,쿠키나 세션기반으로 구현체를 변경해주면됨
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 

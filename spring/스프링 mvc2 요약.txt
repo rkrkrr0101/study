@@ -496,13 +496,216 @@
 		errors?
 	는 만약 null이면 nullpointerexception이 발생하는대신,null을 반환하는 문법(스프링el문법,코틀린에도 있었던거같음)
 	
+	인텔리제이에서 폴더를 클릭하고 그 아래있는걸 컨트롤쉬프트r로 일괄수정할수있음
 	
 	
 	
+	스프링에서의 검증오류처리방법은 BindingResult임
+		public String addItem(@ModelAttribute Item item, BindingResult bindingResult, 
+								RedirectAttributes redirectAttributes, Model model) {
+		}
+	이렇게 담으면,저 BindingResult에 에러를 담으면됨
+	그리고 주의할건,BindingResult파라미터는 무조건 검증할대상 바로 뒤, @ModelAttribute 바로 뒤에 와야함,
+	앞에있는 어트리뷰트에 바인딩되는매커니즘이기때문
+	
+		bindingResult.addError(new FieldError("item","itemName","상품이름은 필수"));
+		bindingResult.addError(new FieldError(오브젝트명,필드명,메시지));
+	오브젝트명은 모델에트리뷰트에 담기는 이름,필드명은 오브젝트안의 필드명,메시지는 출력메시지
+	만약 여러필드에 겹치거나,필드랑 상관없는에러면
+		bindingResult.addError(new ObjectError("item","갯수x가격은 10000이상이어야함"+resPrice));
+		bindingResult.addError(new ObjectError(오브젝트명,메시지));
+		
+	컨트롤p,현재 메서드의 매개변수,오버로드 출력
+	
+	그리고 검증할땐
+		if (bindingResult.hasErrors()){
+			return "원래주소"
+		}
+	로 넣고,모델애트리뷰트에 에러는 안넣어도됨,자동으로 모델에 담겨서 넘어감
+	
+	타임리프에서 렌더링할때 글로벌에러는
+        <div th:if="${#fields.hasGlobalErrors()}">
+            <p class="field-error" th:each="err:${#fields.globalErrors()}"
+ 			   th:text="${err}">전체오류메시지</p>
+        </div>
+	이렇게
+		th:if="${#fields.hasGlobalErrors()} //글로벌에러가 있으면
+		th:each="err:${#fields.globalErrors()}" //모든글로벌에러 foreach로 받아서
+		th:text="${err['globalError']} //해당에러 출력
+	그리고 필드에러는
+		<div class="field-error" th:errors="*{itemName}">
+			상품명오류
+		</div>
+	이렇게만 하면됨(해당오브젝트의 필드네임을 명시하면 에러있으면 출력하고(텍스트는 그 에러에 있는 텍스트를 출력))
+	그리고
+		th:errorclass="field-error"
+	이건 에러가 있으면 저 클래스를 추가해줌(에러검색은 th:field에 있는 값에 에러가 매핑돼있으면 가져옴,즉 저기 에러는 저기 바인딩됨)
 	
 	
+	bindingResult가 있으면,모델애트리뷰트에 데이터바인딩실패해도(인트에 스트링넣는다거나) 400이 뜨지않고,
+	오류정보를 bindingResult에 담아서 컨트롤러를 정상호출함
+	만약 저게없으면 그냥 400에러가 떠버리고 모델은 증발해버림(컨트롤러가 호출되지않음)
+	
+	이때 필드에러면,스프링이 직접 필드에러를 만들어서 우리가 담는거랑 똑같이 담음
+	
+	즉, 진짜 값을 넣는데 실패한오류와 값이 틀린(검증로직에서 탈락한) 오류로 구분할수있음
 	
 	
+	그리고 만약 현재 값을 유지한채 에러메세지를 띄우고싶으면,FieldError에서 다른오버로드를 타면됨
+		bindingResult.addError(new FieldError("item","itemName",item.getItemName(),
+			false,null,null,"상품이름은 필수"));
+		bindingResult.addError(new FieldError(오브젝트명,필드명,해당필드값,
+				바인딩이 실패햇는지 여부,코드,아규먼트,오류메시지));		
+	이 오버로드를 타면,해당 필드값을 그대로 넣어줄수있음
+	
+	즉,기본적으로 사용하는건 값을 유지하지않고 간단히 넣는거(api같은데서 사용할때),값 유지하는건 빡빡하게 넣는거
+	
+	그리고 모델애트리뷰트에 바인딩되는 시점에 오류가 발생하면,즉 바인딩이 실패하면(int에 string를 넣으면 컨트롤러단에서 처리할방법이없으니),
+	저 바인딩리절트에러가 그 값을 오브젝트로 가지고있으면서,그걸 돌려줌
+	이떄는 바인딩이 실패했으니 바인딩실패여부를 true로 줘야함
+	
+	그리고 타임리프가,정상상황에선 모델객체의 값을 사용하지만,오류가 발생하면 FieldError의 값을 출력함(그래서 모델에 못넣는값을 저장할수있는거)
+	이거는 th:field가 이걸 담당함
 	
 	
+	그리고 이렇게 오류메시지를 디폴트로 출력하면,스프링이 오류메시지를 적어둠(우리가 적었던 error의 마지막매개변수)
+	저걸 어디 한군데다가 모아두고 사용할수있음(메시지처럼)
+	이건 매개변수중 코드와 아규먼트로 해당값을 찾아서 있으면 그거출력,없으면 디폴트메시지를 출력하는식
+	
+	이건 그 메시지설정에 추가하고(message.properties밑에 추가하거나,같은식으로 추가)
+		application.properties밑에
+			spring.messages.basename=messages,errors
+	그리고 코드에서
+		bindingResult.addError(new FieldError("item","price",item.getPrice(),
+			false,new String[]{"range.item.price"},new Object[]{1000,1000000},"가격은 1000~1000000사이"));
+	이런식으로 코드에 해당하는 이름을 스트링배열로 넘기고(앞에서부터 찾아가는식,앞에없으면 두번째꺼,다없으면 디폴트출력),
+	매개변수는 뒤에 오브젝트배열로 넘김
+	에러메시지
+		range.item.price=가격은 {0} ~ {1} 까지허용합니다.
+	그리고 해당 메시지도 못찾고 디폴트도 없으면 그냥 에러페이지가 나옴
+	
+	즉 그냥 메시지소스걸쳐서 가는거
+	이거도 너무 코드가 기니까 좀 줄일수있음
+	
+	컨트롤러에서 bindingResult는 검증객체를 이미 알고있음(자기앞에있는게 검증객체)
+	그래서 오브젝트명같은걸 생략할수있음
+	보통
+	rejectValue()나 reject()를 사용함
+		bindingResult.rejectValue("itemName","required");
+		bindingResult.rejectValue("필드명","메시지의 맨앞단어 보통 제약을 적음");
+	이렇게 하면
+		required.item.itemName
+		제약.오브젝트명.필드명
+	으로 자동으로 찾아감
+	아규먼트가 있을땐
+		bindingResult.rejectValue("quantity","max",new Object[]{9999},null);
+		bindingResult.rejectValue(필드명,제약,아규먼트의 오브젝트배열,디폴트메시지);
+	이렇게 넣어주면됨
+		
+	오브젝트에러의경우엔
+		bindingResult.reject("totalPriceMin");
+		bindingResult.reject("에러코드");
+	이렇게 전체를 다 적어줘야함
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

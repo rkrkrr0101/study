@@ -1,0 +1,31 @@
+import unittest 로 추가(기본모듈)
+
+class utilTest(unittest.TestCase):
+    def test_t(self):
+        self.assertEqual(1, 1)
+
+이런식으로 적으면됨,테스트할 메서드앞에는 test_가 꼭있어야함
+	self.assertEqual(1, 1)
+이거로 이퀄테스트하고
+에러테스트는
+	with self.assertRaises(IOError):
+		abcd...
+이렇게 with로 싸고 해당 예외를 명시해주는식으로 확인할수있음
+	def setup(self):  //테스트전 동작
+		abcd...
+	def tearDown(self): //테스트후 동작
+		abcd...
+이거로 테스트전후에 작업할거있으면 처리가능
+
+
+참고
+https://wikidocs.net/16107
+
+
+
+
+
+
+
+
+

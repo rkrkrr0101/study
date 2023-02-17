@@ -606,32 +606,112 @@
 		bindingResult.reject("totalPriceMin");
 		bindingResult.reject("에러코드");
 	이렇게 전체를 다 적어줘야함
+	
+	그리고 제약메시지에서
+		required=필수값입니다
+		range=범위는 {0} ~{1}까지 허용
+		max=최대 {0}까지 허용
+	이렇게만 적고
+		bindingResult.rejectValue("itemName","required");
+	이걸 하면,디테일이 더 높은게 우선순위로 잡힘(required<required.item<required.item.itemName)
+	그러니까 해당분류의 디테일을 조정하는것으로 디폴트메시지를 사용할수있다는거임
+	
+	이걸 단순하게만들면 범용성이좋고,세밀성이 떨어짐,대신 너무 자세하게 만들면 범용성이 떨어짐
+	그래서 베스트는,범용성으로 사용하다가,세밀하게 사용해야할때만 세밀하게 적는것(유저랑 직접닿는부분)
+	
+	이걸 스프링은 messageCodesResolver을 사용해서 지원함
+	얘는 에러코드를 넣으면,스트링배열로 해당하는걸 세밀한거부터 포함되는 모든걸 리턴해줌(앞에서부터우선순위)
+	즉,rejectValue는 자기안에서 저걸불러서 받아오고, 제일앞에있는거 읽어서 그거 리턴하는거임
+	이때 우선순위는
+		제약.오브젝트명.필드명
+		제약.필드명
+		제약.타입(스트링같은,즉 해당타입별로 오류를 만들어둘수있음)
+		제약
+	이렇게 우선순위가잡힘
+	
+	이 messageCodesResolver는 기본적으로 DefaultMessageCodesResolver를 사용하는데
+	얘의 기본메시지생성규칙은
+	객체오류
+		code+"."+오브젝트이름
+		code
+	여기서 코드는 required나 max같은거
+	필드오류는
+		코드+"."+오브젝트네임+"."+필드
+		코드+"."+필드
+		코드+"."+필드타입 (typeMismatch.int,typeMismatch.String)
+		코드
+	이렇게 됨,여기맞춰서 에러메시지를 적어주면됨
+	
+	이렇게 쓰면,적당히 퉁쳐서 쓸수있어서 편하고,필요한부분만 상세히 적을수있음
 
 
+	그리고 bindingResult를 감싸는 if문을 없애는건
+		ValidationUtils.rejectIfEmptyOrWhitespace(bindingResult,"itemName","required");
+	이렇게 해당필드값이 비어있으면 작동하는식의 유틸도 있음
 
+	
+	그리고 스프링이 직접 만드는 검증오류(보통 타입정보)도 해당 오류에(타입의경우 typeMismatch)메시지를 적으면,해당메시지가 출력됨
+	방식자체는 같으니까 직접 넣어주면됨
+		typeMismatch=타입에러
+	이렇게
+	
+	
+	그리고 컨트롤러에서 검증로직이 차지하는 영역이 너무 크니까,이러면 이걸 별도의 클래스로 분리하는게 좋음
+	그리고 이런 검증로직을 재사용할수있음
+	
+	그리고 스프링이 제공하는 인터페이스중 Validator 가 있음
+		public class ItemValidator implements Validator {
+	이렇게
+	얘는 supports와 validate를 가지고있는데,supports는
+		public boolean supports(Class<?> clazz) {
+			return Item.class.isAssignableFrom(clazz);
+		}
+	이렇게 현재 검증할 클래스와 클래스호환이 되냐를 체크(item==clazz),물론 자식클래스도 호환(subItem==Item)
+	그리고 검증로직은 validate에 넣으면됨
+	    public void validate(Object target, Errors errors) {
+			Item item=(Item) target;
+			
+			if (item.getPrice()==null || item.getPrice()<1000 || item.getPrice()>1000000){
+				errors.rejectValue("price","range",
+						new Object[]{1000,1000000},null);
 
+			}
+		}
+	이때 타겟이 오브젝트로 넘어오니까 캐스팅해줘야함
+		Item item=(Item) target;
+	그리고 errors는 자식이 bindingResult니까 저기에 bindingResult를 넣을수있음
+		errors.rejectValue("price","range",
+				new Object[]{1000,1000000},null);
+	그리고 저걸 @Component붙이고,private final ItemValidator itemValidator로 선언해주면 스프링이 주입해줌
+	
+	그리고 컨트롤러에는
+	    if( itemValidator.supports(item.getClass())){
+           itemValidator.validate(item,bindingResult);
+        }
+	이렇게 콜하면됨
+	
+	근데 Validator는 스프링에서 제공하니,이렇게 직접 부르지않고 스프링이 대신 실행시키게 할수있음
+	이건 webDataBinder을 사용하면됨
+		@InitBinder
+		public void init(WebDataBinder dataBinder){
+			dataBinder.addValidators(itemValidator);
+			dataBinder.addValidators(orderValidator);
+		}
+	
+	이걸 넣어주고,해당 객체에 어노테이션을 붙이면(@Validated @ModelAttribute Item item)
+		public String addItemV6(@Validated @ModelAttribute Item item, BindingResult bindingResult, 
+						RedirectAttributes redirectAttributes, Model model) {
+	
+	
+	
+	
+	이 컨트롤러가 호출되면 그 요청에서 @Validated가 있으면 그 객체에 대해 밸리데이터가 동작하게됨(결과는 bindingResult에 담겨있음)
+	@Validated는 검증기를 실행하라는 어노테이션인데,만약 검증기가 여러개라면 supports 루프돌려서 거기서 true뜨면 호출하는식임
 
+	글로벌설정도 할수있는데,이건 필요해지면보자 있다는거만 알아두고(이거도 그냥 전체검증기에 디폴트값을 추가하는느낌일듯)
+	이거하면 beanValidator이 동작하지않아서 보통 사용하진않음
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+5.검증2-빈 밸리데이션
 
 
 

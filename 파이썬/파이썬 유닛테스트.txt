@@ -21,6 +21,11 @@ class utilTest(unittest.TestCase):
 참고
 https://wikidocs.net/16107
 
+모킹참고
+https://www.daleseo.com/python-unittest-mock/
+패치참고
+https://www.daleseo.com/python-unittest-mock-patch/
+
 
 
 

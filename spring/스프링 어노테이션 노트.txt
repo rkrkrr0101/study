@@ -1,5 +1,5 @@
 @PathVariable  -> @DeleteMapping("/{userId}") 이거 받는거,매개변수앞에 붙이고 받으면됨
-
+@RequiredArgsConstructor  생성자를 자동으로 만들어줌(현재 final이 붙은 필드들을 생성자로 주입받음)
 
 
 

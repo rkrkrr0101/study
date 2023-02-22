@@ -855,37 +855,144 @@
 	토큰은 해커가 임의의값을 넣어도 찾을수없게 복잡한해쉬여야함
 	해커가 토큰을 훔쳐가도 시간이지나면 사용할수없게 해당 토큰의 만료시간을 짧게 유지해야함,
 	그리고 해킹의심되면 서버에서 해당토큰을 강제제거하면됨(이건선택)
+	
+	세션을 만들떈 uuid를 만들고 그걸 키값으로 쓰고,밸류에 id를 넣어두고 쿠키에 그 uuid를 넣어서 클라에 주면됨
+	그리고 받은 uuid를 매칭해보고 있으면 그값을 사용하면됨
+	즉 회원과 관련된 정보는 절대 클라에 주지않는다는거
+	그리고 이 세션의 만료시간을 30분정도로 잡아버리면됨
+	
+	맵을써야하는데 동시성이슈가 있을때
+		private Map<String, Object> sessionStore = new ConcurrentHashMap<>();
+	uuid생성
+		 String sessionId = UUID.randomUUID().toString();
+	
+	컨트롤알트c 상수로 변경
+	
+	세션을 직접 만들려면
+	    public void createSession(Object value, HttpServletResponse res) {
+			String sessionId = UUID.randomUUID().toString();
+			sessionStore.put(sessionId, value);
 
+			Cookie mySessionCookie = new Cookie("mySessionId", sessionId);
+			res.addCookie(mySessionCookie);
+		}
+	이런식으로 만들면됨,uuid생성하고 그거랑 들어온 밸류로 세션스토어에 밀어넣고,uuid로 쿠키만들어서 res에 담기
 
+	찾을떄는
+	    public Cookie findCookie(HttpServletRequest req, String cookieName) {
+			Cookie[] cookies = req.getCookies();
+			if (cookies == null) {
+				return null;
+			}
+			return Arrays.stream(cookies)
+					.filter(cookie->cookie.getName().equals(cookieName))
+					.findFirst()
+					.orElse(null);
 
+		}
+	이렇게 찾아서 
+		public Object getSession(HttpServletRequest req) {
+			Cookie sessionCookie = findCookie(req, SESSION_COOKIE_NAME);
+			if (sessionCookie == null) {
+				return null;
+			}
+			return sessionStore.get(sessionCookie.getValue());
 
+		}
+	스토어로 검색돌려서 리턴해주면됨 밸류를
+	세션만료는
+	    public void expire(HttpServletRequest req){
+			Cookie sessionCookie = findCookie(req, SESSION_COOKIE_NAME);
+			if(sessionCookie!=null){
+				sessionStore.remove(sessionCookie.getValue());
+			}
+		}
+	이렇게 찾아서 날려주면됨
+	테스트할때 res나 req는
+		MockHttpServletResponse res = new MockHttpServletResponse();
+	이렇게 모킹하고,이걸 HttpServletResponse대신쓸수있음
+	req도 같음
+	
+	테스트에서 결과값 널일때
+		Assertions.assertThat(expiredResult).isNull();
 
+	이런 세션은 서블릿에서도 지원하니까 그냥 그거쓰면됨
+	동작은 똑같고,추가로 세션을 일정기간 사용안하면 자동으로 삭제하는기능이 추가됨
+	
+	서블릿은 httpSession으로 지원함
+	이거로 만들면 JSESSIONID로 쿠키를 만듬
+	사용법은
+	    HttpSession session = req.getSession();
+        session.setAttribute("loginMember",loginMember);
+	이렇게 로그인할때 현재 세션키값을 가져온뒤에(req.getSession은 만약 있으면 그걸 가져오고,없으면 생성함),
+	거기에 현재 로그인 회원정보값을 밸류에 덮어주면됨
+	그리고
+		req.getSession(true)//기본값,세션이 있으면 기존세션반환,없으면 새세션반환
+		req.getSession(false)//세션이 있으면 기존세션반환,없으면 null반환
+	그리고 세션에 데이터를 보관할떄,한 세션에 여러값을 저장할수있음 
+	
+	세션을 삭제할땐
+	    HttpSession session = req.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+	이렇게 삭제할수있음
+	그리고 컨트롤러에서 세션을 받을땐,
+		HttpSession session = req.getSession(false);
+	로 받아야함
+	저게 true면 세션을 만들어버려서 세션이 있는지없는지 체크가 안되기때문
+	그리고
+	    if (session == null) {
+            return "home";
+        }
+	세션이 존재하는지 체크하고
+        Member loginMember = (Member) session.getAttribute("loginMember");
+        if (loginMember == null) {
+            return "home";
+        }
+	세션에 해당값이 있는지 체크하면됨
+	그리고 있으면
+	    model.addAttribute("member", loginMember);
+        return "loginHome";
+	모델에 담아서 리턴하면됨
+	
+	그리고 당연히 스프링이 어노테이션으로 이걸 지원해줌
+	세션을 받을때
+		@SessionAttribute(name = SessionConst.LOGIN_MEMBER, required = false) Member loginMember
+	이걸 사용하면됨
+		@GetMapping("/")
+		public String homeLoginV3Spring(@SessionAttribute(name = SessionConst.LOGIN_MEMBER, required = false) 
+										Member loginMember,
+										Model model) {
+	그러면 세션이 있는지 체크하고 있으면 해당값을 담아서(없으면 null)던져줌
+	이 기능은 세션을 생성하지않아서,로그인이 아닌(세션생성부분이 아닌),홈화면같은데서 체크할때 사용하면됨
 
+	그리고 완전히 로그인 처음하면 url에 세션id가 적히는데,이건 웹브라우저가 쿠키를 지원하지않을까봐 url을 통해 유지하는거임,한번돌아서 쿠키사용하면 없어짐
+	이걸 끄려면 application.properties에
+		server.servlet.session.tracking-modes=cookie
+	로 넣어주면됨
+        session.getAttributeNames().asIterator()
+                .forEachRemaining(name -> ...));
+	이건 해당 컬렉션으로 forEach돌리는거
+	
+	그리고 세션의 정보들은
+		session.getMaxInactiveInterval() //세션의 지속시간
+		session.getCreationTime()  //세션이 만들어진시간
+		session.getLastAccessedTime()//마지막 세션 접근시간
+		session.isNew()           //세션이 방금만들어졌는지
+	등이 있음
+	그래서 마지막세션접근시간과 세션의 지속시간을 가지고,저게 넘으면 세션을 삭제하는거(처음만들어진시간으로하면 귀찮으니까)
+	그리고 뭐 세션만들어지고 한달지나면 지워버리는정도로
+	이때 기본값은 30분이고,설정은 application.properties에서
+		server.servlet.session.timeout=1800
+	저거 원하는값으로 넣으면됨(분단위로 넣어야함)
+	그리고 특정 세션에서 다르게쓰고싶으면
+		session.setMaxInactiveInterval(1800)
+	넣어주면됨
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	그리고 세션에는 최소한의 데이터만 보관해야함,그래야 메모리사용량이 줄어듬
+	그리고 세션의 시간도 적당히 잡아야함
+	그리고 장기로그인은 리프레시토큰으로 유지됨
 
 
 

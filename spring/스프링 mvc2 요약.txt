@@ -994,6 +994,125 @@
 	그리고 세션의 시간도 적당히 잡아야함
 	그리고 장기로그인은 리프레시토큰으로 유지됨
 
+7.로그인처리2-필터,인터셉터
+	서블릿필터는,공통관심사를 한번에 처리할수있는 기능임
+	즉 모든 요청이 들어가기전에,로깅을하거나 로그인체크를 한다던가 이런 작업들이 필요할때 사용함
+	이건 스프링의 aop와 같은영역이긴한데,웹과 관련된 공통관심사는 서블릿필터나 스프링인터셉터를 사용하는게 좋음
+	이유는 얘들은 http헤더나 url정보를 읽을수있는(특정url만 체크하고 아니면 패스한다던가) HttpServletRequest를 제공하기때문
+	
+	기본적으로 필터를 다 거치고,필터가 다 성공해야 디스페처서블릿으로 들어가게됨
+
+	서블릿필터의 요청흐름은(여기서 서블릿은 디스패처서블릿)
+		요청시작->was->필터->서블릿->컨트롤러
+	정상루틴은 이렇고
+	필터에서 아니다싶으면 끊을수있음
+		요청시작->was->필터
+	그래서 로그인체크하기 좋음
+	그리고 필터가 필터를 콜할수있음
+		요청시작->was->필터1->필터2->필터3->서블릿->컨트롤러
+	그 익스프레스에서의 미들웨어라고 생각해도될듯
+	
+	필터는 Filter(서블릿꺼 임포트)인터페이스를 구현하고 등록하면,이걸 싱글톤객체로 생성해서 관리함
+	이떄 메소드는
+		init()//필터초기화메서드,서블릿컨테이너가 생성될때 호출됨
+		doFilter()//고객의 요청이 올때마다 해당메서드호출,필터로직을 구현하면됨,즉 메인메서드
+		destroy()//필터종료메서드,서블릿컨테이너가 종료될떄 호출됨
+	가 있음
+	여기서 doFilter만 구현해주면됨(init랑 destroy는 default 메서드라서 구현안해도됨)
+
+	그리고 doFilter에선 ServletRequest로 매개변수를 받는데,저건 기능별로없어서 불편하니
+		HttpServletRequest HttpReq = (HttpServletRequest) request;
+	이렇게 다운캐스팅해주는게좋음(저게 HttpServletRequest의 부모임)
+	
+	그리고 doFilter내에서
+		chain.doFilter(request,response);
+	를 하면 다음필터나 필터가없으면 디스패처서블릿이 호출되고
+	저걸 안하면 저기서끝남
+	
+	그리고 이 필터를 등록해야하는데
+	그냥 클래스 하나만들어서 빈을 등록해주면됨
+		@Configuration
+		public class WebConfig {
+			@Bean
+			public FilterRegistrationBean logFilter() {
+				FilterRegistrationBean<Filter> filterRegistrationBean = new FilterRegistrationBean<>();
+				filterRegistrationBean.setFilter(new LogFilter());
+				filterRegistrationBean.setOrder(1);
+				filterRegistrationBean.addUrlPatterns("/*");
+
+				return filterRegistrationBean;
+			}
+		}
+	이때
+		filterRegistrationBean.setFilter(new LogFilter());//해당 필터를 등록
+		filterRegistrationBean.setOrder(1);//해당필터의 체인순서 정해주기
+		filterRegistrationBean.addUrlPatterns("/*");//해당필터가 동작할 url패턴
+	이렇게 넣어주면됨
+	
+	그리고 doFilter내에서
+        try {
+            log.info("Req{}:{}", uuid, requestURI);
+            chain.doFilter(request, response);
+        } catch (Exception e) {
+            throw e;
+        } finally {
+            log.info("res{}:{}", uuid, requestURI);
+        }
+	이런식으로 하면,doFilter전에 처리할거 다하고 doFilter호출하고나서 모든 요청이 끝나면finally가 동작해서 마지막동작까지 할수있음
+	즉 시작전과 종료후에 작업을 칠수있음(요청과 응답 둘다 볼수있다는거)
+	그래서 요청이 얼마나 걸렸나에 대한시간체크같은거도 가능함
+	
+	그리고 같은 요청의 로그에 모두 같은 식별자를 남기는건 logback mdc를 사용할수있음(검색)
+	
+	로그인체크는 화이트리스트를 만들고
+		private static final String[] whitelist = {"/", "/members/add", "/login", "/logout", "/css/*"};
+	여기서 홈,회원가입,로그인,로그아웃,css는 접근할수있어야함! 
+	해당 스트링과 url이 일치하는지 확인하는 메서드만들어서
+		private boolean isLoginCheckPath(String reqURI) {
+			return !PatternMatchUtils.simpleMatch(whitelist, reqURI);
+		}	
+	이걸 필터에서 받아서 if문돌리면됨(즉 필터빈에서 한번 거를수있고,여기서 한번거를수있고 두번 거를수있음)
+		try {
+			log.info("인증체크필터시작", requestURI);
+			if (isLoginCheckPath(requestURI)) {
+					log.info("인증체크로직실행 {}", requestURI);
+					HttpSession session = httpReq.getSession(false);
+					if (session == null || session.getAttribute(SessionConst.LOGIN_MEMBER) == null) {
+						log.info("미인증사용자요청{}", requestURI);
+						httpRes.sendRedirect("/login?redirectURL=" + requestURI);
+						return;
+					}
+				}
+			chain.doFilter(request, response);
+        } catch (Exception e) {
+            throw e; //여기서 로깅할수있는데,일단 던지긴해야함
+        } finally {
+
+        }
+	이런식으로 아니다싶으면 필터선에서 컷해버리면됨
+	여기서 
+		httpRes.sendRedirect("/login?redirectURL=" + requestURI);
+	sendRedirect로 해당 url로 던져버릴수있는데,저기서 ?redirectURL=를 주면 저기의 행동이 끝나고나서 다시 원래요청페이지로 돌려달라는거
+	해당 컨트롤러에서 있는지없는지보고 if문걸어서 리다이렉트해주면됨
+		@RequestParam(defaultValue = "/") String redirectURL //로그인 매개변수받는곳에 추가하고
+		return "redirect:"+redirectURL; //저걸 리다이렉트에 더해주면됨,디폴트가 /니까 없으면 저기로 가는거고
+	이렇게 해주면됨
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

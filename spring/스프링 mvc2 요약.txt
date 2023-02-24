@@ -1099,18 +1099,82 @@
 	이렇게 해주면됨
 	
 	
+	스프링의 인터셉터는 서블릿필터처럼 공통관심사를 처리함
+	얘는 서블릿필터와 적용되는 순서와 범위,사용방법이 다름
+	
+	스프링 인터셉터는 스프링기반이기때문에,무조건 디스패처서블릿을 거쳐야함
+		요청->was->필터->디스패처서블릿->인터셉터->컨트롤러
+	즉 잘못된요청으로 막아도,컨트롤러로 들어가는거만 막을수있음(스프링mvc의 시작이 디스패처서블릿이니까)
+		요청->was->필터->디스패처서블릿->인터셉터
+	그리고 인터셉터의 url패턴은 매우 정밀하게 설정할수있음
+	
+	즉 서블릿필터 강화판이라고 보면됨
+	
+	스프링 인터셉터는 HandlerInterceptor인터페이스를 구현하고,얘는
+		preHandle() //컨트롤러호출전
+		postHandle()//컨트롤러호출후
+		afterCompletion()//요정완료이후
+	메서드가 있음(전부 default라서 구현하고싶은거만 구현해도됨)
+	그래서 try catch finally로 트릭써서할필요가없음
+	이건 리턴값이 tf로 있는데,리턴값이 true면 다음으로 진행,false면 거기서 멈춤
+	
+	그리고 인터셉터는 어떤 컨트롤러(핸들러)가 호출되는지에 대한 정보와,어떤 modelandview가 반환됐는지 정보도 받을수있음
+	afterCompletion은 뷰가 렌더링된이후에 호출됨
+	그리고 afterCompletion은 예외가 뜨던말든 무조건 호출됨(그래서 예외출력도 가능함,예외뜨면 예외가 넘어옴)
+	    if (ex != null) {
+            log.error("after error", ex);
+        }
+	postHandle은 컨트롤러에서 예외가 발생하면 호출되지않음
+	그래서 종료처리는 afterCompletion에 하는게좋을듯
+	
+	그리고 preHandle에서 afterCompletion으로 데이터를 넘겨야하거나 그러면 그냥 req에 setAttribute로 넘기면됨
+	그리고 handler에는 호출할 컨트롤러메서드의 모든 정보가 포함돼있음
+	
+	그리고 등록은
+		public class WebConfig implements WebMvcConfigurer {
+	저거 받아서
+		@Override
+		public void addInterceptors(InterceptorRegistry registry) {
+			registry.addInterceptor(new LogInterceptor())   //해당 인터셉터 생성후 등록
+					.order(1)       //순서
+					.addPathPatterns("/**")  //적용할 패턴
+					.excludePathPatterns("/css/**","/*.ico","/error"); //그중에서 제외할 패턴
+		}
+	이걸 구현해주면됨,이렇게 패턴적용이 정밀하게 할수있어서 편함(정규표현식)
+	로그인체크인터셉터는
+		@Override
+		public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+			String requestURI = request.getRequestURI();
+			log.info("인증체크인터셉터 실행{}", requestURI);
+
+			HttpSession session = request.getSession();
+			if (session == null || session.getAttribute(SessionConst.LOGIN_MEMBER)==null){
+				log.info("미인증사용자{}");
+				response.sendRedirect("/login?redirectURL="+requestURI);
+				return false;
+			}
+				return true;
+		}
+	이렇게 하면됨,화이트리스트같은거도 인터셉터등록에서 처리하니,진짜로 인증검사만 하면됨
+		public void addInterceptors(InterceptorRegistry registry) {
+			registry.addInterceptor(new LogInterceptor())
+					.order(1)
+					.addPathPatterns("/**")
+					.excludePathPatterns("/css/**", "/*.ico", "/error");
+			registry.addInterceptor(new LoginCheckInterceptor())
+					.order(2)
+					.addPathPatterns("/**")
+					.excludePathPatterns("/css/**","/login","/");
+		}
 
 
-
-
-
-
-
-
-
-
-
-
+	
+	argumentResolver는, 매개변수를 합쳐서 객체로 만들던가 dto로 만들던가 하는식으로,받는거임
+		public String homeLoginV4Spring(@Login Member loginMember,  //@Login은 커스텀 어노테이션임
+										Model model) {
+	req를 접근할수있으니까,req를 받아서 가공을 해서 리턴해주는식으로 동작됨							
+	이건 근데 어노테이션생성하고 귀찮은게 좀있어서,나중에 필요하면보자
+	
 
 
 

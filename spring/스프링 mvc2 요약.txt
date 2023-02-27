@@ -1281,18 +1281,86 @@
 
 
 9.api 예외처리
+	html페이지는 그냥 예외코드랑 페이지만 있으면 처리가 되는데,api의 경우엔 각 오류상황에 맞는 오류 응답 스펙을 정하고,json으로 던져줘야함
+	
+	서블릿에서 api예외처리를 할때,그냥페이지랑 api랑 동시에 있을경우
+		@RequestMapping(value = "error-page/500",produces = MediaType.APPLICATION_JSON_VALUE)
+	accecpt를 기준으로 분류해서 컨트롤러를 2개만드는식으로 해결할수있음(자세한거부터 우선순위잡히니)
+		@RequestMapping(value = "error-page/500", produces = MediaType.APPLICATION_JSON_VALUE)
+		public ResponseEntity<Map<String, Object>> errorPage500Api(HttpServletRequest req,
+																   HttpServletResponse res) {
+			log.info("api 500");
+			Map<String, Object> result = new HashMap<>();
+			Exception ex = (Exception) req.getAttribute(ERROR_EXCEPTION);
+			result.put("status", req.getAttribute(ERROR_STATUS_CODE));
+			result.put("message", ex.getMessage());
+			Integer statusCode =(Integer) req.getAttribute(ERROR_STATUS_CODE);
+			
+			return new ResponseEntity<>(result, HttpStatus.valueOf(statusCode));
+		}
+	이런식으로 json을 만들어서 리턴해주면됨(맵보단 객체가 낫긴할듯)
+	
+	api예외처리도 스프링부트가 제공하는 기본오류처리방식을 사용할수있음(BasicErrorController)
+	즉 아무것도 등록하지않고 예외가 뜨면
+		{
+			"timestamp": "2023-02-27T04:00:25.936+00:00",
+			"status": 500,
+			"error": "Internal Server Error",
+			"exception": "java.lang.RuntimeException",
+			"message": "잘못된사용자",
+			"path": "/api/members/ex"
+		}
+	이런식으로 리턴해줌
+	얘도 accecpt를 기반으로 구분해서 던져줌(html을 먹을수있는 accecpt이면 그게우선,아니면 나머지 전부는 json)
+	
+	여기서도 그 server.error.include-message같은거 먹히니까 조심
+	그래서 에러로그를 사용하자
+	
+	
+	그리고 보통 @ExceptionHandler를 사용함
+	오류페이지 표시에서는 BasicErrorController를 사용하지만,보통은 api마다 결과값을 다르게 출력해줘야하는경우가 많아서 api는 저걸 잘 안씀
 
+	handlerExceptionResolver는 서블릿에서 예외에따른 상태코드의 변화(기본적으론 500으로 다 들어가니)와,
+	오류메시지,형식들을 api마다 다르게 쓰고싶어서 생긴 기술임
+	보통 줄여서 ExceptionResolver이라고 함
+	얘는 postHandle위치에서 동작하게됨(핸들러 다음,당연히 postHandle은 호출되지않음)
+	
+	이 handlerExceptionResolver 인터페이스를 구현하면됨
 
+		@Override
+		public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+			try {
+				if (ex instanceof IllegalArgumentException) {
+					log.info("일리걸이면 400으로바꿈");
+					response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
+					return new ModelAndView();
+				}
+			} catch (IOException e) {
+				log.error(e);
+			}
 
-
-
-
-
-
-
-
-
-
+			return null;
+		}
+	이렇게 예외로 if걸어서 에러코드 생성해주고 새로운 빈 모델앤뷰 던져주면됨(예외를 먹고 상태코드로 바꿧다고 생각해도될듯)
+	즉 이렇게되면 예외가 사라지고 http상태코드가 생김
+	그리고 null로 반환하면 아무일없고 그냥 지나가게됨
+	이때 반환값에 따른 동작방식은
+		빈 모델앤뷰:뷰를 렌더링하지않고,정상흐름으로 서블릿리턴
+		들어있는 모델앤뷰:해당 뷰를 렌더링(그래서 뷰를 렌더링해서 줄수도있고)
+		null:다음 ExceptionResolver를 찾아서 전달(미들웨어처럼),없으면 그냥 서블릿밖으로 예외를 던짐
+	그리고 res.getWriter().printLn("abcd") 이렇게 응답바디에 직접 데이터를 넣어서 줄수도 있음,
+	즉 여기에 json넣어서 api응답처리할수있음
+	그리고 webconfig에서
+	    @Override
+		public void extendHandlerExceptionResolvers(List<HandlerExceptionResolver> resolvers) {
+			resolvers.add(new MyHandlerExceptionResolver());
+		}
+	등록해주면됨
+	
+	이렇게 여기서 모든 예외를 커버쳐주는게 좋음
+	
+	
+	그리고 이 ExceptionResolver를 스프링이 래핑해둬서 날로먹을수있음
 
 
 

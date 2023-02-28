@@ -1361,23 +1361,91 @@
 	
 	
 	그리고 이 ExceptionResolver를 스프링이 래핑해둬서 날로먹을수있음
+	
+	스프링부트가 기본으로 제공하는 ExceptionResolver는
+		ExceptionHandlerExceptionResolver //@ExceptionHandler를 처리
+		ResponseStatusExceptionResolver //http상태코드를 지정,@ResponseStatus(value=HttpStatus.NOT_FOUND)
+		DefaultHandlerExceptionResolver//스프링 내부 기본 예외를 처리
+	위에서부터 우선순위고,처리되면 밑으로 안내려감(null반환해야 다음으로),
+	우리가 써야할건 ExceptionHandlerExceptionResolver이거로 보통 예외처리를함
+
+	ResponseStatusExceptionResolver는 그냥 자동으로 500을 지정한 상태코드로 바꿔주는거
+	얘는
+		@ResponseStatus
+		ResponseStatusException
+	두개를 처리함
+	이건 해당 내가 만든 예외에 @ResponseStatus를 달면됨
+	얘도 그냥 예외받아서 상태코드로바꾸고 빈 모델앤뷰 던지는,우리가 만드는거랑 똑같은방식임
+	
+	그리고 예외 메시지를 http오류메시지로 바꿔줌(설정있으면 출력됨)
+	그리고 예외 메시지를 error.bad같이,그 국제화에서 썻던거처럼 세팅하고
+	messages.properties에 error.bad=abcd 넣어두면 abcd를 출력해줌
+	
+	그리고 우리가 만들지않는 예외엔 @ResponseStatus를 붙일수없으니
+		throw new ResponseStatusException(HttpStatus.NOT_FOUND,"error.bad",new NullPointerException());
+	이런식으로 해당예외를 싸서 주면 저거보고 http상태코드랑 메시지붙이고,래핑벗기고 저 예외 다시 던져줌(try catch에서 e잡고 넣어주면될듯)
 
 
+	DefaultHandlerExceptionResolver는,스프링내부에서의 스프링예외를 처리함
+	대표적으로 파라미터바인딩 실패(int에 string에 들어온다던지)같은것들을 처리해줌
+	이건 스프링이 만든 예외들만 명시해서 받아서,해당하는방식으로 처리함
+	파라미터바인딩실패같은건 400으로 보낸다던지..
 
 
+	일반적으로 api 오류를 처리할땐 @ExceptionHandler를 사용하게되고,모델앤뷰도 필요없고 정밀한 제어를 해서 json을 만들어 내려보내줘야함
+	@ExceptionHandler를 사용하면 어노테이션으로 처리할수있음
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	사용법은
+		@ExceptionHandler(IllegalArgumentException.class)
+		public ErrorResult illegalExHandler(IllegalArgumentException e){
+			log.error("[exception]ex",e);
+			return new ErrorResult("Bad",e.getMessage());
+		}
+	저기서 ErrorResult는 내가 만든 에러코드dto라고보면됨
+	이렇게 컨트롤러에 선언을 하면,여기 컨트롤러내에서 저 예외가 터졌을경우,저걸 받게됨
+	즉,여기서 IllegalArgumentException이 터지면,저 ErrorResult를 변환한 json을 받게된다는거
+	이경우,예외가 내부에서 처리되니,완전히 정상로직이라서 http상태코드가 200이 되버리니(그래도 postHandle는 당연히 동작안함,핸들러는 예외떳으니)
+		@ResponseStatus(HttpStatus.BAD_GATEWAY)
+		@ExceptionHandler(IllegalArgumentException.class)
+	위에 상태코드 넣는거도 보통 세트로 따라옴
+	그리고 매개변수로 받으니 @ExceptionHandler옆에 명시안해도 되긴함
+		@ResponseStatus(HttpStatus.BAD_REQUEST)
+		@ExceptionHandler
+		public ResponseEntity<ErrorResult> userExHandler(UserException e) {
+			log.error("[exception]ex", e);
+			ErrorResult errorResult = new ErrorResult("user-ex", e.getMessage());
+			return new ResponseEntity<>(errorResult, HttpStatus.BAD_REQUEST);
+		}
+	이런식으로 그냥 해당 예외를 url로 처럼 받는 컨트롤러라고 생각해도될거같음,리턴값은 진짜 뭐 컨트롤러가 줄수있는건 다줄수있음(뷰템플릿같은거도 당연히가능)
+		@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+		@ExceptionHandler
+		public ErrorResult exHandler(Exception e) {
+			log.error("[exception]ex", e);
+			return new ErrorResult("Bad", e.getMessage());
+		}
+	이런식으로 설정하면,모든 예외를 받을수도있음,당연히 여기도 기본적으로 자세한거부터 우선순위를 가짐
+	그리고 예외는,부모클래스를 잡으면 해당클래스의 자식클래스까지 다 잡을수있음(그래서 Exception잡으면 다잡히는거)
+	물론 자세한거부터 우선순위잡히고
+	
+	이게 좋긴한데,예외처리랑 정상동작이랑 같은공간에 있는게 불편하거나,여러군데서 같은거쓰고싶으면,@ControllerAdvice로 외부로 뺼수있음
+	이건
+		@ControllerAdvice
+		@RestControllerAdvice //ControllerAdvice에 ResponseBody붙은거
+	두개가 있음
+		@Slf4j
+		@RestControllerAdvice
+		public class ExControllerAdvice {
+		
+		}
+	이렇게 사용하면됨
+	이쪽에서 컨트롤러를 지정할수있음(aop를 컨트롤러대상으로 사용하는느낌)
+		@RestControllerAdvice(annotations = RestController.class)//저 어노테이션이 컨트롤러레벨에 붙어있는 컨트롤러
+		@RestControllerAdvice("org.example.controllers")//해당 패키지 하위에 있는 컨트롤러들
+		@RestControllerAdvice(assignableTypes = {ControllerInterface.class,
+								AbstractController.class})//구현체나,인터페이스를 직접 지정,즉 클래스를 지정,부모면 자식도포함
+	생략하면 전체컨트롤러에 적용됨(기본값으로 작동)
+		
+		
+		
+		
 

@@ -1455,11 +1455,20 @@
 	이 타입컨버터는 당연히 기본적으로 주는 타입은 다 변환이 되는데,내가 새로운 타입을 만들었으면,컨버터 인터페이스를 구현하면 됨
 	만약 스트링 true가 오면 bool로 변환하고싶으면,string->bool 컨버터를 만들어서 등록하면되는거
 
-	아목아파서못하겟다 와디지겟다
+	타입컨버터는 Converter를 구현하면됨(org.springframework.core.convert.converter.Converter)
 
-
-
-
+	@EqualsAndHashCode 해쉬코드가 같으면 같은객체
+	
+	스프링은 이런 컨버터를 등록해두면 모델애트리뷰트나 RequestParam같은걸 자동으로 바꿔주는데,이건 컨버전서비스가 알아서 바꿔줌
+	
+	이 컨버전서비스는,컨버팅이 가능한지 확인하는기능과 컨버팅기능으로 된 인터페이스로 구현됨
+	    DefaultConversionService conversionService = new DefaultConversionService();
+        conversionService.addConverter(new StringToIntegerConverter());
+        conversionService.addConverter(new IntegerToStringConverter());
+	이런식으로 등록해서
+		Integer res = conversionService.convert("10", Integer.class);
+		Integer res = conversionService.convert(입력값, 출력클래스);
+	이렇게 사용함
 
 
 

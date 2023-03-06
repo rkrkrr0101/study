@@ -1470,10 +1470,24 @@
 		Integer res = conversionService.convert(입력값, 출력클래스);
 	이렇게 사용함
 
+	스프링에서 컨버터를 사용할땐,webconfig에서 컨버터를 등록해주면됨
+		@Configuration
+		public class WebConfig implements WebMvcConfigurer{
+		    @Override
+			public void addFormatters(FormatterRegistry registry) {
+				registry.addConverter(new StringToIntegerConverter());
+				registry.addConverter(new IntegerToStringConverter());
+			}
+		}
+	이렇게 등록해주면됨
+	그리고 기본객체들은 전부 컨버터가 있어서 추가할필요없고,내가만든객체변환시에만 넣으면됨
+	그리고 내가 넣은 컨버터가 우선순위를 가짐
 
-
-
-
+	그리고 타임리프에서
+		${number} //컨버터적용안함,단순변수표현식
+		${{number}} //컨버터적용
+	임
+	그리고 tf:field에서는 컨버터가 자동으로 적용됨,싫으면 th:value써야함
 
 
 

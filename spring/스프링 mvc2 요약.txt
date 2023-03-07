@@ -1488,15 +1488,53 @@
 		${{number}} //컨버터적용
 	임
 	그리고 tf:field에서는 컨버터가 자동으로 적용됨,싫으면 th:value써야함
+	
+	컨버터가 입력과 출력타입에 제한이 없는,범용 타입변환을 제공하는데,보통 그런거보다 string숫자를 int로,바꾸는식의 포맷변경이 일반적임
+	거기에 추가로 숫자중간에 쉼표넣거나,쉼표들어있는걸 숫자로 바꾸는식
+	이런걸 할땐 컨버터보다 포맷터를 사용하는게 편함
+	포맷터는 컨버터의 특별한버전이라고 생각하면됨
+	
+	포맷터는 문자+현지화에 특화된 버전임
+	이걸 구현할땐,프린터와 파서 인터페이스를 상속받아서 둘다 구현하면되는데,formatter안에 둘다 들어있으니 이거받으면됨
+		public class MyNumberFormatter implements Formatter<Number> {}
+	
+	그리고 parse에 실제 변환을 구현하면됨
+	    NumberFormat format = NumberFormat.getInstance(locale);
+        return format.parse(text);
+	이건 쉼표를없애는거
+	parse는 문자를 숫자로,print는 오브젝트를 문자로 변환해줌
+	
+	이 포맷터들을 컨버전서비스에 등록하려면,일반 컨버전서비스가 아닌,포맷터를 지원하는 컨버전서비스를 사용해야함
+	얘는 어댑터로 포맷터를 컨버터처럼 동작하게함
+	이건 DefaultFormattingConversionService를 사용하면됨
+		DefaultFormattingConversionService conversionService = new DefaultFormattingConversionService();
+	    conversionService.addConverter(new IpPortToStringConverter());
+        conversionService.addFormatter(new MyNumberFormatter());
+	이렇게 쓰면됨
+	사용시엔 그냥 컨버터 포맷터 구분없이
+		conversionService.convert
+	사용하면됨
+	
+	그리고 스프링의 WebMvcConfigurer엔 저게 들어있어서 그냥 저거쓰고 addFormatter쓰면됨
+		registry.addFormatter(new MyNumberFormatter());
+	그리고 컨버터와 포맷터중에선 컨버터가 우선순위가 더 높음
+	
+	그리고 스프링은 기본적으로 포맷터들도 엄청 많이 제공함
+	근데 포맷터는 기본형식이 지정돼있어서,객체의 각 필드마다 다른형식으로 쓰긴어려움
+	그래서 어노테이션으로 원하는 형식을 지정할수있는 포맷터들이 있음
+		@NumberFormat(pattern="###,###")
+		@DateTimeFormat(pattern="yyyy-MM-dd HH:mm:ss")
+	이런식으로 패턴을 적으면됨
+	사용법은
+		@NumberFormat(pattern="###,###")
+		private Integer number;
 
-
-
-
-
-
-
-
-
+	
+	그리고 HttpMessageConverter에서는 컨버전서비스가 적용되지않음
+	이건 단순히 메시지바디내용을 객체로 변환하거나 객체를 메시지바디에 넣는거뿐임
+	여기서 형식을 지정하고싶으면,라이브러리 설정을 통해 포맷을 지정해야함
+	
+	즉 컨버전서비스는 @RequestParam,@ModelAttribute,@PathVariable,뷰템플릿 등에서만 적용됨
 
 
 

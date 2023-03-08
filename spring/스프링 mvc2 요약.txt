@@ -1537,20 +1537,50 @@
 	즉 컨버전서비스는 @RequestParam,@ModelAttribute,@PathVariable,뷰템플릿 등에서만 적용됨
 
 
+11.파일 업로드
+	파일업로드는 enctype=multipart/form-data를 사용해서 바이너리로 파일을 던짐(이러면 컨텐츠타입이 멀티파트가 됨)
+	이걸 사용하면,각 인풋타입마다 타입헤더(컨텐츠타입)를 지정하고 부분을 나눠서 데이터를 던짐
 
 
+	서블릿에서 받을땐
+		Collection<Part> parts = req.getParts();
+	이렇게 받으면됨
+	
+	그리고 이 멀티파트 사용에서 업로드크기제한은
+		spring.servlet.multipart.max-file-size=1MB //한파일의 크기제한
+		spring.servlet.multipart.max-request-size  //한리퀘스트에서의 총합크기제한
+	으로 할수있음
+	그리고
+		@Value("${file.dir}")
+		private String fileDir;
+	이렇게 하면 application.properties에서 file.dir을 미리 선언해뒀으면 그값을 가져올수있음
 
 
-
-
-
-
-
-
-
-
-
-
+	그리고 멀티파트에서 content-disposition을 보면,파일명과 헤더명이 다 명시되어있음
+		part.getSubmittedFileName()
+	이렇게 뽑을수있음(멀티파트를 분해하고,그안의 메소드에있음)
+	사이즈도 받을수있고
+		part.getSize()
+	헤더말고 파일을 받을땐(메시지바디에 있는 바이너리)
+		InputStream inputStream = part.getInputStream();
+		String body =StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+	이렇게 받음
+	파일 저장은
+		if (StringUtils.hasText(part.getSubmittedFileName())){
+			String fullpath = fileDir + part.getSubmittedFileName();
+			part.write(fullpath);
+		}
+	이렇게 하면됨
+	
+	
+	스프링에서는 MultipartFile로 멀티파트파일을 업로드할수있음
+		 public String saveFile(@RequestParam String itemName, @RequestParam MultipartFile file){}
+	이렇게 그냥 받고
+	    if (!file.isEmpty()) {
+            String fullPath = fileDir + file.getOriginalFilename();
+            file.transferTo(new File(fullPath));
+        }
+	이렇게 그냥 써서 던지면됨
 
 
 

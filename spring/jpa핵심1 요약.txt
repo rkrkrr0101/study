@@ -1,0 +1,12 @@
+1.환경설정
+	implementation 'org.springframework.boot:spring-boot-devtools'
+	넣으면 해당파일만 리컴파일가능
+	
+	모든 엔티티 변경은 트랜잭션 안에서 일어나야함
+	그리고 테스트에서 @Transactional이 있으면,테스트끝나고 바로 롤백해버림
+	
+	그리고 같은 트랜잭션안에서 엔티티를 생성하고,조회하면 하나의 영속성컨텍스트안에서는 id값이 같으니 같은객체임(같은엔티티)
+	
+	쿼리파라미터를 로그남길려면(쿼리에서 쿼리는 보여주는데 파라미터는 표시안되니까)
+		implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0'
+	이거 넣어두면됨(이건 성능저하가 있을수있어서 운영에선 성능테스트해봐야함)

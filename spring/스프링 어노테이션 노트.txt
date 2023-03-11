@@ -4,11 +4,22 @@
 
 
 
+@Entity 도메인 엔티티
+@Embeddable 이 클래스를 객체처럼 사용할수 있음
+@Embedded  해당클래스를 객체로 사용할때 붙여야함,Embeddable과 둘중 한군데(클래스에 붙이거나 사용처에 붙이거나)만 있으면됨
+
+@ManyToOne
+@OneToMany 해당 객체변수의 연관관계에 따라 붙임
+@JoinColumn(name = "member_id") 매핑을 뭘로할건지,포린키의 이름
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE) 상속관계일떄 상속전략
+@DiscriminatorColumn(name = "dtype") 싱글테이블일때 구분컬럼
+@DiscriminatorColumn(name = "B") 구분값(현재 내 객체의 구분값을 적으면됨)
+@Enumerated(EnumType.STRING) 이넘사용시 붙여야함,반드시 STRING써야함
+
+
 객체-json 매핑이 필요하면 ObjectMapper
 
-타임리프 분량이 너무많아서 힘듬
-세션부분에서 리프레시토큰관련 정보가 언급만이라도 됐으면좋겠음(세션 기본값이 30분이라는데 요즘은 로그인 장기유지되는게 기본이니 궁금할거같음)
-강의 자체론 처음부터 발전하는식으로 되는게 이해가 좋은데,나중에 다시 찾아볼땐 헷갈려서,최종버전만 따로 정리된게 있으면 좋겠음
+
 
 
 

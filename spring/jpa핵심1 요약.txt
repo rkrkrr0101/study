@@ -10,3 +10,141 @@
 	쿼리파라미터를 로그남길려면(쿼리에서 쿼리는 보여주는데 파라미터는 표시안되니까)
 		implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0'
 	이거 넣어두면됨(이건 성능저하가 있을수있어서 운영에선 성능테스트해봐야함)
+	 
+2.도메인 분석 설계
+	다대다는 쓰면안됨
+	양방향 연관관계(양쪽다 서로를 소유하는거)는 사용하지않는게 좋음
+	
+	그리고 실제 현실에서의 관계가 아닌,설계상에선 모든 테이블을 동급으로 넣고 생각해야함(회원이 주문을 생성하는게 아닌,주문을 생성하려면 회원을 참조한다)
+	그리고 일대다에선 어지간하면 다쪽이 주인이 됨
+	
+	일대일에선 어디다 포린키를 둬도되는데,이떈 그냥 액세스 많은데 두는게 편함
+	
+	양방향 연관관계면,연관관계의 주인을 정해야하는데,이때 외래키가 있는 주문을 주인으로 정하는게 좋음(일대다에서 다쪽에 무조건 포린키가 있으니 여기가 주인)
+	그래야 업데이트할때 한군데만 업데이트되고 그러니까
+	
+	외래키가 가까운데 있는게 좋음(중앙근처에)
+		@Entity 도메인 엔티티
+		@Embeddable 이 클래스를 객체처럼 사용할수 있음
+		@Embedded  해당클래스를 객체로 사용할때 붙여야함,Embeddable과 둘중 한군데(클래스에 붙이거나 사용처에 붙이거나)만 있으면됨
+
+		@ManyToOne
+		@OneToMany 해당 객체변수의 연관관계에 따라 붙임
+		@JoinColumn(name = "member_id") 매핑을 뭘로할건지,포린키의 이름
+	연관관계의 주인 정할땐 슬레이브쪽에
+		@OneToMany(mappedBy = "member")
+	이렇게 넣으면됨
+	
+	상속관계매핑일땐,부모클래스에서 상속전략을 적어줘야함
+		@Entity
+		@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+		@DiscriminatorColumn(name = "dtype")
+		public abstract class Item {}
+	DiscriminatorColumn은 싱글테이블일때 구분컬럼
+	상속받은애들한테서,구분값을 정해야함
+		@Entity
+		@DiscriminatorColumn(name = "B")
+		public class Book extends Item {}	
+	이렇게
+	
+	이넘은 @Enumerated을 넣어야하는데,여기서
+		@Enumerated(EnumType.ORDINAL) 1,2,3,4 인덱스숫자로 들어감
+		@Enumerated(EnumType.STRING)  스트링으로 들어감
+	이거 주의해야함
+	중간에 상태추가되면 머리아프니
+		@Enumerated(EnumType.STRING)
+	사용하는게 좋음(기본값이 ORDINAL임)
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

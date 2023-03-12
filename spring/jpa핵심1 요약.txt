@@ -55,16 +55,50 @@
 		@Enumerated(EnumType.STRING)
 	사용하는게 좋음(기본값이 ORDINAL임)
 	
+	자기자신을 셀프로 매핑할수도있음(계층구조)
+	category객체에서
+		@ManyToOne
+		@JoinColumn(name = "parent_id")
+		private Category parent;
+		@OneToMany(mappedBy = "parent")
+		private List<Category> child = new ArrayList<>();
+	셀프로 자기자신안에서 양방향 연관관계를 걸었다고봐도됨
+	다대다의경우엔 1대다 다대1로 풀어내는 중간테이블이 있어야해서
+		@JoinTable(name="category_item")
+	이런게 들어가야함(뭐 근데 다대다를 쓰면안되니까)
+	
+	그리고 밸류클래스는,생성자만 있고,setter을 제공안하는게 좋음(변경필요할땐 새로만들게)
 	
 	
+	엔티티엔 setter를 사용하면안됨
+	모든 연관관계는 지연로딩으로 설정(디폴트가 즉시로딩이니 직접 지연로딩으로 바꿔야함) 
+		@ManyToOne(fetch=FetchType.LAZY)
+		즉시로딩이면 연관된 모든 테이블이 한번에 조회되고,지연로딩이면 필요해지면 조회함
+		만약 연관된 엔티티를 같이 조회해야할때만 fetch join이나 엔티티그래프를 사용해서 조회해야함
+	컬렉션은 필드에서 초기화하자(null에 대해 안전해짐)
+		엔티티를 영속화할떄,컬렉션을 감싸서 하이버네이트의 내장컬렉션으로 바꾸는데,이경우에 생성자초기화를하면 문제가생길수있어서 필드초기화가 좋음
+		그리고 엔티티를 생성할때만 컬렉션에 집어넣고,여기를 어지간하면 변경을 안하는게좋음(내장컬렉션으로 바꾸고나서 변경하면 머리아파지니까)
 	
 	
+	그리고 디폴트테이블과 컬럼명은,엔티티가 카멜케이스면(memberPoint)대문자를 언더케이스하고 앞에 _를 붙임(member_point)
+	그리고 모든 대문자는 소문자로 바뀜
+	이거 설정은 바꿀수있음,필요해지면 pdf 찾아보자
 	
+	그리고 cascade를 all로 두면(저장,삭제등 하나만세팅도 가능),해당 엔티티를 영속화할때,캐스케이드가 있는거도 체인타고 저장이됨
+	즉 체인을 타게할건지 말지임
+	체인을 안타면 직접 다 저장해줘야함
 	
-	
-	
-	
-	
+	그리고 연관관계 편의메서드는,양방향 연관관계에서 좀 편하게쓰려고 만드는거
+	order에서
+		public void setMember(Member member) {
+			this.member=member;
+			member.getOrders().add(this);
+		}
+		public void setDelivery(Delivery delivery) {
+			this.delivery = delivery;
+			delivery.setOrder(this);
+		}		
+	이렇게하면 편하게 연관관계있는애들끼리 넣어줄수있음,이건 컨트롤하는(연관관계주인)쪽에 넣어두는게편함
 	
 	
 	

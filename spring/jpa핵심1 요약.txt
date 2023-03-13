@@ -102,17 +102,66 @@
 	
 	
 	
+3.어플리케이션 구현 준비
+	컨트롤러는 웹계층,
+	서비스는 비즈니스로직+트랜잭션처리,
+	레포지토리는 jpa와 엔티티매니저,
+	도메인은 엔티티가 모여있는계층,모든계층에서 접근가능(dto사용하는게 일반적)
+	
+4.회원 도메인 개발
+	레포지토리에서
+	    @PersistenceContext
+		private EntityManager em;
+	이렇게하면,스프링이 엔티티매니저를 만들어서 di해줌(스프링데이터jpa를 사용하면,
+	그냥 @Autowired가 되기떄문에,@RequiredArgsConstructor가 먹음)
+	
+	해당객체 저장시엔(영속화)
+		public void save(Member member) {
+			em.persist(member);
+		}	
+	해당객체 조회시엔
+		public Member findOne(Long id) {
+			return em.find(Member.class, id);
+		}	
+	여러객체 조회시엔
+		public List<Member> findAll() {
+			return em.createQuery("select m from Member m", Member.class).getResultList();
+		}
+	이렇게 jpql써야함
+	jpql은,엔티티를 대상으로 쿼리한다고 보면됨
+	where필요하면
+	    public List<Member> findByName(String name){
+			return em.createQuery("select m from Member m where m.name=:name", Member.class)
+					.setParameter("name",name)
+					.getResultList();
+		}
+	이렇게
+	
+	그리고 서비스에선, @Transactional이 있어야함,이걸 클래스레벨에 붙이면 퍼블릭메서드엔 다 들어감
+	메서드레벨에 붙일수도있는데,이떄 조회시엔
+		@Transactional(readOnly=true)
+	하면 좀더 성능최적화를 해줌
+	
+	그래서 보통 읽기가 많으니
+	클래스레벨에
+		@Transactional(readOnly=true)
+	하고,업데이트나 인서트에서
+		@Transactional
+	로 덮어씌우는식으로 사용하는듯
+	
+	그리고 멀티쓰레드등으로 벨리데이션이 뚫릴수있으니까,유니크해야하는건 db에서 유니크잡아주는게 좋음
+	
+	jpa에서 persist를 하면,일반적으로는 즉발로 인서트가 안나가고,플러시(현재 영속성컨텍스트와 db를 멱등하게 맞추는거)를 하고 커밋이 되면 인서트가 나감
+	그래서 테스트에선 롤백을 해버리니 인서트문이 찍히지않음
 	
 	
+	테스트는 완전히 격리된 환경에서 하는게 좋아서,스프링에선 메모리db를 제공함
+	그래서 테스트폴더에 resources폴더를 만들고,거기에 application.yml이나 프로퍼티를 생성하고(이러면 테스트에선 이거사용)
+	데이터소스를 메모리로 바꾸면됨
+		url: jdbc:h2:mem:test
+	이러면 메모리로 띄움
 	
-	
-	
-	
-	
-	
-	
-	
-	
+	근데 스프링부트에선 그냥 설정이 없으면 메모리모드로 돌려서,spring에 있는거 다지워도됨(jpa까지)
 	
 	
 	

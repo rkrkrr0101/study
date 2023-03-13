@@ -16,6 +16,8 @@
 @DiscriminatorColumn(name = "B") 구분값(현재 내 객체의 구분값을 적으면됨)
 @Enumerated(EnumType.STRING) 이넘사용시 붙여야함,반드시 STRING써야함
 
+@PersistenceContext 엔티티매니저 바인딩(스프링이 생성해서 주입해줌)
+
 
 객체-json 매핑이 필요하면 ObjectMapper
 

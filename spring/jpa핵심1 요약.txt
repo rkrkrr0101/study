@@ -184,6 +184,22 @@
 	
 	그리고 jpa를 사용하면,데이터만 바꿀땐,더티체킹해서 변경내역을 자동으로 업데이트해줌
 	
+	테스트는 단위테스트를 빡세게,통합은 제대로 잘붙어있는지 확인하는용도
+
+
+	jpa에서 동적쿼리는,따로 조건을 모아둔 클래스를 만들고,그걸 참조해서 넘길수있음
+		return em.createQuery("select o from Order o join o.member m"
+							+ " where o.status=:status "
+							+ " and m.name like :name ",
+					Order.class)
+			.setParameter("status", orderSearch.getOrderStatus())
+			.setParameter("name", orderSearch.getMemberName())
+			.setMaxResults(1000) //페이징할때 setFirstResult(100)이렇게 스타트포지션잡을수있음
+			.getResultList();
+	기본적으로 항상 다 들어가는값이면 저렇게하는데,동적쿼리의 경우는 저게안되니(조건따라 있을수있고 없을수있으니)
+	젤 무식한방법은 null체크해서 직접 문자열로 생성하는거고(안씀)
+	좀 더 나은건 jpa criteria(안씀)
+	보통 사용하는건 Querydsl
 	
 	
 	

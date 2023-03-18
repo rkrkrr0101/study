@@ -4,6 +4,7 @@
 
 
 
+
 @Entity 도메인 엔티티
 @Embeddable 이 클래스를 객체처럼 사용할수 있음
 @Embedded  해당클래스를 객체로 사용할때 붙여야함,Embeddable과 둘중 한군데(클래스에 붙이거나 사용처에 붙이거나)만 있으면됨
@@ -18,6 +19,8 @@
 
 @PersistenceContext 엔티티매니저 바인딩(스프링이 생성해서 주입해줌)
 
+@NotEmpty(message = "이름은필수")이 변수는 비어있을수 없음,비었으면 예외+메시지 전달
+@Valid  notEmpty같은걸 적용해줌,public String create(@Valid MemberForm form){}이렇게사용
 
 객체-json 매핑이 필요하면 ObjectMapper
 

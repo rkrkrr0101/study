@@ -1,0 +1,80 @@
+1.강좌소개
+	orm(jpa)는,그냥 컬렉션에 데이터를 담고 빼고 하는걸 데이터베이스와 매핑시키는거
+2.jpa소개
+	기본적으로 데이터를 저장한다는건,객체를 db에 저장한다는것과 같음
+	근데 이때 sql이 들어가면,번역이 들어가서 코스트가 추가로 들어가게됨(넣을때랑 뺄때 둘다(insert와 select))
+	
+	sql중심적인 개발의 문제는,이 코스트낭비에 있음
+	이건 유지보수(컬럼을 추가한다던가)할때 너무너무머리가 아프고,결국 sql에 의존적인 개발이 돼버림
+	
+	문제는 객체와 rdb는 패러다임이 다름
+	크게
+		상속
+		연관관계
+		데이터타입
+		데이터 식별방법
+	객체는 상속을 받을수있는데,rdb에선 슈퍼타입서브타입으로 풀순있는데,이건 너무복잡해져서 사용하지못할수준임
+	객체는 연관관계할때 참조(객체의 주소값)를 사용하고,테이블은 외래키를 사용해서 조인을 해야함(복잡하기도하고,객체가 아닌 객체의id를 사용하게됨 테이블에선) 
+	
+	즉 객체처럼 모델링하면할수록 sql매퍼에선 매핑작업만 늘어남
+	그래서 나온게 orm임
+	
+	즉 객체를 컬렉션에 저장하고 조회하듯 날로먹을수있음
+		em.persist(객체) //저장
+		Member member =em.find(memberId) //조회
+		memeber.setName("바꿀이름") //수정(트랜잭션안에서 더티체킹으로 해야하긴함 )
+		em.remove(객체)  //삭제
+	상속받은객체도,그냥 가져오면 알아서 조인해서 가져다줌,연관관계도 알아서해줌(n+1은 조심해야하지만 기본적으론 레지로딩으로 처리하면됨)
+	
+	그리고 같은 트랜잭션안에선 항상 같은엔티티를 반환해줌(캐시를 사용해서 3번조회를해도 한번만sql날리고 그걸 던져줌)
+	그리고 인서트쿼리같은거도 커밋을 하는순간 모아서보내서 통신코스트가 줄어듬(어짜피 트랜잭션커밋전에만 보내면되니)
+		
+3.jpa시작
+	application.properties에 h2사용할때
+		spring.datasource.url=jdbc:h2:tcp://localhost/~/test
+		spring.datasource.driver-class-name=org.h2.Driver
+		spring.datasource.username=sa
+		spring.jpa.database-platform=org.hibernate.dialect.H2Dialect //h2방언선택,mysql은 org.hibernate.dialect.MySQL5InnoDBDialect
+		spring.jpa.hibernate.ddl-auto=create-drop //현재 등록된 엔티티 스키마 생성 어케할거냐,운영환경에선 validate
+	넣고
+	빌드 그래들에
+		implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+		runtimeOnly 'com.h2database:h2'
+	추가
+	
+	@Entity를 붙이면 이건 jpa가 관리하는 객체라는거고,그안에서 @Id는 프라이머리키임
+	모든 작업은 트랜잭션 내에서 일어나야함
+	
+	그리고
+		생성=em.persist(객체)
+		조회=em.find(객체클래스.class,객체)
+		조건조회=em.createQuery("jpql내용",객체클래스.class).getResultList()
+		삭제=em.remove(객체)
+		수정=em.find(객체)->객체 변형(setter이나 그런거로),persist안해도됨
+	조회를 제외한 모든건 트랜잭션안에서 일어나야하고,같은 트랜잭션내에선 조회의 결과값은 항상 같음 
+	
+	jpql은 테이블이 아닌 객체를 대상으로 쿼리를 짠다고 생각해야함
+	이거의 장점은 페이징(setFirstResults,setMaxResults)같은게 쉽고,db의 변경도 쉬움
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	

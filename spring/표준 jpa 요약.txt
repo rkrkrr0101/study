@@ -117,11 +117,51 @@
 	em.find하면 영속컨텍스트로 들어가니까 이런식으로 영속으로 처리하면됨
 		
 		
+5.엔티티 매핑
+	객체와 테이블매핑
+		@Entity
+		@Table
+	필드와 컬럼매핑
+		@Column
+	기본키매핑
+		@Id
+	연관관계매핑
+		@ManyToOne
+		@OneToMany
+		@JoinColumn
 		
-		
-		
-		
-		
+	@Entity가 붙은 클래스는 jpa가 관리하고,이걸 엔티티라고 함
+	jpa를 사용해서 테이블과 매핑할 클래스는 @Entity가 필수임
+	이때 지켜야할조건은
+		기본생성자는 필수이고(파라미터가없는 public나 protected생성자),
+		final이나 enum,인터페이스,inner클래스를 사용할수없고,
+		저장할필드에 final을 사용할수없음
+	가 있음
+	@Entity에서 name으로 jpa에서 사용할 엔티티명을 정할수있는데,안넣으면 클래스명을 그대로사용하고,이렇게쓰는게좋음
+	@Table에서 name으로 매핑할 테이블이름을 정할수있고,기본값은 역시 엔티티이름(@Table(name="abc") )
+	@Column에서 name으로 매핑할 컬럼명을 정할수있고,기본값은 현재 필드이름
+	@Column에서 unique나 length,nullable등으로 컬럼의 설정을 추가할수있음(ddl생성기능)
+	@Column에서 insertalbe,updateable로 등록 변경 가능여부를 설정할수있음,즉 한번생성하면 변경못하게할수있는거(기본값 true)
+	@Column에서 columnDefinition으로 수동으로 설정값(default같은)을 넣을수있음
+	@Enumerated(EnumType.STRING)으로 enum을 사용할수있음(이떄 그냥 STRING쓰는게 좋음..Ordinal쓰레기임)
+	@Temporal(TemporalType.TIMESTAMP)으로 날짜타입사용시 붙이면됨(요즘은 안씀,LocalDateTime에선 자동으로 지원하기때문)
+	@Lob으로 큰 데이터를 넣을수있음(html을 통으로넣는다거나),문자면 clob,나머지는 blob로 매핑됨
+	@Transient로 db에 안올리는걸 표시할수있음(객체메모리에서만 가지고있음)
+	
+	ddl을 사용하면 애플리케이션 생성시점에 스키마를 자동생성하고,꺼질때 자동삭제 할수있음
+	이건 개발서버에서만 사용해야함 당연히,이걸가지고 좀 수정해서 개발에 임포트하면됨
+	종류별로
+		개발에선 create나 update(변경점만 바꿈,삭제는 안됨)
+		테스트코드는 create-drop  
+		테스트서버는 update나 validate
+		운영이나 스테이징은 validate나 none
+	이렇게쓰면됨
+	ddl생성기능은 ddl을 생성할때만 사용되고,실제 jpa동작엔 영향을주지않음(notnull이나 length정도는 체크해준다고함),
+	그래서 엔티티 컬럼에서 조건걸어도 jpa내부에서 체크하지않고,영속에 넣어서 db에 던져봐야 알수있음 
+	
+	
+	
+	
 		
 		
 		

@@ -1,9 +1,6 @@
 package jpabasic.ex1hellojpa.hellojpa.domain;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,8 +15,12 @@ public class Member {
 
     @Id
     @GeneratedValue
+    @Column(name="MEMBER_ID")
     private Long id;
     private String name;
+    private String city;
+    private String street;
+    private String zipcode;
 
 
 

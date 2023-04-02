@@ -556,9 +556,34 @@
 	엔티티를 혼동해서 값타입으로 만들면 안됨
 		
 11.객체지향쿼리언어1-기본문법		
-		
-		
-		
+	jpa는 jpql이나 queryDSL,jdbc직접사용,mybatis,SpringJdbcTemplate등으로 쿼리를 날릴수있음(쌩쿼리도 날릴수있음)
+	jpql은,가장 단순한 조회방법
+	얘는 엔티티객체를 대상으로 검색함(테이블이 아님)
+	정확히는 이걸 작성하면 알아서 sql로 바꿔서 돌려서 가져와서 리턴함
+	대충
+		em.createQuery("select m From Member m where m.name like '%hello%'",Member.class)
+		  .getResultList();
+	이런식으로,테이블대상이 아닌 엔티티대상으로 쿼리를 날리면,밑단에서 알아서 처리하고 리턴함(밑을 추상화해서 특정 db에 의존하지않음)
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 		
 		
 		

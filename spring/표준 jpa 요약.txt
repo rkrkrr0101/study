@@ -556,7 +556,7 @@
 	엔티티를 혼동해서 값타입으로 만들면 안됨
 		
 11.객체지향쿼리언어1-기본문법		
-	jpa는 jpql이나 queryDSL,jdbc직접사용,mybatis,SpringJdbcTemplate등으로 쿼리를 날릴수있음(쌩쿼리도 날릴수있음)
+	jpa는 jpql이나 queryDSL(동적쿼리용),jdbc직접사용,mybatis,SpringJdbcTemplate등으로 쿼리를 날릴수있음(쌩쿼리도 날릴수있음)
 	jpql은,가장 단순한 조회방법
 	얘는 엔티티객체를 대상으로 검색함(테이블이 아님)
 	정확히는 이걸 작성하면 알아서 sql로 바꿔서 돌려서 가져와서 리턴함
@@ -565,16 +565,57 @@
 		  .getResultList();
 	이런식으로,테이블대상이 아닌 엔티티대상으로 쿼리를 날리면,밑단에서 알아서 처리하고 리턴함(밑을 추상화해서 특정 db에 의존하지않음)
 	
+	queryDSL은 동적쿼리할때 주로사용됨,스트링이 아닌 자바코드인게 장점(자바코드로 jpql을 짜는거)
+		list<Member> result=queryFactory
+			.select(order)
+			.from(order)
+			.join(order.member,member)
+			.where(statusEq(orderSearch),memberNameEq(orderSearch))
+			.fetch() //쿼리끝났다는걸 알림
+	이런식으로 짜면됨,거의 sql과 똑같음
 	
+	그리고 jpql이 아닌 생쿼리나 jdbc템플릿같은걸 사용할땐,persist만이 아닌 플러시까지 생각해야함(얘들은 1차캐시안보니까 db에 밀어넣어야함)
 	
+	기본적으로 jpql에서 select는
+		select
+		from
+		where
+		groupby
+		having
+		orderby
+	순서임(select m from Member m where m.age>18)
+	기본적으로 엔티티와 속성은 대소문자구분을 하고,jpql키워드는 대소문자구분을 하지않음
+	엔티티를 대상으로 쿼리하는거니,엔티티이름(디폴트값은 클래스명)을 사용하고,별칭은 필수임
 	
+	그리고 기본펑션들은 다 제공됨
+		select
+			count(m),
+			sum(m.age),
+			avg(m.age),
+			max(m.age),
+			min(m.age)
+		from Member m
+	이런거
 	
+	그리고 typeQuery와 query가 있는데,typeQuery는 반환타입이 명확할떄 사용하고,Query는 명확하지않을때 사용
+		TypedQuery<Member> query
+		Query query
+	즉,타입정보를 주면 TypedQuery,안주면 Query(from절에 엔티티 자체가 아닌 특정값을 타입여러개로 가져왔을때 query사용)
 	
+	그리고 query.getResultList()로 반환을 받을수있고(결과가 하나이상일떄,없으면 빈리스트반환)
 	
+	결과가 딱 하나이면 query.getSingleResult()로 받을수있음,
+	이떄 결과가없으면 noResultExcepiton,
+	두개이상이면 nonUniqueResultException
+	이건
+		Member res=query.getSingleResult()
+	이런식으로 엔티티로 바로받을수있는 장점이있는데,결과없을때 예외터지는거떄문에 잘안쓰고,스프링dataJPA에서 비슷한게 있어서 그거씀
 	
-	
-	
-	
+	파라미터바인딩은
+		TypedQuery<Member> query=em.createQuery("select m from Member m where m.age>:userAge",Member.class);
+		query.setParameter("userAge",18);
+		query.getResultList();
+	이렇게 넣고쓰면됨
 	
 	
 	

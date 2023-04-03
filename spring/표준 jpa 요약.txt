@@ -617,14 +617,74 @@
 		query.getResultList();
 	이렇게 넣고쓰면됨
 	
+	프로젝션은 select에서 대상을 지정하는거(sql에서 *같은거)
+	jpa에선 이 대상이 엔티티,임베디드타입,스칼라타입(인트,스트링같은)이 가능함(rdb는 스칼라만 가능한데,그걸 추상적으로 확장한거)
+		select m from member m //엔티티  Member.class
+		select m.team from member m //엔티티  Team.class
+		select m.address from member m //임베디드 Address.class
+		select m.username,m.age from member m //스칼라 오브젝트로 리턴함
+	그리고 distinct로 중복을 제거할수있음
+		select distinct m.username,m.age from member m	
+	그리고 jpql로 쿼리로 가져온값들은 영속성 컨텍스트에 자동으로 들어감(서치된거 전부 다 들어감)
+	그래서 수정하면 바로 적용됨
 	
+	그리고 해당엔티티 안에 속한 하위엔티티만 받을떈,해당엔티티클래스로 받아야하는데,어지간하면 명시적으로 받는게 좋음(나가는sql이랑 비슷하게)
+		em.createQuery("select t from member m join m.team t" ,Team.class)
+	그리고 단순값(스칼라)의 묶음을 dto로 바로 조회할수있음(제일 많이 쓸듯)
+		select new jpabook.jpql.UserDTO(m.username,m.age) from Member m
+	이때 패키지명을 포함한 전체클래스명을 입력해줘야하고(queryDSL에서 극복가능),순서와 타입이 일치하는 생성자가 필요함
 	
+	jpa는 페이징을
+		setFirstResult(시작위치) //0부터시작
+		setMaxResults(조회데이터수)
+	두가지로 해결함
+		em.createQuery("select m From Member m where m.name like '%hello% order by m.age desc'",Member.class)
+		  .setFirstResult(0)
+		  .setMaxResults(10)
+		  .getResultList();		
+	그냥 이런식으로 던지면됨
 	
+	jpa에서 조인은
+		select m from Member m join m.team t //이너조인(겹치는거만 출력),기본적으로 둘의 id를 비교
+		select m from Member m left join m.team t //아우터조인(안겹치는건 null로 출력)
+		select count(m) from Member m,Team t where m.username=t.name//세타조인,양쪽을 곱해서 nxm을 만든뒤에 where로 거름
+	jpa에서 on으로 조인대상을 필터링하거나,연관관계없는 엔티티 외부조인을 할수있음
+		
+	조인대상필터링은,조인연산의 코스트를 감소시키려고 사용하는거
+		select m,t from member m Left join m.team t on t.name='A'
+	이렇게하면 팀이 먼저 필터링돼서,a인거만 남고 그거로 조인을 검
 	
+	연관관계 없는 엔티티 외부조인은
+		select m,t from member m left join team t on m.username=t.name //막조인
+	이렇게 연관관계가 없어도 조인을 거는거
+		
 	
+	jpa는 서브쿼리는 똑같이 쓰면됨
+		select m from Member m where m.age>(select avg(m2.age) from Member m2)
+		select m from Member m where (select count(o) from Order o where m=o.member)>0
+	이렇게 메인쿼리에서 값을 가져올수도있고,따로 돌릴수도있음(따로돌리는게 당연히 성능은 잘나옴)
 	
-	
-	
+	이 서브쿼리 지원 함수가 있는데
+		exist (서브쿼리):서브쿼리에 결과가 존재하면 참(앞에 not붙일수있음)
+		all(서브쿼리) 모두 만족하면 참
+		any(서브쿼리) 조건을 하나라도 만족하면 참
+		some(서브쿼리)조건을 하나라도 만족하면 참 //두개는 같음 
+		in (서브쿼리) 서브쿼리의 결과중 하나라도 같은게 있으면 참(앞에 not붙일수있음)
+	예시로
+		select m from Member m
+		where exists(select t from m.team t where t.name='teamA') //팀 a 소속인 팀원
+		
+		select m from Member m
+		where m.team=any(select t from team t) //어떤팀이든 팀에 소속된 회원
+	jpa에선 where와 having,select 에서만 서브쿼리를 할수있음(from에선 불가능,최신하이버네이트(6)에선 가능),그래서 이경우엔 조인으로 해결해야함	
+		
+		
+		
+		
+		
+		
+		
+		
 		
 		
 		

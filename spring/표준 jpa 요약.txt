@@ -678,10 +678,133 @@
 		where m.team=any(select t from team t) //어떤팀이든 팀에 소속된 회원
 	jpa에선 where와 having,select 에서만 서브쿼리를 할수있음(from에선 불가능,최신하이버네이트(6)에선 가능),그래서 이경우엔 조인으로 해결해야함	
 		
+	jpql에서의 타입표현은
+		스트링: 'abcd'
+		숫자: 10L,10D,10.1F
+		불린:TRUE,FALSE
+		ENUM:jpabook.MemberType.Admin //패키지명을 포함
+		엔티티타입:TYPE(i)=Book //상속관계에서 사용,상위클래스를 조회하면서 하위클래스선택할때 사용,잘안쓰는듯
+	이 있음	
+	즉
+		"select 'abcd',TRUE From Member m"
+		"select 'abcd',TRUE From Member m where m.type=jpql.MemberType.ADMIN" //이넘사용 
+	이렇게가 된다는거
+	jpql.MemberType.ADMIN 이런건 어짜피 파라미터바인딩하면 클래스로 박아버릴수있으니까 괜찮음(하드코딩 보통안하니까)
+	
+	그리고
+		exists,in
+		and,or,not
+		between,like,is null
+	다 지원함
+	
+	jpql에선 case도 지원함
+		select
+			case when m.age<=10 then '학생'
+				 when m.age>=60 then '경로'
+				 else '일반'
+			end
+		from Member m
+	이런식
+	이거외엔
+		coalesce:하나씩 조회해서 첫값이 null이 아니면 그대로 반환,널이면 두번째거반환
+		nullif:두값이 같으면 null,다르면 첫번째값 반환
+	이 있음
+	예시로는
+		select coalesce(m.username,'이름없는회원') from Member m
+		select nullif(m.username,'관리자')from Member m //이름이 관리자면 null,아니면 본인이름반환
+	이렇게
+	
+	jpql의 기본함수는
+		concat  //더하기
+		substring(m.username,2,3) //문자자르기
+		trim //공백제거
+		lower,upper
+		length
+		locate('de',m.username) //특정단어 위치
+		size //size는 컬렉션의 크기,t.members처럼 컬렉션을 넣을수있음
+		index //사용하지않음
+	가 있고,사용자 정의함수도 만들수 있음(특정 db에만 있는걸 받아다가 등록할수있음),필요해지면 찾아보자
+	근데 설정할때 등록할때 명시해두면 알아서 해두니까 그냥 가져다가써도됨,어지간한건 다 들어있음(안시sql은 아니니 db바꾸면 깨지긴하겠지만)
+	
+12.객체지향쿼리언어2 중급문법	
+	경로표현식은 점을찍어서 객체그래프를 탐색하는거(m.username이나 m.orders.ordername)
+		m.username// 상태필드
+		m.team    // 단일값 연관필드
+		m.orders  // 컬렉션값 연관필드
+	이런것들
+	이 3가지 방식이 전부 결과가 달라서,구분해서 사용해야함 
+	여기서 
+	상태필드는,단순히 값을 저장하기위한 필드고,
+	연관필드는 연관관계를 위한 필드(엔티티나 컬렉션대상)
+		단일값 연관필드는 manyToOne이나 OneToOne,
+		컬렉션값연관필드는 oneToMany나 ManyToMany
+	임
+	
+	그리고 경로표현식에서
+		상태필드:경로탐색의 끝,탐색을 하지않음(할곳이 없음 마지막이라서)
+		단일값연관경로:묵시적 내부조인이 발생,탐색을 할수있음
+		컬렉션값 연관경로:묵시적 내부조인이 발생,탐색을 못함,단 from에서 명시적조인으로 별칭을 얻으면 그거로 탐색할수있음
+	여기서 묵시적내부조인은,jpql상에서 표현되지않지만,sql상에서 일어나는게 묵시적,이경우에 일어나는 내부조인을 합해서 묵시적내부조인
+	이런 묵시적조인은 쿼리튜닝이 어려워지기때문에,명시적으로 해야함(묵시적으로 되는거도 명시적으로 풀어야함)
+	
+	컬렉션값 연관경로에서는 .을찍어도 아무것도 안나오는데(t.members,컬렉션이니까..)뭘 가져오고싶으면 
+		select m.username from team t join t.members m
+	이런식으로 명시적조인하고 별칭붙이면 사용할수있음
 		
+	그래서 이런 단일값연관경로나 컬렉션값 연관경로는 사용하지않는게 좋음(묵시적 조인을 사용하는게 좋지않음)
+	그러니 join을 직접사용하자
+		select m from Member m join m.team t //단일값 연관경로를 명시적조인으로 푼거
+		select m.username from team t join t.members m //컬렉션값 연관경로를 명시적조인으로 푼거
+	이런식	
 		
+	
+	페치조인은 sql조인이 아닌,jpql에서 성능최적화를 위해 제공하는기능임(정확히는 조인은 그대로고,페치가 즉시로딩으로 치환되는거)
+	기본적으로 레지로딩으로 땡겨오는데,이걸 묶어서 땡겨오려고 사용하는 기능임(명시적 즉시로딩이라고 봐도될듯)
+	이건 join fetch 조인경로 로 사용함
+		select m from Member m join fetch m.team //멤버와 팀을 한번에 땡겨와라
+	이렇게 날리면,sql에선 멤버와 팀을 select절에 같이 넣어서 이너조인을 해서 가져오게됨(즉 현재 검색된 멤버에 맞는 팀들을 로딩해서 가져옴)
+	left붙이면 아우터조인도 됨
+	
+	이걸 사용하지않으면,각 로우마다 team을 접근할때마다 쿼리가 나가는 n+1이 터짐(같은팀이면 1차캐시에서 가져오는데,아닐경우 다시쿼리나감)
+	그냥 이건,sql이랑 상관없이 한번에 묶어서 사용해야할떄,코스트를 줄이는용도라고 생각하면될듯
+	
+	그리고 일대다조인을 하면 데이터가 뻥튀기가됨(컬렉션에 같은id를 들고있는애들은 전부 같은값이니까)
+	이경우엔 distinct를 사용할수있음(같은데이터 제거)
+		select distinct t from Team t join fetch t.members where t.name='팀A'
+	sql의 distinct랑 다르게,좀 더 빡빡하게 지워줌(sql+같은식별자를 가진 엔티티를 제거)	
+	물론 다대일에선 상관없음
 		
+	
+	근데 페치조인을 쓰면,페치조인대상엔 별칭을 줄수없음(하이버네이트는 가능하긴한데,가급적 사용하지않는게 좋음)
+	객체그래프에선 all or nothing이지,페치조인중 일부만 가져오는건 문제가 생길여지가 많음(jpa설계랑 안맞음)
+	이런경우엔,페치조인을 사용하면안되고,그 대상만 조회하는쿼리를 따로날려야함
+		select t from team t join fetch t.members m where m.age>10 //이게 아닌
+		select m from member m where m.age>10
+	이렇게
+	
+	그리고 둘 이상의 컬렉션은 페치조인할수없음	
+	즉 엔티티가 orders랑 team처럼 oneToMany를 2개이상 가지고있을때,한번에 둘을 페치조인할수없음(데이터정합성의 문제,카테시안곱문제)
+	
+	컬렉션을 페치조인하면,페이징api(setFirstResult,setMaxResults)를 사용할수없음(일대일 다대일같은 단일값 연관필드들은 페이징이 가능)
+	단 일대다에서는 메모리에서 페이징을 하는데,이건 매우위험해서 사용하면안됨(데이터뻥튀기되는거때문에 로우수가 이상해지기때문,일대다에선 어케될지모르니..)
+	그래서 다대일쪽에서 들고와서 페이징을 하면됨
+	아니면 엔티티에 
+		@BatchSize(size=100)
+		@OneToMany(mappedBy="team")
+		private List<Member> members new ArrayList<>();
+	이렇게 @BatchSize를 붙이면,딱 저사이즈만큼 묶어서 가져오겠다는거(현재 내가 조회하는게 아니어도 같이 던져주는거임)
+	이걸 사용하면 n+1이 많이 완화됨(n/배치사이즈+1)
+	그리고 이걸 옵션에 넣어서 글로벌세팅으로 넣을수있음
+		hibernate.default_batch_fetch_size=100 //1000이하의 값 적당히
 		
+	즉 페치조인은
+		연관된 엔티티들을 sql한번에 조회
+		글로벌 로딩전략은 lazy로 넣고,성능최적화가 필요하면 페치조인을 사용
+	이렇게 사용하면됨
+	모든걸 페치조인으로 해결할순없지만,객체그래프를 유지할때 사용하면 효과적임
+	
+	단,여러 테이블을 조인해서,엔티티의 모양이 아닌 전혀 다른 결과를 내야하면,
+	일반조인을 사용하고 필요한데이터만 조회해서 dto를 만들어서 반환하는게 좋음
 		
 		
 		

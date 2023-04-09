@@ -9,6 +9,21 @@
 @Embeddable 이 클래스를 객체처럼 사용할수 있음
 @Embedded  해당클래스를 객체로 사용할때 붙여야함,Embeddable과 둘중 한군데(클래스에 붙이거나 사용처에 붙이거나)만 있으면됨
 
+
+@PersistenceContext 엔티티매니저 바인딩(스프링이 생성해서 주입해줌)
+
+@RequestBody 현재 요청의 리퀘스트바디를 이 어노테이션이 달린 매개변수에 매핑해서 넣어줌
+
+@NotEmpty(message = "이름은필수")이 변수는 비어있을수 없음,비었으면 예외+메시지 전달(엔티티에 해당필드에 적으면됨)
+@Valid  notEmpty같은걸 적용해줌,즉 값을 검증해줌,public String create(@Valid MemberForm form){}이렇게사용
+
+
+
+객체-json 매핑이 필요하면 ObjectMapper
+
+
+jpa
+
 @ManyToOne
 @OneToMany 해당 객체변수의 연관관계에 따라 붙임
 @JoinColumn(name = "member_id") 매핑을 뭘로할건지,포린키의 이름
@@ -18,14 +33,6 @@
 @Enumerated(EnumType.STRING) 이넘사용시 붙여야함,반드시 STRING써야함 Ordinal쓰레기임
 @Transient  db에 안올리는걸 표시할수있음(객체메모리에서만 가지고있음)
 @BatchSize(size=100) 일대다에서 이번에 조회한게 아닌 다른값도 같이들고와서 n+1을 완화할수있음
-
-@PersistenceContext 엔티티매니저 바인딩(스프링이 생성해서 주입해줌)
-
-@NotEmpty(message = "이름은필수")이 변수는 비어있을수 없음,비었으면 예외+메시지 전달
-@Valid  notEmpty같은걸 적용해줌,public String create(@Valid MemberForm form){}이렇게사용
-
-객체-json 매핑이 필요하면 ObjectMapper
-
 
 
 

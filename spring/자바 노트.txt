@@ -1,0 +1,48 @@
+
+<> :제네릭,파라미터타입이나 리턴타입정의를 외부로 미뤄버림
+	여기들어가는건 뭐든 들어갈수있지만,한번 정해지면(초기화되고나면) 쭉 그걸 써야함 그 오브젝트내에선
+	보통 arraylist<>()나 class Sample<T>{} 이때 많이 사용됨
+	이걸 사용할때 
+		Sample<Integer> sample=new Sample<>()
+	이런식으로 사용하게됨
+	즉 이건 오브젝트를 사용해서 받고싶은데,오브젝트를 쓰면 초기화이후에도 계속 타입을 변경할수있으니,이걸 못하게하고싶어서 나온거임
+	추가적으로 오브젝트때문에 다운캐스팅을 계속해야하는 악순환도 해결해줌
+	이 제네릭을 사용할땐 클래스의 우측에 넣거나,메소드에서도 사용할수있음
+	메서드에서 사용할땐
+		public <T> t test(Supplier<T> supplier){
+			return supplier.get();
+		}
+	이렇게 받거나 리턴타입으로 정의할수있음,이건 메소드 호출시점에 무슨타입일지가 정해짐
+	그리고 동시에 여러타입을 선언할수도 있음
+		public <P,R> R test(P p,Function<P,R> function){
+			return function.apply(p);
+		}
+	즉 T는 대단한게아닌,타입의 변수명임
+	이경우엔 P를 소비해서 R을 리턴한다는것
+	
+	참고:https://jehuipark.github.io/java/java-generic
+
+
+stream().map(): 이건 람다식임,
+	사용할때
+		컬렉션.stream().map(a->new MemberDTO(a.getName())).collect(Collectors.toList());
+	이런식으로 컬렉션으로 뽑아서 사용하는거도 가능하고,현재 변수에 안에있는걸 다 더한다든가 for문으로 할수있는거들 편하게할수있음
+	그리고 또다른장점은,병렬처리가 가능함
+	참고:https://futurecreator.github.io/2018/08/26/java-8-streams/
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		

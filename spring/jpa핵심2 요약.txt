@@ -52,12 +52,53 @@
 	아예 설정으로 가져오게 할수도있고 그런데, 당연히 n+1이나가고,필요없는 엔티티필드도 다 긁어오고,엔티티노출되니까 스펙도못바꾸고 머리아파짐 ㅋㅋ
 	
 	그러니까 dto를 쓰고 페치조인을 하자..
+	dto쓰는건 dto를 만들고,도메인을 받아서 dto로 변경하는 생성자를 만들고
+	    List<Order> all = orderRepository.findAllByString(new OrderSearch());
+        List<SimpleOrderDTO> collect = all.stream()
+                .map(o -> new SimpleOrderDTO(o))
+                .collect(Collectors.toList());
+        return collect;
+	이렇게 스트림돌리던가 for문돌리면됨(물론 이때 리스트 그대로 반환이 아닌,뭘로 한번 더 싸서 보내는게 좋음)
+	그리고 dto는 엔티티를 참조해도 괜찮음,별로 안중요한데서 중요한걸 의존하는거라,문제생겨도 무시하면됨(dto를 피의존하는게 별로없으니)
+	이거만하면 일단 엔티티노출문제는 해결되지만,n+1은 아직 남아있음
+	이건 페치조인으로 해결해야함
+		public List<Order> findAllWithMemberDelivery() {
+			return em.createQuery(
+					"select o from Order o" +
+							" join fetch o.member m" +
+							" join fetch o.delivery d", Order.class
+			).getResultList();
+		}	
+	이런식으로 레포지토리에 만들어서 저거로 들고오면됨
+		List<Order> all = orderRepository.findAllWithMemberDelivery()
+	이렇게
 	
+	그리고 엔티티를 안거치고 바로 dto로 받을수도있음
+	    return em.createQuery("select new jpabook.jpashop.repository.SimpleOrderQueryDTO(o.id,m.name,o.orderDate,o.status,d.address) " +
+                        " From Order o " +
+                        "join o.member m " +
+                        "join o.delivery d ", SimpleOrderQueryDTO.class)
+                .getResultList();
+    이런식으로 하면 되긴함(이때 dto를 직접받을땐 fetch를 붙일수없기때문에,직접 깡조인해야함)
+	이게 select가 적어서 부하가 적긴한데,쿼리가 ㄹㅇ개쓰레기같다는 단점이 있음,그냥 깡sql짜는거랑 별차이없음
 	
+	그래서 그냥 페치조인만 하는거랑,dto를 사용하는건
+		dto로 직접안받음
+			쿼리가 보기편하고
+			재사용성이 좋음
+			영속엔티티를 직접받기때문에 수정이 가능
+			단,필요없는 컬럼도 다받아야함
+		dto로 직접받음
+			컬럼을 원하는거만 받아서 부하를 줄일수있음
+			영속엔티티가 아닌 dto로 받기때문에,영속성컨텍스트 객체를 받지못해서 수정이 불가능 
+			단,쿼리가 쓰레기같음
+			단,재사용이 거의 불가능
+			단,api스펙에 레포지토리가 종속됨(스펙바뀌면 바로 뜯어고쳐야함)
+	두개는 트레이드오프가 있으니,상황따라 써야함(어지간하면 걍 엔티티로 받는게나아보이긴하다)
+	그냥 기본을 엔티티로 가져가고,정 튜닝해야하면 그거만 수정하자(곱연산에 신경쓰고,합연산은 대충살자..)
 	
-	
-	
-	
+	이런 튜닝된 dto검색쿼리는,따로 하위리포지토리로 빼는게 좋음(수정할일있으면 거기서 수정하는게 나음)
+	리포지토리는 엔티티검색용으로 순수하게 유지하는게 좋음
 	
 	
 	

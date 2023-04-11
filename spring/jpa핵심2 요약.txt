@@ -38,7 +38,7 @@
         return new Result(collect, collect.size());
 	즉,리스트를 바로 던져버리면 안되고,그걸 싸서 던져야 나중에 뭐 추가할때 편함
 
-2.api개발 고급-준비	
+2.api개발 고급-지연로딩과 조회성능 최적화	
 	성능문제가 되는건 어지간하면 조회에서 나옴
 	
 	xToOne(컬렉션이 아닐때)의 성
@@ -100,11 +100,38 @@
 	이런 튜닝된 dto검색쿼리는,따로 하위리포지토리로 빼는게 좋음(수정할일있으면 거기서 수정하는게 나음)
 	리포지토리는 엔티티검색용으로 순수하게 유지하는게 좋음
 	
+3.api개발 고급-컬렉션 조회 최적화
+	oneToMany같은 xToMany(어짜피 매니투매니는 안쓰지만)에서는 1개의 로우에 n개의 로우가 딸려들어오게됨(n개로 뻥튀기됨)
+	즉 이런 컬렉션을 받는애들은 최적화가 빡셈
 	
-	
-	
-	
-	
+	이거도 당연히 dto로 바꾸고,페치조인을 써야하는데,페치조인을 쓰는곳에서 차이가 있음
+	문제는,oneToMany속에 oneToMany이 있든가 이렇게되면,dto로 바꾸는거도 좀 머리아픔
+	왜냐면,dto안에는 엔티티가 있으면 안됨(이러면 해당엔티티는 노출이 안되지만,하위엔티티는 그대로 노출됨)
+	즉 엔티티는 무슨일이있어도 노출하면안됨(값 객체는 ㄱㅊ)
+	그래서 해당dto를 또 만들어서 그걸 참조해야함
+        public OrderDTO(Order o) {
+            orderId = o.getId();
+			...
+            address = o.getDelivery().getAddress();
+            orderItems = o.getOrderItems().stream()
+                    .map(orderItem -> new OrderItemDTO(orderItem))
+                    .collect(Collectors.toList());
+        }	
+	이런식으로 내부에서도 dto를 참조해야함
+	일단 이러면 엔티티노출은 해결되는데,n+1은 페치조인으로 해결해야함
+	이때도 주의사항이 있는데,
+		로우뻥튀기때문에 distinct를 사용해야함(안쓰면 rdb말고 엔티티도 갯수가 늘어남 ㅋㅋ,하이버네이트6부터는 자동으로 붙인다고함)
+		컬렉션여러개를 페치조인할수없음(나가기는 하는데 개판나니까 쓰면안됨,이건 1:n이 2개있는걸 말하는게 아닌,1:n:m같은걸 말하는거)
+		기본적으로 페이징이 불가능
+	하는건 똑같음
+	        return em.createQuery(
+                "select o from Order o " +
+                        "join fetch o.member " +
+                        "join fetch o.delivery d " +
+                        "join fetch o.orderItems oi " +
+                        "join fetch oi.item i", Order.class).getResultList();
+	그냥 패치조인하고,한단계밑도 패치조인하면됨(별칭은 하이버네이트기능,별칭주는건 상관없는데(가급적안하는게 낫다지만),패치조인대상으로 where걸면안됨)
+	단,이거만하면 페이징이 불가능함(컬렉션(일대다) 패치조인시 페이징이 불가능,정확히는 메모리에서 페이징을 해버려서 의미가없고,oom나기쉬움)
 	
 	
 	

@@ -133,8 +133,84 @@
 	그냥 패치조인하고,한단계밑도 패치조인하면됨(별칭은 하이버네이트기능,별칭주는건 상관없는데(가급적안하는게 낫다지만),패치조인대상으로 where걸면안됨)
 	단,이거만하면 페이징이 불가능함(컬렉션(일대다) 패치조인시 페이징이 불가능,정확히는 메모리에서 페이징을 해버려서 의미가없고,oom나기쉬움)
 	
+	이 일대다 컬렉션 페치조인 페이징은,일대다를 페이징하려면,라이브러리단이 아닌,
+	db단에서 로우레벨로 컨트롤해야하는데(리미트갯수 가지고있다가,딱 그 리미트갯수 넘기면 그만둬야하니까,일대다는 값이 몇개나올지몰라서 라이브러리단에선 불가능),
+	각 벤더마다 페이징하는방식이 달라서 불가능함
+	그래서 하이버네이트는 메모리에서 해버리는데,이건 절대 사용하면안됨(oom)
+	즉 일반적인 방식으론 불가능하고,대신
+	그래서 이걸 하려면,
+		ToOne을 전부 페치조인함(얘들은 row수증가가 없어서 상관없음,얘들은 계속 체인타도 상관없음(오더.멤버.딜리버리...))
+		컬렉션은 지연로딩을 사용해서 조회(페치조인을 사용하지않음)
+		지연로딩 성능최적화로,한번에 가져오는 갯수를 정해서,배치로 한번에 긁어옴(이걸 사용하면,이 갯수만큼을 한번에 긁어옴)
+			hibernate.default_batch_fetch_size //글로벌설정
+			@BatchSize //로컬설정
+		그러면 toOne만 페치조인했으니까 페이징붙여도 상관없어짐				
+	즉,데이터가 증가하지않는건 신경쓰지말고 페치조인하고,지연로딩에서 n+1터질걸,한번에 배치로 가져와서 해결하는방식임((n/배치)+1)
+	이떄
+	    public List<OrderDTO> ordersV3_page(
+            @RequestParam(value = "offset", defaultValue = "0") int offset,
+            @RequestParam(value = "limit", defaultValue = "100") int limit
+		) {...}
+	오프셋과 리미트를 넣고
+	    public List<Order> findAllWithMemberDelivery(int offset, int limit) {
+			return em.createQuery(
+					"select o from Order o" +
+							" join fetch o.member m" +
+							" join fetch o.delivery d", Order.class
+			).setFirstResult(offset).setMaxResults(limit).getResultList();
+		}
+	이렇게 평범하게 api로 사용하고,
+	그리고 default_batch_fetch_size: 100를 세팅하거나(이건 기본적으로 넣어두는게좋음), //이값은 100~1000사이 넣어두면됨
+	@BatchSize로 개별적으로 세팅해서 사용
+	이건 엔티티에 적용하면됨
+		@BatchSize(size = 1000)
+		@OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+		private List<OrderItem> orderItems = new ArrayList<>();	
+	이러면(@BatchSize) 쿼리에 식별자(id)를 가지고 in을 사용해서 그 갯수만큼 1차캐시에 넣어둠
+		in(3,4,7,11) 
+	이런식으로 pk인덱스활용해서 떙기는데,
+	이건 페치조인되거나 원래 엔티티의경우 전부 로딩이 되니까,
+	거기에 포린키값이 있으니 그걸가지고 in절을 구성해서 던지는거임(배치갯수만큼)
+	
+	이게 컬렉션페치조인하는거랑 트레이드오프는,
+		쿼리호출수가 약간 증가하지만,db데이터전송량이 감소함(쌤쌤임)
+		페이징이 가능해짐
+	즉,toOne로 쿼리수를 줄이고,컬렉션은 지연로딩시키고 배치를 활용하자..가 답
+	아예 toOne도 다 페치조인빼버려도 되긴하는데..굳이 그럴필요가 없음,일단 쿼리갯수가 증가하긴하니까 넣는게좋음
+	
+	이때 default_batch_fetch_size의 갯수는,100~1000이 추천인데(in쿼리 1000개넘으면 에러띄우는 db종류가있음),
+	어짜피 서버쪽에선 다 로드해야해서 크면클수록 좋지만(총 메모리사용량은 같고,점유시간은 길어짐,쿼리시간이 길어지니),
+	커지면 db에 순간부하가 걸리므로 그거 생각해서 결정해야함(1000 1개,100 10개)
+	애매하면 500잡자 ㅋㅋ
 	
 	
+	
+	jpa에서 dto를 직접조회할때 컬렉션이 있으면,new로 드럽게 짜도,컬렉션을 넣을순없음(생성자로 못넣음)
+	그래서 일단 컬렉션을 제외하고 dto를 생성한뒤,
+		List<OrderQueryDTO> result =em.createQuery("select new jpabook.jpashop.repository.query.OrderQueryDTO(o.id,m.name,o.orderDate,o.status,d.address) from Order o " +
+					" join o.member m" +
+					" join o.delivery d", OrderQueryDTO.class)
+			.getResultList();	
+	foreach같은거로 직접 넣어줘야함
+	    result.forEach(o -> {
+            List<OrderItemQueryDTO> orderItems = findOrderItems(o.getOrderId());
+			o.setOrderItems(orderItems);
+        });
+		private List<OrderItemQueryDTO> findOrderItems(Long orderId) {
+			return em.createQuery("select new jpabook.jpashop.repository.query.OrderItemQueryDTO(oi.order.id,i.name,oi.orderPrice,oi.count)" +
+                        " from OrderItem oi" +
+                        " join oi.item i" +
+                        " where oi.order.id=:orderId", OrderItemQueryDTO.class)
+                .setParameter("orderId", orderId)
+                .getResultList();
+		}
+	이렇게(사실 jpa단일로 이렇게쓰는건 너무 실전성없어보이고,querydsl사용해야댈듯..)
+	
+	이건 루트1번,컬렉션n번 실행하는식인데,
+	toOne들을 먼저 조회하고,toMany를 별도로 처리하는식임
+	이유는,toOne는 row가 증가하지않아서 최적화가 쉬우니까 한번에 묶어서처리하고,
+	toMany는 최적화가 어려우니까 따로 메소드로 빼서 복잡성을 낮춤
+	단 이렇게하면,1+n(컬렉션수)가 되니까 최적화해야함
 	
 	
 	

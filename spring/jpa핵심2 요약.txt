@@ -166,7 +166,7 @@
 		@BatchSize(size = 1000)
 		@OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
 		private List<OrderItem> orderItems = new ArrayList<>();	
-	이러면(@BatchSize) 쿼리에 식별자(id)를 가지고 in을 사용해서 그 갯수만큼 1차캐시에 넣어둠
+	이러면(@BatchSize) 쿼리에 메인테이블의 식별자(id)를 가지고 in을 사용해서 그 갯수만큼 1차캐시에 넣어둠
 		in(3,4,7,11) 
 	이런식으로 pk인덱스활용해서 떙기는데,
 	이건 페치조인되거나 원래 엔티티의경우 전부 로딩이 되니까,
@@ -211,8 +211,56 @@
 	이유는,toOne는 row가 증가하지않아서 최적화가 쉬우니까 한번에 묶어서처리하고,
 	toMany는 최적화가 어려우니까 따로 메소드로 빼서 복잡성을 낮춤
 	단 이렇게하면,1+n(컬렉션수)가 되니까 최적화해야함
+	단 조회하는 메인테이블에서 결과가 1개나올거로 예측되면 걍 이거써도됨,똑같은데 코드는 간단함
 	
+	컬렉션 최적화는,id값들을 스트림으로 맵돌려서 리스트로 받은뒤에,이걸로 in을 사용해서 한번에 가져오는방식임
+        List<Long> orderIds = result.stream()
+                .map(o -> o.getOrderId())
+                .collect(Collectors.toList());
+
+        List<OrderItemQueryDTO> orderItems = em.createQuery("select new jpabook.jpashop.repository.query.OrderItemQueryDTO(oi.order.id,i.name,oi.orderPrice,oi.count)" +
+                        " from OrderItem oi" +
+                        " join oi.item i" +
+                        " where oi.order.id in :orderIds", OrderItemQueryDTO.class)
+                .setParameter("orderIds", orderIds)
+                .getResultList();	
+	이때,원래테이블과 컬렉션을 합쳐야하니까,컬렉션을 람다써서 Map으로 바꾸고
+		Map<Long, List<OrderItemQueryDTO>> orderItemMap = orderItems.stream()
+			.collect(Collectors.groupingBy(orderItemQueryDTO -> orderItemQueryDTO.getOrderId()));
+		
+		result.forEach(o -> o.setOrderItems(orderItemMap.get(o.getOrderId())));
+		return result;
+	맵에서 키로 찾아서 넣은다음에 리턴해주면됨
+	즉,in을 사용해서 한번에 컬렉션을 긁어온뒤에,그걸 메모리에서 그룹바이로 합치고,합쳐진걸 다시 메인리스트에 추가해주는느낌
+	루트를 다 조회한뒤에,해당되는 컬렉션들을 in으로 한번에 긁어와서,메모리에서 나머지를 처리하는느낌임
+	단,이건 in을 사용하니까,데이터가 1000건 넘어가면 에러가남
 	
+	그리고 좀더 최적화되면,메인과 컬렉션을 조인해서 가져올수도있음(이러면 한방쿼리니까)
+	즉,dto에 메인dto와 컬렉션dto의 필드를 전부넣고 조인쳐서 한방에 긁어오고,어플리케이션에서 그룹바이치는거
+	이때는,컬렉션을 걍 조인했기때문에,로우뻥튀기가 일어나기때문에,페이징이 불가능함
+	그리고 만약 메인dto형식대로 맞춰야하면,dto를 파싱해서 메인dto의 형태로 직접 바꿔줘야함
+	솔직히 쓸일없을듯 이거,어짜피 스프링데이터jpa쓰긴하겠지만
+	
+	정리하면,
+		엔티티조회하는거로 우선 접근(DTO필수,페치조인도 필수)
+			toOne는 페치조인사용
+			컬렉션있으면 지연로딩+배치사이즈사용으로 페이징
+		엔티티조회로 해결안되면 dto조회사용
+			메인쿼리가 1건이면 n+1해도 1+1이니까 단순조회
+			메인쿼리가 여러건이면 n+1터지니 in사용 최적화(코드가 많이복잡해짐)
+		이거로도안되면 깡sql
+	순서대로 결정하면됨
+	근데 뭐 dto조회 쓸정도되면 캐시같은거 써서 해결해야해서..사용할일이 있을까
+	그리고 엔티티는 그걸 바로 캐싱(레디스)하면안됨
+	jpa도 영속성컨텍스트를 캐시로 관리하는데,캐시에 값이 있어버리면 둘을 동기화시켜줘야하기때문..
+	그래서 엔티티를 dto로 변환한뒤,dto를 캐싱해야함
+	
+	엔티티 조회가,코드를 거의 건드리지않고 옵션변경으로 성능최적화 시도가 쉬움
+	dto는 이런게 안돼서,코드를 엄청 건드려야함
+	
+	(참고:배치사이즈는 루트엔티티의 pk의 갯수만큼 동작함,하위엔티티의 갯수가 아님,
+	즉 order과 orderItem이 있고 균등분배일때,order이 10개고,orderItem이 1000개,배치사이즈가 10이면,1000개를 다 가져오는거임
+	결국 n+1도,의 n도 루트엔티티의 pk갯수니까..)
 	
 	
 	

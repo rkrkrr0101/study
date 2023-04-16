@@ -35,7 +35,8 @@ jpa
 @BatchSize(size=100) 일대다에서 이번에 조회한게 아닌 다른값도 같이들고와서 n+1을 완화할수있음
 
 
-
+@NoArgsConstructor(access = AccessLevel.PROTECTED) jpa 기본생성자(매개변수 하나도안받는거)생성하는 롬복어노테이션
+@ToString(of={"id","username","age"}) 객체tostring했을때 안에있는 해당필드값을 리턴해줌,여기에 jpa연관관계 객체넣으면 개판나니 주의
 
 
 

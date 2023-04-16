@@ -1,0 +1,21 @@
+1.프로젝트 환경설정
+	스킵
+2.예제도메인모델
+	~xToMany:이쪽이 x,상대쪽이 매니니까 상대쪽이 연관관계주인,즉 mappedby붙여야함(이 엔티티엔 list<객체>추가)
+	~xToOne:이쪽이 x,원투원이면 알아서 정하고,매니투원이면 내가 연관관계주인,즉 @JoinColumn붙여야함(이 엔티티엔 객체 추가)
+	
+	기본생성자 대신 @NoArgsConstructor(access = AccessLevel.PROTECTED) 위에 붙여도됨
+	
+	그리고 양방향연관관계에서 추가시,주인쪽에서 알아서 밑에있는엔티티에 값을 넣어줘야함(해당 메서드를 만들어야함)
+		public void changeTeam(Team team){
+			this.team=team;
+			team.getMembers().add(this);
+		}
+		public Member(String username, int age, Team team) {
+			this.username=username;
+			this.age=age;
+			if (team!=null) {
+				changeTeam(team);
+			}
+		}
+3.공통인터페이스 기능

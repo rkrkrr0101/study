@@ -42,19 +42,97 @@
 	이런식임
 	이게 쿼리메서드임
 	
+
+4.쿼리메소드 기능	
+	쿼리메소드는 
+		메소드 이름을 보고 쿼리를 생성하던가
+		메소드 이름으로 네임드쿼리를 호출하던가
+		@Query로 쿼리를 직접 날리든가
+	하는 기능임,보통 메소드이름으로 쿼리날리는게 매우자주쓰임
 	
+	메소드 이름으로 쿼리 생성하는건,findByUsername(String username) 이런식임
+	즉,findBy(조회) Username(조건) 이런식
+	findByUsernameAndAgeGreaterThen(String username,int age) 이런식으로 뭘할건지적고,조건나열하는거임
+	findBy(액션)Username(조건1,일치)And(연산자)AgeGreaterThen(조건2,age가 입력변수보다 크면)
+	여기서 해당 엔티티의 필드명으로 조건을 거는거임,그래서 엔티티의 필드명이 변경되면,이 이름도 같이변경돼야함(안하면 앱시작시점에러떠서 확인시켜줌)
+	대충
+		findBy //기본조회
+		countBy//카운트,반환타입 long
+		existsBy//존재확인,반환타입 bool
+		deleteBy//삭제
+		findFirst3,findFirst,fintTop//리미트
+	이렇게 있고,동사와 by사이에 설명을 적을수있음(findHelloBy)
+	and,or 걸수있고,조건으로 GreaterThen,between,isnull뭐 등등 다있음 디비에있는거
+	OrderBy도 있고
+	In도있는데,이건 리스트를 넘겨주면 거기 쭉 다 들어감
+	https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#jpa.query-methods.query-creation
+	참고
 	
+	이건 근데,메소드명이 너무길어지니까,조건 2~3개정도까지만 저걸사용하고,아니면 다른방법으로 이름을 바꿔버리는게 나음(네임드쿼리나 @Query같은)
 	
+	jpa의 네임드쿼리는,직접 쿼리를 만들고(jpql) 거기에 이름을 붙여서 사용하는거임
+	이걸 직접쓰진않고,스프링데이터jpa는 이걸 래핑해서,@Query로 제공함(이거도 안씀 대체재있어서)
+	사용하는법은
+		@NamedQuery(
+			name="Member.findByUsername",
+			query = "select m from Member m where m.username=:username"
+		)
+		public class Member {}
+	이걸 엔티티에 붙이고
+	    @Query(name="Member.findByUsername")
+		List<Member> finduser(@Param("username")String username);
+	이렇게 사용하면됨,이때,네임드쿼리의 파라미터는,정확히 @Param으로 명시를 해줘야함
+	그리고,@Query가 없어도,현재 레포지토리에 명시된 엔티티의 현재 메소드의 이름과 같은이름의 네임드쿼리가 있으면,그걸 가져오게됨
+		@NamedQuery(
+			name="Member.finduser",
+			query = "select m from Member m where m.username=:username"
+		)
+		public class Member {}
+	레포지토리에는
+		List<Member> finduser(@Param("username")String username);
+	이렇게만 들어가도 동작함
+	즉 우선순서가
+		네임드쿼리찾기
+		해당메서드명 분리해서 쿼리만들어돌리기(findByUsernameAnd어쩌구저쩌구 이런거)
+	순임
+	근데 그래도 명시해두는게 나을거같긴하다 가독성땜에
+	어짜피 이거 안쓸거지만
 	
+	그냥 레포지토리에서 @Query를 붙여서 사용하는게 좋음
+	    @Query("select m from Member m where m.username=:username and m.age=:age")
+		List<Member> findUser(@Param("username") String username,@Param("age") int age);
+	이렇게
+	이건 애플리케이션 실행단계에서 에러를 띄워줌(스트링이지만 띄워줌)
+	이건 그냥 이름없는 네임드쿼리라고 보면됨
 	
+	즉
+		간단한 정적쿼리->메소드이름파싱
+		복잡한 정적쿼리->@Query
+		동적쿼리->queryDSL
+		dto조회->queryDSL
+	이렇게 선택하면됨
 	
+	그리고 값으로 조회하거나,dto로 조회하려면
+	값은
+	    @Query("select m.username from Member m")
+		List<String> findUsernameList();
+	그냥 이렇게 해당값으로 받으면되고(jpa 복합값타입(@Embedded)도 똑같이받으면됨 이름맞춰서)
 	
+	dto조회시엔
+	    @Query("select new study.datajpa.dto.MemberDto(m.id,m.username,t.name) 
+		  from Member m
+		  join m.team t")
+		List<MemberDto> findMemberDto();
+	이렇게 new써서 패키지 다붙이는걸 또해야함(생성자로 데이터는 맞춰주면됨)
+	이거도 걍 queryDSL로 해결하는게좋음
 	
-	
-	
-	
-	
-	
+	파라미터바인딩은,이름기반과 위치기반이 있는데,위치기반은 나중에 바꾸기 개빡세니까 이름기반으로쓰면됨
+		where m.username=:username
+		@Param("username") String username
+	컬렉션을 파라미터바인딩할때는
+	    @Query("select m from Member m where m.username in :names")
+		List<Member> findByNames(@Param("names") List<String> names);
+	이런식으로 걍 던지면됨,이건 in사용할때 많이 사용함
 	
 	
 	

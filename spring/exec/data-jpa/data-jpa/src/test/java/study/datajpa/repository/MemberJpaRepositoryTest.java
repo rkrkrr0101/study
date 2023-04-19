@@ -10,6 +10,7 @@ import study.datajpa.entity.Member;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -70,5 +71,24 @@ class MemberJpaRepositoryTest {
 
         assertThat(result.get(0).getUsername()).isEqualTo("BBB");
         assertThat(result.get(0).getAge()).isEqualTo(20);
+    }
+    @Test
+    public void paging(){
+        memberJpaRepository.save(new Member("member1",10));
+        memberJpaRepository.save(new Member("member2",10));
+        memberJpaRepository.save(new Member("member3",10));
+        memberJpaRepository.save(new Member("member4",10));
+        memberJpaRepository.save(new Member("member5",10));
+
+
+        List<Member> byPage = memberJpaRepository.findByPage(10, 0, 3);
+        for (Member member : byPage) {
+            System.out.println("member = " + member);
+        }
+        long l = memberJpaRepository.totalCount(10);
+        System.out.println("l = " + l);
+
+        assertThat(byPage.size()).isEqualTo(3);
+        assertThat(l).isEqualTo(5);
     }
 }

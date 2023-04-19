@@ -30,7 +30,7 @@ stream().map(): 이건 람다식임,
 	그리고 또다른장점은,병렬처리가 가능함
 	참고:https://futurecreator.github.io/2018/08/26/java-8-streams/
 		
-		
+Optional<타입>:해당타입이나 널중 하나가 들어있음,즉 널이 가능한 객체임
 		
 		
 		

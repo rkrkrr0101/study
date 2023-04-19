@@ -1,5 +1,7 @@
 package study.datajpa.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -7,6 +9,7 @@ import study.datajpa.dto.MemberDto;
 import study.datajpa.entity.Member;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface MemberRepository extends JpaRepository<Member,Long> {
 
@@ -26,4 +29,15 @@ public interface MemberRepository extends JpaRepository<Member,Long> {
 
     @Query("select m from Member m where m.username in :names")
     List<Member> findByNames(@Param("names") List<String> names);
+
+    List<Member> findListByUsername(String username);
+    Member findMemberByUsername(String username);
+    Optional<Member> findMemberOptionalByUsername(String username);
+
+    Page<Member> findByAge(int age, Pageable pageable);
+
+    @Query(value = "select m from Member m",
+    countQuery = "select count(m.username) from Member m")
+    Page<Member> findAllCountBy(Pageable pageable);
+
 }

@@ -7,6 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 import study.datajpa.entity.Member;
+import study.datajpa.entity.Team;
 
 import java.util.List;
 
@@ -16,9 +17,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @Transactional
-//@Rollback(false)
+@Rollback(false)
 class MemberJpaRepositoryTest {
     @Autowired MemberJpaRepository memberJpaRepository;
+
 
     @Test
     public void testMember(){
@@ -91,4 +93,23 @@ class MemberJpaRepositoryTest {
         assertThat(byPage.size()).isEqualTo(3);
         assertThat(l).isEqualTo(5);
     }
+    @Test
+    public void bulkUpdate(){
+        memberJpaRepository.save(new Member("member1",10));
+        memberJpaRepository.save(new Member("member2",19));
+        memberJpaRepository.save(new Member("member3",20));
+        memberJpaRepository.save(new Member("member4",21));
+        memberJpaRepository.save(new Member("member5",40));
+
+        int resultCount = memberJpaRepository.bulkAgePlus(20);
+
+        List<Member> byGreaterAge = memberJpaRepository.findByGreaterAge(20);
+        for (Member member : byGreaterAge) {
+            System.out.println("member = " + member);
+
+        }
+
+
+    }
+
 }

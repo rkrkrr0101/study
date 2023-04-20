@@ -194,20 +194,74 @@
 	이런식으로 바로 바꿔서 쓰면됨
 	
 	
+	벌크성 수정쿼리를 넣을땐
+	순수 jpa는
+        return em.createQuery("update Member  m set m.age=m.age+1 where m.age>=:age")
+                .setParameter("age", age)
+                .executeUpdate();	
+	이렇게 던지면됨
+	
+	스프링데이터jpa에서는
+	    @Modifying
+		@Query("update Member m set m.age=m.age+1 where m.age>=:age")
+		int bulkAgePlus(@Param("age")int age);
+	이렇게 하면됨
+	여기서 주의할건,
+		@Modifying을 반드시 붙여야함
+		벌크성 쿼리를 날리고나서 영속성 컨텍스트를 초기화해야함(벌크성쿼리는 걍 깡쿼리로 날려서 영속성컨텍스트와 db가 내용물이 달라질수있음,즉 무결성깨짐)
+			방법
+				영속성컨텍스트에 엔티티가 없는상태에서 벌크연산을 먼저 실행
+				@Modifying(clearAutomatically=true) //자동으로 영속성컨텍스트 초기화,즉 em.clear()를 자동으로해줌
+				em.flush() em.clear()	//@PersistentContext로 em불러와서 해야함,어짜피 빈이니까 다 같은 em이니까			 
+	가능하면 영속성컨텍스트에 뭐 안넣고 업데이트부터 하는게 좋긴함(젤 부하가적음)
+	만약 그 이후에 조회가 필요하면,영속성컨텍스트를 날려야함
+	
+	그리고 이거랑 마찬가지로,마이바티스나 깡sql,jdbc템플릿 쓸때도 jpa가 인식못하니까 이거랑 똑같이 em 클리어해줘야함
+	
+	참고:위에거랑은 상관없지만,jpql은 무조건 flush가 먼저 일어나고,jpql이 발생함
 	
 	
+	엔티티그래프(@EntityGraph)는,jpql없이 페치조인을(jpql사용도 가능) 사용하게 해주는 방법임
+	즉 페치조인의 간편버전이라고 보면되고,이건 left Outer Join을 사용함
+	즉
+	    @Query("select m from Member m left join fetch m.team")
+		List<Member> findMemberFetchJoin();
+	이걸
+		@Query("select m from Member m")
+		@EntityGraph(attributePaths = {"team"})
+		List<Member> findMemberFetchJoin();
+	이렇게 바꾸면됨(물론 그냥 페치조인해도됨,간단하면 엔티티그래프 복잡하면 페치조인 쓰면됨)
+	그리고 만약 findAll같은,상위인터페이스꺼를 저렇게쓰고싶으면 오버라이드하면됨
+		@Override
+		@EntityGraph(attributePaths = {"team"})
+		List<Member> findAll();	
+	이렇게
+	이름으로 파싱하는거에도 가능하고
+		@EntityGraph(attributePaths = {"team"})
+		List<Member> findByUsernameAndAgeGreaterThan(String username,int age);
+	다됨
+	네임드쿼리에서는 @NamedEntityGraph로 쓸수있긴한데,네임드쿼리를 안쓰니까..필요하면 찾아보자
 	
 	
+	jpa힌트는,sql힌트가 아닌 하이버네이트 구현체에 쿼리 힌트를 주는거
+	대표적으로 리드온리날릴때 가끔 사용함
+		@QueryHints(value=@QueryHint(name = "org.hibernate.readOnly",value = "true"))
+		Member findReadOnlyByUsername(String username);	
+	이런식으로 사용함
+	이렇게 해버리면,원본 스냅샷을 안떠서,그냥 변경자체가 불가능해짐
+	(예외는 안뜨는데 그냥 바로 준영속이 된다고 보면됨,그래서 메모리에서만 바뀌고 db플러시가 안됨)
+	근데 이걸 쓸일이 있나 싶음,어짜피 메모리 좀 더먹는다고 무슨일잇나싶은데,
+	걍 있다 정도만 알아두자
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	그리고 db락걸땐
+	    @Lock(LockModeType.PESSIMISTIC_WRITE)
+		List<Member> findLockByUsername(String username);
+	이렇게 걸수있음
+	이러면
+	    select m from member m where m.username=? for update
+	이렇게 뒤에 for update를 붙여서,트랜잭션이 끝날때까지 crud가 전부 차단됨
+	이런 lock은,실시간트래픽이 많은 서비스에선 가급적 안쓰는게좋고,써야한다면 낙관적락(Optimistic Lock)을 거는게좋음
+	물론 금전관련이면 비관적락이 나을수도있고
 	
 	
 	

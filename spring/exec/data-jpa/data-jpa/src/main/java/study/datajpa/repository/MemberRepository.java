@@ -1,9 +1,10 @@
 package study.datajpa.repository;
 
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import study.datajpa.dto.MemberDto;
 import study.datajpa.entity.Member;
@@ -15,6 +16,8 @@ public interface MemberRepository extends JpaRepository<Member,Long> {
 
     //List<Member> findByUsername(String username);
     List<Member> findByUsernameAndAgeGreaterThan(String username,int age);
+
+    List<Member> findByAgeGreaterThan(int age);
 
     //@Query(name="Member.findByUsername")
     List<Member> finduser(@Param("username")String username);
@@ -39,5 +42,23 @@ public interface MemberRepository extends JpaRepository<Member,Long> {
     @Query(value = "select m from Member m",
     countQuery = "select count(m.username) from Member m")
     Page<Member> findAllCountBy(Pageable pageable);
+
+    @Modifying(clearAutomatically=true)
+    @Query("update Member m set m.age=m.age+1 where m.age>=:age")
+    int bulkAgePlus(@Param("age")int age);
+
+    @Query("select m from Member m")
+    @EntityGraph(attributePaths = {"team"})
+    List<Member> findMemberFetchJoin();
+
+    @Override
+    @EntityGraph(attributePaths = {"team"})
+    List<Member> findAll();
+
+    @QueryHints(value=@QueryHint(name = "org.hibernate.readOnly",value = "true"))
+    Member findReadOnlyByUsername(String username);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<Member> findLockByUsername(String username);
 
 }

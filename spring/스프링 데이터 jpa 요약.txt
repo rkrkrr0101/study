@@ -266,27 +266,129 @@
 	
 	
 5.확장기능	
+	만약 스프링데이터jpa의 특정 메서드를 직접 구현하고싶으면(jdbc나 마이바티스등을 사용하거나,특히 queryDSL사용할때),
+	인터페이스를 상속받아서 직접 구현하기엔 너무 구현해야하는 기능이 많음
+	그래서 이럴떈,
+		새로 인터페이스를 하나 파고,
+		내가 만들고싶은 기능만 넣어서 메서드 정의를 하고,
+		그걸 구현한 클래스를 만들고(이때 이름은 뒤에 Impl을 꼭 붙여줘야함,이거보고 판단하기때문,MemRepoCustomImpl)
+		메인 인터페이스(스프링데이터jpa인터페이스)에서
+			public interface MemberRepository extends JpaRepository<Member,Long>,MemberRepositoryCustom {
+		이렇게 받으면됨
+	이걸 실행시키면,메인 레포지토리를 참조해서 커스텀기능을 실행시킬수 있게됨	
+		memberRepository.findMemberCustom();
+	즉,논리적으론 메인인터페이스랑,커스텀인터페이스를 합쳐서 메인인터페이스로 쓰는느낌
+	
+	이때 조건은,구현클래스에서 뒤에 Impl을 꼭 붙여야,스프링데이터jpa가 상속받은 인터페이스에서,구현을 어느클래스로 할지 확인하고 그걸 불러올수있음
+	
+	이건 쿼리dsl같은걸 쓸때,밖으로 뽑아내서 커스텀해서,2파일로 나눠서 관리하고싶을때 유용함
+	
+	그리고,항상 커스텀레포지토리가 필요한건 아님,그냥 임의의 레포지토리를 만들고,그걸 그냥 스프링빈으로 등록해서 직접사용해도됨
+	즉,굳이 이걸 합쳐야하는게 아니면 걍 따로써도됨 스프링으루 dl넣어서
+	이떄 선택방법은,핵심 비즈니스로직 레포지토리랑,화면에 맞춘 쿼리나,복잡한 통계성 쿼리같은 이런 완전히 분리하는게 좋은 레포지토리는,
+	걍 스프링빈(@Repository)으로 등록하는게,즉 완전히 2개로 분리하는게 유지보수측면에서 더 나음
+	그냥 적당히 간단하게 뽑아낼수 있는거만 커스텀레포지토리에 사용하는듯,일관성 맞는것들만
+	
+	즉,커맨드와 쿼리의 분리,핵심비즈니스로직과 뷰에맞춘쿼리의 분리 이런걸 잘 생각해야함
 	
 	
+	auditing은,엔티티를 생성,변경할때 무조건 들어가는 등록일,수정일같은걸 공통으로 처리해주는거임
+	즉,실수로 빼먹을수있는걸 방지해줌
+	얘로 보통 처리하는건
+		등록일
+		수정일
+		등록자
+		수정자
+	등록자 수정자는 세션id같은걸 사용
+	
+	깡jpa에선 @MappedSuperclass사용해서 클래스만들고 그거 상속받는식으로 해결할수있음(pdf참고)
+	이때 @PrePersist와 @PreUpdate사용해서 현재시간을 받아서 필드에 넣어주면됨
+	
+	스프링데이터jpa로 사용할땐,스프링부트 설정클래스에
+		@EnableJpaAuditing
+	넣고(메인에 넣으면됨,xxxApplication)
+	엔티티엔
+		@EntityListeners(AuditingEntityListener.class)
+	붙이면됨
+	이떄 사용가능한 어노테이션은
+		@CreatedDate
+		@LastModifiedDate
+		@CreatedBy
+		@LastModifiedBy
+	가 있음
+	사용법은
+		@EntityListeners(AuditingEntityListener.class)
+		@MappedSuperclass
+		@Getter
+		public class BaseEntity {
+			@CreatedDate
+			@Column(updatable = false)
+			private LocalDateTime createDate;
+			@LastModifiedDate
+			private LocalDateTime lastModifiedDate;
+		}
+	이렇게 붙이고
+		public class Member extends BaseEntity {}
+	이렇게 쓰면됨
+	등록자,수정자는
+	    @CreatedBy
+		@Column(updatable = false)
+		private String createdBy;
+		
+		@LastModifiedBy
+		private String lastModifiedBy;
+	이렇게 넣고,스프링부트 메인에서(xxxApplication)
+		@Bean
+		public AuditorAware<String> auditorProvider(){
+			return ()-> Optional.of(UUID.randomUUID().toString());
+		}	
+	람다를 던지고(여기선 랜덤uuid를 던지지만 실제론 세션같은데서 값 받아와서 써야겠지만)
+	저걸 받아다가 넣음(즉,리턴값이 AuditorAware인 빈을 받아다가 사용함)
+	
+	그리고 보통,등록일 수정일 클래스와,등록자 수정자클래스를 따로두고,등록자 클래스가 등록일클래스를 상속(등록일은 무조건들어가니)하는식으로 사용할수있음
 	
 	
+	도메인클래스컨버터는,컨트롤러단에서 바로 엔티티의 id를 받아서 사용하는거임,즉 findById를 거치지않고 바로 사용하려는거
+	이건 그냥
+		@GetMapping("/members/{id}")
+		public String findMember(@PathVariable("id")Member member){
+			return member.getUsername();
+		}
+	이렇게 쓰면됨
+	단,주의해야할건,이렇게쓰면 영속상태가 아니기때문에(트랜잭션이 없으니까),엔티티를 업데이트를 해도 반영되지않음
+	그리고 외부에서 pk를 받아서 조회할일이 많이있지도않고
+	그냥 있다는거만 알고있자
 	
+	스프링데이터에서 제공하는 페이징과 정렬을 mvc에서 사용할때도 편하게 쓸수있는데,컨트롤러에서 Pageable을 받아서 쓸수있음
+	    @GetMapping("/members")
+		public Page<MemberDto> list(Pageable pageable){
+			Page<Member> page = memberRepository.findAll(pageable);
+			Page<MemberDto> map = page.map
+					(m -> new MemberDto(m.getId(), m.getUsername(), m.getTeam().getName()));
+			return map;
+		}	
+	이러면,
+		localhost:8080/members?page=1&size=2&sort=id,desc&sort=username,desc
+	이런식으로 자동으로 받아서 페이징을 할수있음(따로 뭐 안해줘도됨)
+	여기서 사용할수있는건
+		page  //인덱스 0부터 시작
+		size  //기본값 20
+		sort //이건 두개이상넣을수도있음,그러면 앞에서부터 큰단위정렬,즉 우선순위같을때 이후정렬조건으로 들어감,기본값 asc
+	이때 이 기본값을 바꾸고싶으면,
+	글로벌로 바꾸려면,어플리케이션 프로퍼티에(그 맨날 스프링 세팅넣던 그거)
+		spring.data.web.pageable.default-page-size=2
+		spring.data.web.pageable.one-indexed-parameters=true
+	이렇게 바꾸면됨
+	그리고 만약 특정 컨트롤러만 바꾸고싶으면
+		public Page<MemberDto> list(@PageableDefault(size=5,sort = "username") Pageable pageable){
+	이렇게 바꿀수있음
 	
+	이떄 one-indexed-parameters는 조심해야하는게,그냥 들어온값은 -1하고,0보다작으면 0으로바꾸는거밖에 없어서,
+	0으로날리든 1로날리든 값이 똑같고,리턴값에서 메타데이터들이(pageNumber같은) false일때랑 똑같음 ㅋㅋ
+	그래서 조심해서 쓰던가 걍 안쓰는게 나을듯,아니면 프론트에서 잘 처리해주길 바래야할듯
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	그리고 페이징을 하든 뭘하든 엔티티반환은 절대안되니까 dto로 변환해서 줘야함
+	그리고 엔티티는 dto를 의존하면안되지만,dto는 엔티티를 의존해도되니까,그냥 dto에서 엔티티를 받는 생성자만들어두면 편함
 	
 	
 	

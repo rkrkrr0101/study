@@ -240,4 +240,11 @@ public class MemberRepositoryTest {
 
 
     }
+    @Test
+    public void callCustom(){
+        List<Member> memberCustom = memberRepository.findMemberCustom();
+        for (Member member : memberCustom) {
+            System.out.println("member = " + member);
+        }
+    }
 }

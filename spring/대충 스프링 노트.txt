@@ -1,1 +1,4 @@
 보통 .InvalidDefinitionException 뜨면서 no property같은거 뜨면,getter없다는거임,@Getter붙이거나 @Data
+
+무조건 dto반환
+모든로딩전략은 lazy,같이쓸거면 패치조인이나 @EntityGraph

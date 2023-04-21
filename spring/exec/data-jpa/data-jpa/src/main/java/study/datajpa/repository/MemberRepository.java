@@ -12,7 +12,7 @@ import study.datajpa.entity.Member;
 import java.util.List;
 import java.util.Optional;
 
-public interface MemberRepository extends JpaRepository<Member,Long> {
+public interface MemberRepository extends JpaRepository<Member,Long>,MemberRepositoryCustom {
 
     //List<Member> findByUsername(String username);
     List<Member> findByUsernameAndAgeGreaterThan(String username,int age);
@@ -54,7 +54,9 @@ public interface MemberRepository extends JpaRepository<Member,Long> {
     @Override
     @EntityGraph(attributePaths = {"team"})
     List<Member> findAll();
-
+    @Override
+    @EntityGraph(attributePaths = {"team"})
+    Page<Member> findAll(Pageable pageable);
     @QueryHints(value=@QueryHint(name = "org.hibernate.readOnly",value = "true"))
     Member findReadOnlyByUsername(String username);
 

@@ -59,8 +59,8 @@ class MemberTest {
 
         Member findMember = memberRepository.findById(member.getId()).get();
 
-        System.out.println("findMember.getCreateDate() = " + findMember.getCreateDate());
-        System.out.println("findMember.getLastModifiedDate() = " + findMember.getLastModifiedDate());
+        System.out.println("findMember.getCreateDate() = " + findMember.getCreatedBy());
+        System.out.println("findMember.getLastModifiedDate() = " + findMember.getLastModifiedBy());
         System.out.println("findMember.getCreatedBy() = " + findMember.getCreatedBy());
         System.out.println("findMember.getLastModifiedBy() = " + findMember.getLastModifiedBy());
 

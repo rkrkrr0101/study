@@ -394,16 +394,37 @@
 	
 	
 	
+6.스프링데이터 jpa 분석
+	기본적으로 스프링데이터jpa의 구현체는,SimpleJpaRepository임
+	사실 코드보면 그냥 jpa를 래핑해서 사용+스프링 레포지토리(@Repository)를 사용하는거임
+	그래서 하부에서(jpa에서)예외가 나도 스프링예외으로 바꿔서 올라감(즉 jpa를 다른거로 바꿔도 똑같은 예외가 남)
+	
+	그리고 트랜잭셔널을 레포지토리단위로 readOnly=True로 걸어두고(@Transcational(Readonly=True)),
+	업데이트,딜리트하는곳에서만 푸는식으로 해둠(@Transcational)
+	
+	
+	그리고 중요한건,save()메서드는,엔티티가 새거면 persist하고,아니면 merge를 날림
+	여기서 persist와 merge는 코스트차이가 크기때문에(머지는 셀렉트가 한번 나가야함),그래서 최대한 persist로 동작하게 해야함
+	
+	즉 삽입은 persist,변경은 더티체킹으로 해야함
+	
+	이때 스프링데이터jpa가 persist와 merge를 구분하는방법은,pk가 객체면 null,기본타입이면 0이면 새엔티티라고 판단함
+	이게 @GeneratedValue넣어두면 걍 persist해버리는데,문제는 uuid쓰려고 저걸 안넣어두고,직접 삽입할때 생김
+	그러면 select가 한번 나가서 쿼리가 2번나가서 쓸모없는부하가생김
+	
+	그래서 uuid사용할때는,Persistable를 직접 구현해서,저 판단루틴을 덮어씌워서 다른방식으로 바꿔야함
+		public class Item implements Persistable<String> {}
+	이걸상속받고
+		@Override
+		public boolean isNew() {
+			return createDate==null;
+		}	
+	이걸 구현해주면됨 
 	
 	
 	
-	
-	
-	
-	
-	
-	
-	
+7.나머지기능들
+	필요없는건 스킵
 	
 	
 	

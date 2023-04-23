@@ -425,52 +425,38 @@
 	
 7.나머지기능들
 	필요없는건 스킵
+	크리테리아나 쿼리바이나 프로젝션이나 다 안쓰니까 대충 보기만하자(다 쿼리dsl로 해결되니까)
+	
+	프로젝션은 그냥 엔티티전체가 아니라 간단히 조회하고싶을때 쓸수있긴함
+	즉 단순하면 사용할수있음
+	쓰는거도 별로안어려우니까(그냥 인터페이스로 필드명게터만 만들고,그거 레포지토리인터페이스의 메서드 리턴값에 넣으면됨) 필요해지면 볼만한듯?
+		Public interface UsernameOnly{
+			String getUsername();
+		}
+	사용
+		List<UsernameOnly> abc= findProjectionsByUsername(@Param("username") String username);
+	장점으로,특정 필드만 따로 가져올수있다는거와,뒤의 조건들도 다같이 적용된다는게 장점
+	그리고
+		Public interface UsernameOnly{
+			@Value("#{target.usetname + ' '+ target.age}")
+			String getUsername();
+		}
+	이런식으로 가져온뒤에 로직을 거칠수도있음(오픈 프로젝션),근데 이러면 그냥 전체다 가져와버려서,select절 최적화가 안됨(jpql최적화)
+	그래서 주의해야함
+	
+	그리고 Dto를 만들고,dto생성자의 매개변수 이름을 엔티티 필드와 똑같이 맞춰주면,그걸 가져와서 매칭도 됨(List<UsernameOnlyDto> abc)
+	
+	얘는 조인데이터를 사용하지않고,루트데이터만 사용할거면(연관관계 안건드릴거면)괜찮을거같긴함
+	
+	근데 그냥 스펙통일시키는게 나을거같긴하다 queryDSL쓸거면
+	어짜피 복잡해지면 그냥 쿼리dsl쓸텐데
+	
+	jpa에서도 깡쿼리를 날릴수있는데
+		@Query(value="select * from member where username=?",nativeQuery=true)
+		Member findabcd(String username)
+	이런식으로 날리면됨
+	가능하면 사용하지않는게 좋고(애플리케이션 로딩시점에 검증 불가능함),차라리 커스텀리포지터리나 따로 스프링빈으로 떼서 jdbc템플릿이나 마이바티스쓰는게나음
 	
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+끝

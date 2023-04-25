@@ -1,0 +1,216 @@
+1.프로젝트 환경설정
+	
+	디펜던시에
+		implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
+		annotationProcessor "com.querydsl:querydsl-apt:${dependencyManagement.importedProperties['querydsl.version']}:jakarta"
+		annotationProcessor "jakarta.annotation:jakarta.annotation-api"
+		annotationProcessor"jakarta.persistence:jakarta.persistence-api"
+	추가후 리로드(자료에있는거 구버전이니까 그냥 이거만하면됨 3.0이상이면)
+	
+	그리고 그래들의 빌드-클린 이후 other-compileJava하거나(이러면 빌드밑에 생성),걍 메인파일실행시키면(이러면 out밑에 생성)q파일생성됨
+	
+	그리고 제너레이트된 q파일같은건,깃에서 관리되면 안됨,그러니까 빌드나 out은 통째로 이그노어걸어버리면됨
+	
+	그리고
+		JPAQueryFactory query=new JPAQueryFactory(em);
+		QHello qHello=new QHello("h");
+		Hello hello1 = query.selectFrom(qHello).fetchOne();
+	이렇게 날려봐서 테스트해보면됨(만든 엔티티앞에 Q붙이면됨,쿼리라는뜻)
+	
+	
+2.기본문법	
+	기본적으로 jpql로 짜면
+	    String qlString = "select m from Member m " +
+            "where m.username=:username";
+        Member singleResult = em.createQuery(qlString, Member.class)
+                .setParameter("username", "member1")
+                .getSingleResult();
+	이렇게되는게
+	쿼리dsl은
+	    JPAQueryFactory queryFactory = new JPAQueryFactory(em);
+        QMember m=new QMember("m");
+
+        Member member1 = queryFactory
+                .select(m)
+                .from(m)
+                .where(m.username.eq("member1"))
+                .fetchOne();
+	이런식으로 됨
+	여기서 queryFactory는,em있는곳으로 빼버려도되고,
+		@PersistenceContext
+		EntityManager em;
+		JPAQueryFactory queryFactory ;
+		
+		@BeforeEach
+		public void before(){
+			queryFactory = new JPAQueryFactory(em);	
+			...
+		}
+	필드에서 바로 em을 받진못하는데,저시점에서는 em이 널이기때문,그래서 비포어이치쯤에서 받아야함
+	QMember도 같은테이블을 2번이상 조인하지않으려면 빼버려도되고(만약 한번에 2번이상 접근해야하면(같은테이블을 조인해야할때),위처럼 변수 하나 더만들면됨) 
+		QMember m=QMember.member;
+	스태틱임포트해버려도됨(이러면 그냥 member가져다쓰면됨)
+		QMember.member 잡고 알트엔터로 스태틱임포트 후에 member사용
+	이렇게하면됨
+	
+	그리고 결국 쿼리dsl도 jpql의 빌더역할인데,기본세팅으로는 jpql쿼리는 안보이는데 보이게하려면 
+		jpa.properties.hibernate.use_sql_comments=true
+	이거 어플리케이션 프로퍼티에 넣으면됨
+	
+	where에서 앤드는
+		List<Member> member1 = queryFactory
+			.selectFrom(member)
+			.where(member.username.eq("member1").and(member.age.eq(10)))
+			.fetch();
+	이렇게 넣으면되고(이렇게 체인을 and or 계속 걸어가면됨)
+	
+	얘는 jpql이 제공하는거 다 제공하고
+	대충
+		eq //==
+		ne //!=
+		eq().not() // !=
+		
+		isNotNull() //해당필드가 낫널
+		
+		in() //in절
+		notIn() //not in
+		between(1,3) //두개 사이
+		
+		goe() //>=  그레이트 or 이퀄
+		gt() // >   그레이트
+		loe() //<=  로우 or 이퀄
+		lt()  //<   로우
+		
+		like("ab%") //라이크검색
+		contains("abc")// %abc% 검색
+		startsWith("abc") // abc% 검색
+	있을거같다 하고 인텔리센스쓰면 다 있음
+	
+	그리고 and는
+		Member member11 = queryFactory
+			.selectFrom(member)
+			.where(
+					member.username.eq("member1")
+					,(member.age.eq(10))
+			)
+			.fetchOne();
+	이렇게 and안쓰고 쉼표로 가져갈수도있음(이렇게쓰면 중간에 null이있으면 null을 무시해서 동적쿼리만들기 좋음)
+	
+	그리고 결과는
+		fetch() //리스트로 반환,없으면 빈리스트
+		fetchOne()//단건조회,없으면 null 2개이상이면 예외
+		fetchFirst()//결과중 첫번째만 가져옴,limit(1).fetchOne()와 같음
+		fetchResults()//페이징정보포함,토탈카운트 추가실행함
+		fetchCount()//카운트쿼리로 변경해서 카운트수 조회
+	여기서 fetchResults와 fetchCount는 deprecated 됨,대신 fetch().size()로 토탈카운트 받아와야함
+	
+	정렬은
+		List<Member> fetch = queryFactory.selectFrom(member)
+			.where(member.age.eq(100))
+			.orderBy(member.age.desc(), member.username.asc().nullsLast())
+			.fetch();
+	그냥 이렇게 orderBy안에 순서대로 넣으면되고,nullLast나 nullFirst로 널의 위치지정도 해줄수있음
+	
+	페이징은
+		List<Member> fetch = queryFactory
+			.selectFrom(member)
+			.orderBy(member.username.desc())
+			.offset(1)
+			.limit(2)
+			.fetch();
+	그냥 offset과 limit쓰면됨,여기서 offset은 0번부터 시작
+	그리고 토탈카운트는,fetchResults가 죽어버렸기때문에 따로날려야함
+	
+	집합은
+        List<Tuple> result = queryFactory.select(
+                    member.count(),
+                    member.age.sum(),
+                    member.age.avg(),
+                    member.age.max()
+                )
+                .from(member)
+                .fetch();	
+	이렇게 받아서,튜플에서 값을 꺼내주면됨(기본적으로 튜플로 들어옴,단일타입이 아닌 여러타입이 같이들어오는거까지 커버하려고 이러는거)
+        Tuple tuple = result.get(0);
+        Long count = tuple.get(member.count());	
+	이렇게 해당구문을 뽑아주면됨(이 튜플은 쿼리dsl꺼임,자바꺼아니라서 저게되는거)
+	그리고 보통은 튜플로 안뽑고 dto로 뽑게됨
+	그룹바이는
+		List<Tuple> result = queryFactory.select(team.name, member.age.avg())
+			.from(member)
+			.join(member.team, team)
+			.groupBy(team.name)
+			.fetch();
+	이런식으로 사용하면됨(이건 팀이름으로 묶고,거기서 나이의평균구한거)
+	having도 똑같이하면됨
+		.groupBy(team.age)
+		.having(team.age.gt(50))
+	이렇게
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

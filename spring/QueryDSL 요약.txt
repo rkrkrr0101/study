@@ -147,60 +147,379 @@
 		.having(team.age.gt(50))
 	이렇게
 	
+	조인은,첫파라미터에 조인대상을 지정하고,두번째에 별칭으로 사용할 q타입을 지정하면됨
+		join(member.team,QTeam.team)
+	이렇게 이 두개가 매칭되면 조인되는거임
+	그리고
+		leftJoin(member.team,QTeam.team)
+	이렇게 다 있음
+	
+	그리고 연관관계가 없어도 막조인을 할수있음(세타조인)
+        List<Member> result = queryFactory.select(member)
+                .from(member, team)
+                .where(member.username.eq(team.name))
+                .fetch();
+	그냥 이렇게 from으로 2개받아서 where걸어버리면됨
+	이 세타조인에서 주의할건,외부조인이 불가능함,단 on을 사용하면 외부조인이 가능해짐
+	
+	on을 사용하면,조인대상을 필터링하거나,연관관계없는 엔티티외부를 조인할수있음
+	1번은 연관관계가 있는대상에서 특정대상만 필터링(teamA만 필터링한다던가)할수있고
+	2번은 막조인을 할때 두 엔티티의 필드를 묶어서 조인칠수있는거(이건 필요할때 자주사용)
+	
+	1번은
+		List<Tuple> result = queryFactory.select(member, team)
+			.from(member)
+			.leftJoin(member.team, team)
+			.on(team.name.eq("TeamA"))
+			.fetch();
+	이렇게 받으면,멤버는 전체출력,팀은 TeamA인애들만 멤버에 붙고,아닌애들은 null붙음 (레프트아우터조인이니)
+		tuple = [Member(id=1, username=member1, age=10), Team(id=1, name=TeamA)]
+		tuple = [Member(id=2, username=member2, age=20), Team(id=1, name=TeamA)]
+		tuple = [Member(id=3, username=member3, age=30), null]
+		tuple = [Member(id=4, username=member4, age=40), null]	
+	이렇게 나옴
+	물론 그냥 leftJoin을 join으로 바꾸면 내부조인이니까 
+		tuple = [Member(id=1, username=member1, age=10), Team(id=1, name=TeamA)]
+		tuple = [Member(id=2, username=member2, age=20), Team(id=1, name=TeamA)]	
+	이렇게 나옴
+	근데 이럴거면 걍 where치는게 편하니까,그냥 where치자(내부조인에서 on은 where와 같음)
+		.on(team.name.eq("TeamA")) == .where(team.name.eq("TeamA"))
+	즉,레프트조인은 어찌됐든 왼쪽건 다가져와야하니까 where과 on이 다른데(오른쪽은 걍 널로 넣어도 왼쪽은 있어야하니)
+	이너조인은 걍 줄 자체가 사라지니까 where와 on이 같은거
+	
+	연관관계 없는 엔티티 외부조인은,그냥 깡필드 2개로 붙이는거임 포린키로 붙이는게 아니라
+        List<Tuple> result = queryFactory.select(member, team)
+                .from(member)
+                .leftJoin(team).on(member.username.eq(team.name))
+                .fetch();	
+	이런식으로,그래서 leftJoin에 member.team이 아닌,걍 team이 들어간거임,막조인이라 같은급으로 맞춰주는거(하위로 넣어버리면 포린키써버리니)
+	즉
+		.leftJoin(member.team, team) //일반 조인
+		.leftJoin(team).on(조건) //막조인
+	이렇게
+	결과는
+		tuple = [Member(id=1, username=member1, age=10), null]
+		tuple = [Member(id=2, username=member2, age=20), null]
+		tuple = [Member(id=3, username=member3, age=30), null]
+		tuple = [Member(id=4, username=member4, age=40), null]
+		tuple = [Member(id=5, username=TeamA, age=0), Team(id=1, name=TeamA)]
+		tuple = [Member(id=6, username=TeamB, age=0), Team(id=2, name=TeamB)]
+	이렇게나옴,즉 깡조인도 레프트조인이 되는거
 	
 	
+	페치조인은 그냥
+		Member findMember= queryFactory.selectFrom(member)
+			.join(member.team,team).fetchJoin()
+			.where(member.username.eq("member1"))
+			.fetchOne();
+	이렇게 .join(member.team,team).fetchJoin() 이거만 넣어주면됨
+	즉 전체조회하는데 패치조인하고싶으면
+        List<Member> fetchMember = queryFactory.selectFrom(member)
+                .join(member.team, team).fetchJoin()
+                .fetch();
+	이렇게하면됨
+	
+	페치조인 테스트할때(로딩된앤지 아닌지)
+		@PersistenceUnit
+		EntityManagerFactory emf;
+	이거 필드로 받아두고(em이랑 같이두면됨 같은레벨로)
+		boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+		Assertions.assertThat(loaded).isTrue();
+	로 테스트가능
+	
+	서브쿼리는 select와 where절에서 사용가능함(아직 FROM은 hibernate에선 이젠 지원하는데,querydsl은 아직 지원하지않음)
+	사용법은
+        QMember memberSub = new QMember("memberSub");
+        List<Member> result = queryFactory.selectFrom(member)
+                .where(member.age.eq(
+                        JPAExpressions
+                                .select(memberSub.age.max())
+                                .from(memberSub)
+                ))
+                .fetch();	
+	이렇게 where조건 내부에 JPAExpressions에다 .찍고 쿼리작성하면됨
+	즉
+		.where(member.age.eq(
+			JPAExpressions
+					.select(memberSub.age.max())
+					.from(memberSub)
+
+		))
+	여기서 eq대상이 내부의 select의 단일결과값임
+	다른거로
+		.where(member.age.goe(
+			JPAExpressions
+					.select(memberSub.age.avg())
+					.from(memberSub)
+
+		))
+	이거도 뭐 avg뽑는거만 다르고 똑같음,단지 메인쿼리의 where조건이 >=일뿐
+	in도
+		List<Member> result = queryFactory.selectFrom(member)
+			.where(member.age.in(
+					JPAExpressions
+							.select(memberSub.age)
+							.from(memberSub)
+							.where(memberSub.age.gt(10))
+
+			))
+			.fetch();
+	이렇게하면됨
+	select절 조인은
+		List<Tuple> fetch = queryFactory
+			.select(member.username,
+					JPAExpressions.select(memberSub.age.avg())
+							.from(memberSub)
+			)
+			.from(member)
+			.fetch();
+	이렇게 select에 넣어서 하면됨
+	이때 외부랑 내부가 같은 테이블접근할땐,둘의 별칭이 달라야하니,Q객체를 새로 만들어서 별칭따로붙여주고 그거사용하면됨 서브쿼리에서는
+	
+	from서브쿼리는 아직 지원하지않는데,대체로는
+		서브쿼리를 join으로 변경(어지간하면 되는데,안될때도있음)
+		애플리케이션에서 쿼리를 2번으로 분리해서 실행
+		깡sql을 사용
+	그리고 from절에 서브쿼리사용하면,보통 화면에 맞추려는상황이 많아서,최대한 그런걸 줄이고,재사용성있게 가져가는게 좋음
+	즉 db쿼리는 데이터를 퍼올리는거만 집중하고,어떻게 데이터를 싸게가져올까를 고민해야지,거기서 막 모양까지 맞춰서 쿼리하려는건 안좋음
 	
 	
+	case도 select나 where에서 지원함(특정대상을 바꾸는거)
+	셀렉트절은
+		List<String> fetch = queryFactory.select(member.age
+					.when(10).then("열살")
+					.when(20).then("스무살")
+					.otherwise("기타"))
+			.from(member)
+			.fetch();
+	간단히는 이렇게쓰면되고
+	좀 복잡한건
+		List<String> res = queryFactory
+			.select(new CaseBuilder()
+					.when(member.age.between(0, 20)).then("0~20살")
+					.when(member.age.between(21, 30)).then("21~30살")
+					.otherwise("기타")
+			)
+			.from(member)
+			.fetch();
+	이런식으로 CaseBuilder사용해서해야함
+	가능하면 이런건 쿼리로 쓰지말고,애플리케이션단에서 하는게 나음
+	
+	그리고 orderBy에서 임의의순서로 회원을 출력하고싶을때,해당조건을 만들어서
+		NumberExpression<Integer> rankPath =newCaseBuilder()
+			.when(member.age.between(0,20)).then(2)
+			.when(member.age.between(21,30)).then(1)
+			.otherwise(3);
+		queryFactory.select(member.username,member.age,rankPath)
+		.from(member)
+		.orderBy(rankPath.desc())
+		.fetch()
+	이런식으로 임의의 조건으로 정렬할수있음(셀렉트로 해당값을 만든다음에,그거가지고 정렬하는방식인듯)
 	
 	
+	상수나 문자를 더해야하면
+        List<Tuple> result = queryFactory
+                .select(member.username, Expressions.constant("A"))
+                .from(member)
+                .fetch();	
+	이렇게 해당 상수를 모든로우에 추가할수있음
+		Expressions.constant("A")
+	그리고 이건 jpql에선 안나가고,그냥 결과값에만 추가됨(어플리케이션단에서 추가함)
+	
+	문자더하기는
+        List<String> result = queryFactory
+                .select(member.username.concat("_").concat(member.age.stringValue()))
+                .from(member)
+                .where(member.username.eq("member1"))
+                .fetch();	
+	이렇게 concat쓰면되는데,두개의 타입이 다를경우(int와 스트링) 안더해지니까,전부 스트링으로 바꿔서 더해줘야함
+	그래서 스트링이 아닌거에 .stringValue()를 붙여주면됨
+	이 stringValue는 사용할일이 많으니까 알아두자,enum을 처리할때도 자주 사용함
 	
 	
+3.중급문법	
+	프로젝션은 select대상을 지정하는거 
+        List<String> fetch = queryFactory
+                .select(member.username)
+                .from(member)
+                .fetch();
+	이런거
+	이떄 대상이 하나면,타입을 명확하게 지정할수있고(member도 대상이 하나니까 단일프로젝션임.select(member) 이런거),
+	둘 이상이면 튜플이나 DTO로 조회해야함
+		List<Tuple> fetch = queryFactory
+			.select(member.username, member.age)
+			.from(member)
+			.fetch();
+	여기서 튜플은,querydsl의 다중타입의 기본값임
+	튜플에서 값꺼낼떈
+		tuple.get(member.age)
+	이런식으로 쿼리에서 날렷던거 그대로 뽑으면됨
+	
+	그리고 튜플은 querydsl꺼라서,레포지토리안에서는 사용해도되는데,밖에다 던질땐 까서 dto로 던져주는게좋음(의존성 차단)
+	
+	querydsl에서 dto로 직접 받을떈,그 깡jpa에서 그 개판짓거리 안해도됨(new로 패키지명 다붙여버리는거)
+	방법이 3개가 있음
+		프로퍼티접근(setter)
+		필드직접접근(필드주입)
+		생성자 사용
+		
+	프로퍼티접근은
+		List<MemberDto> fetch = queryFactory
+			.select(Projections.bean(MemberDto.class,
+					member.username, member.age))
+			.from(member)
+			.fetch();
+	이렇게 Projections.bean(dto클래스,가져올값1,가져올값2...)
+	이렇게 하면됨,이떄 주의점은,dto클래스에 기본생성자(@NoArgsConstructor)를 달아둬야함
+	
+	필드접근은
+        List<MemberDto> result = queryFactory
+                .select(Projections.fields(MemberDto.class,
+                        member.username, member.age))
+                .from(member)
+                .fetch();	
+	이렇게 Projections.fields()사용하면됨,얘는 게터세터없어도됨,단 양쪽간의 필드명이 같아야함,다르면 값을 못들고옴
+	이럴땐
+		List<UserDto> result = queryFactory
+			.select(Projections.fields(UserDto.class,
+					member.username.as("name"), member.age))
+			.from(member)
+			.fetch();
+	이렇게 as붙여서 맞춰주면됨
+	서브쿼리같은경우엔
+        QMember memberSub = new QMember("memberSub");
+        List<UserDto> result = queryFactory
+                .select(Projections.fields(UserDto.class,
+                        member.username.as("name"),
+                        ExpressionUtils.as(JPAExpressions
+                                .select(memberSub.age.max())
+                                .from(memberSub),"age")
+                        ))
+                .from(member)
+                .fetch();	
+	이런식으로 붙이면됨,Projections.fields 안에서 ExpressionUtils사용해서 붙이고,마지막에 해당값의 별칭 붙여주면됨("age")
+	
+	생성자접근은
+	        List<MemberDto> result = queryFactory
+                .select(Projections.constructor(MemberDto.class,
+                        member.username, member.age))
+                .from(member)
+                .fetch();
+	이렇게 Projections.constructor()사용하면됨,주의점은 타입과순서를 맞춰야함,이름은 안맞춰도됨(as를 이름맞춘다고 할필요없음 )
+	
+	그리고 제일 깔끔한 @QueryProjection이 있음
+	이건 dto도 q파일로 생성시켜서 사용하는방식임
+	사용할땐
+	    @QueryProjection
+		public MemberDto(String username, int age) {}
+	이렇게 생성자에 어노테이션붙이면됨
+	그리고
+		List<MemberDto> fetch = queryFactory
+			.select(new QMemberDto(member.username, member.age))
+			.from(member)
+			.fetch();
+	이렇게 사용하면됨
+	이건 틀리면 컴파일시점에 에러띄워주고,코드도 깔끔함
+	
+	생성자랑 차이는,
+	생성자는
+		일단 런타임오류고,
+		코드가 많아지면 지저분해짐
+	쿼리프로젝션은
+		컴파일오류고
+		알트p로 넣어야할거 바로 볼수있음
+		단,q파일을 생성해야함(요즘은 자동으로되는듯)
+		단,dto가 queryDSL을 의존해야함(여러레이어에 걸쳐서 돌아다니는데,걔가 queryDSL을 의존하니까 찝찝해짐)
+	
+	그리고 distinct는 그냥 select().distinct()하면됨
 	
 	
+	동적쿼리는 BooleanBuilder과 where다중파라미터 2가지 방법으로 처리할수있음
+	불린빌더는
+        BooleanBuilder builder=new BooleanBuilder();
+        if (usernameCond!=null){
+            builder.and(member.username.eq(usernameCond));
+        }
+        if(ageCond!=null){
+            builder.and(member.age.eq(ageCond));
+        }
+        return queryFactory
+                .selectFrom(member)
+                .where(builder)
+                .fetch();	
+	이렇게 BooleanBuilder선언해서,조건맞춰서 동적쿼리조건 생성후에,그냥 queryFactory에 where에 박아넣으면 해결임
+	즉,null이면 사용하지않고,널이 아니면 그걸 사용해야하는 동적쿼리는 이렇게 해결가능
+	그리고 필수다 싶으면
+		new BooleanBuilder(member.userStock.eq(stockCond));
+	이렇게 생성자로 넣어버릴수도있음(앞에서 널이 확실히 아니게 막아줘야함)
+	그리고 이 빌더끼리도 여러개만들어서 and,or로 조립할수있음
+	
+	그리고 where다중파라미터가 있는데,이게 더 많이쓰임
+	이건 where안에 null이 있으면 걍 무시하는특성을 이용한거
+	    private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+        return queryFactory
+                .selectFrom(member)
+                .where(usernameEq(usernameCond),ageEq(ageCond))
+                .fetch();
+		}
+	    private Predicate usernameEq(String usernameCond) {
+			if(usernameCond==null) {
+				return null;
+			}
+			return member.username.eq(usernameCond);
+		}
+	이렇게 널이면 널반환,아니면 값반환을 넣어두고 그대로쓰면됨
+	이게 메서드명만 잘지어두면 깔끔해서 사용하기좋음
+	그리고 메서드로 빠졌기때문에,조합이 가능함(이떈 BooleanExpression로 바꿔줘야함,어짜피 같은인터페이스라서 호환가능)
+		private BooleanExpression allEq(String usernameCond,Integer ageCond ){
+			return usernameEq(usernameCond).and(ageEq(ageCond));
+		}	
+	이렇게 조립해서 그냥
+		.where(allEq(usernameCond,ageCond))
+	이렇게 사용가능함(널처리는 신경써줘야함)
+	그래서 특정 쿼리조건별로 묶어서 재사용가능한 조건메서드를 만들수있음
 	
 	
+	벌크쿼리(배치쿼리)는,
+		long count = queryFactory
+			.update(member)
+			.set(member.username, "비회원")
+			.where(member.age.lt(28))
+			.execute();
+	이런식으로 날리면됨(리턴값은 영향을 받은 로우 수 )
+	기존값 기준으로 변경할땐
+        long count = queryFactory
+                .update(member)
+                .set(member.age, member.age.add(1))
+                .where(member.age.lt(28))
+                .execute();
+	이렇게하면됨
+	벌크연산시 주의점은,이건 깡쿼리를 날리는거라서,영속성컨텍스트에 변경을 주지않아서,영속성컨텍스트의 값과 db의 값이 달라질수있음
+	그래서 이거하고나서 em.flush,em.clear를 해줘야함,아니면 이거를 마지막으로 하고 끝내던가
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	sql펑션을 사용할떈,
+        List<String> result = queryFactory
+                .select(
+                        Expressions.stringTemplate("function('replace',{0},{1},{2})",
+                                member.username, "member", "m"))
+                .from(member)
+                .fetch();	
+	이렇게 사용할수있음,근데 스트링기반이라서,가능하면 사용하지않고 해당기능이 queryDSL에 내장돼있는게 많아서,어지간하면 그런거사용하는게 좋음
+		List<String> fetch = queryFactory
+			.select(member.username)
+			.from(member)
+			.where(member.username.eq(
+					Expressions.stringTemplate("function('lower',{0}) ", member.username)))
+			.fetch();
+	이런 lower같은경우에도
+	         queryFactory
+                .select(member.username)
+                .from(member)
+                .where(member.username.eq(member.username.lower()))
+                .fetch();
+	이렇게 있음(보통 안시표준같은경우 가지고있음)
+	그리고 하이버네이트 방언 기반이라,거기 등록돼있는 함수만 사용가능함(아니면 그 jpa기본편에서처럼 상속받아서 추가하던가)
 	
 	
 	

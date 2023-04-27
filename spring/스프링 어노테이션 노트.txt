@@ -38,8 +38,12 @@ jpa
 @NoArgsConstructor(access = AccessLevel.PROTECTED) jpa 기본생성자(매개변수 하나도안받는거)생성하는 롬복어노테이션
 @ToString(of={"id","username","age"}) 객체tostring했을때 안에있는 해당필드값을 리턴해줌,여기에 jpa연관관계 객체넣으면 개판나니 주의
 
+@PersistenceUnit EntityManagerFactory emf;->
+	boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+	이거로 현재 저게 초기화된건지 아닌지(페치조인테스트) 알수있음
 
 
+@QueryProjection queryDsl에서 dto의 생성자에 붙여서 dto q파일을 만들어서,select절에서 가져다쓸수있음(깔끔하게 dto로반환가능) 
 
 
 

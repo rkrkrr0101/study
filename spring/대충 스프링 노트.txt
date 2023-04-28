@@ -2,3 +2,18 @@
 
 무조건 dto반환
 모든로딩전략은 lazy,같이쓸거면 패치조인이나 @EntityGraph
+
+assertThat().extracting 이거로 해당 클래스배열의 필드값을 명시해서 그값만가지고 테스트할수있음,containsExactly()이런 완전일치같은거랑 잘쓰임
+	ex) assertThat(res).extracting("name").containsExactly("abc","bcd")
+
+
+스프링에서 프로파일 나눌땐
+	spring.profiles.active=test //테스트에 적고
+	spring.profiles.active=local //메인에 적고
+이렇게 프로퍼티에 적고()
+	@Profile("local")
+	public class InitMember {
+	}
+이렇게 붙이면됨
+
+PostConstruct와 @Transactional을 같이불일수없음,같이쓰고싶으면 트랜잭션을 밖으로 메서드로 뽑고,그걸 불러오는건 허용됨

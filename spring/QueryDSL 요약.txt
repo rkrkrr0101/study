@@ -522,6 +522,83 @@
 	그리고 하이버네이트 방언 기반이라,거기 등록돼있는 함수만 사용가능함(아니면 그 jpa기본편에서처럼 상속받아서 추가하던가)
 	
 	
+4.순수jpa와 queryDSL
+	di는
+		private final EntityManager em;
+		private final JPAQueryFactory qf;
+
+		public MemberJpaRepository(EntityManager em) {
+			this.em = em;
+			this.qf = new JPAQueryFactory(em);
+		}
+	이런식으로 하면됨(RequiredArgsConstructor는 em을 qf에 박아줘야해서 안먹힘,구버전 인텔리제이에선 생성자 파라미터em에 에러뜨는데 동작함)
+	@RequiredArgsConstructor쓰고싶으면,쟤를 스프링빈으로 등록해버리면됨
+		@Bean
+		JPAQueryFactory jpaQueryFactory(EntityManager em){
+			return new JPAQueryFactory(em);
+		}
+	그리고 생성자 지워버리고 @RequiredArgsConstructor붙이고
+		private final EntityManager em;
+		private final JPAQueryFactory qf;
+	이렇게 선언해주면 di해줌
+	
+	
+	queryDSL쓰면 확실히 깡jpa보단 쿼리도그렇고 훨나음
+		select m from Member m where username=:username
+	이게
+		qf.selectFrom(member)
+					.where(member.username.eq(username))
+					.fetch();
+	이렇게 바뀌니까
+	
+	그리고 동시성문제는,qf는 모든걸 em에 의존하는데,
+	em은 트랜잭션단위로 분리해서 동작시키게 만들어져있어서 ㄱㅊ(스프링은 em을 프록시를 주입해서 싱글톤으로 한군데서 처리하게해둠)
+	
+	그리고 Q객체가 없으면,한번 해당라인 null처리한번하고 실행한번시키고나면 생김
+	
+	그리고 동적쿼리짤때,null로 들어올수도 있지만,""으로 들어올수도있어서 이것도 null체크해줘야하는데
+		StringUtils.hasText(cond.getTeamName())
+	이거사용하면됨(이때 쿼리dsl이 아닌,스프링프레임워크꺼 써야함,같은이름 많으니까 주의)
+        if(StringUtils.hasText(cond.getTeamName())){
+            builder.and((team.name.eq(cond.getTeamName())));
+        }	
+	이런식으로 빌더에 추가해가면서 다하고나서 where에 넣으면됨 빌더방식은
+        return qf.select(new QMemberTeamDto(
+                    member.id.as("memberId"), member.username,member.age,
+                        team.id.as("teamId"), team.name.as("teamName")
+                ))
+                .from(member)
+                .leftJoin(member.team, team)
+                .where(builder)
+                .fetch();	
+	이게 dto로 받아서,where에 동적쿼리조건 넣은거
+	
+	그리고 주의해야할건,조건이 다빠져버리면 전체조회를 해버리기때문에 조심해야함(기본조건이나 리미트를 걸어둬야함),즉 페이징을 같이해줘야함
+	
+	where로 할떈,해당메서드를 만들고(BooleanExpression이 출력으로 나오면됨,기본적으로 뽑으면 Predicate인데 바꿔주면됨,이래야 조합이됨)
+		private BooleanExpression usernameEq(String username) {
+			if (hasText(username)){
+				return member.username.eq(username);
+			}
+			return null;
+		}	
+	이렇게 만들고
+		.where(usernameEq(cond.getUsername()))
+	이렇게 사용하면됨
+	그리고 조건들끼리 묶어서 메서드만들어서 써도됨(이땐 널조심해야함)
+	이걸 주로 사용하면됨 동적쿼리쓸때
+	장점은,셀렉트 프로젝션같은 외부영향을 안받아서,조건들이 재사용이 쉬워짐 잘만 만들어두면
+	그래서 필수조건들(날짜나 딜리트플래그)같은걸 묶어서 한번에쓰기좋음
+	
+	그리고 사용할때 컨트롤러에서
+		@GetMapping("/v1/members")
+		public List<MemberTeamDto> searchMemberV1(MemberSearchCondition cond){
+			return memberJpaRepository.search(cond);
+		}
+	이렇게 받고 
+		/v1/members?teamName=teamB&ageGoe=31
+	이렇게 쿼리파라미터로 넘기던가 하면됨
+	
 	
 	
 	

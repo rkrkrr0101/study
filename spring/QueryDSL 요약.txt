@@ -102,7 +102,7 @@
 		fetchFirst()//결과중 첫번째만 가져옴,limit(1).fetchOne()와 같음
 		fetchResults()//페이징정보포함,토탈카운트 추가실행함
 		fetchCount()//카운트쿼리로 변경해서 카운트수 조회
-	여기서 fetchResults와 fetchCount는 deprecated 됨,대신 fetch().size()로 토탈카운트 받아와야함
+	여기서 fetchResults와 fetchCount는 deprecated 됨,대신 따로 카운트쿼리날려서 받아와야함,size()는 oom위험때문에 사용불가
 	
 	정렬은
 		List<Member> fetch = queryFactory.selectFrom(member)
@@ -598,6 +598,99 @@
 	이렇게 받고 
 		/v1/members?teamName=teamB&ageGoe=31
 	이렇게 쿼리파라미터로 넘기던가 하면됨
+	
+	
+5.스프링데이터jpa와 querydsl
+	쿼리dsl을 스프링데이터jpa와 쓰려면,결국 구현클래스를 만들어야하는데,이때는
+		사용자정의 인터페이스 생성
+		사용자정의 인터페이스 구현(이떄 뒤에 Impl을 꼭 붙여줘야함 구현클래스에)
+		스프링데이터jpa인터페이스에 사용자정의 인터페이스 상속
+	이렇게,그 스프링데이터jpa에서 사용자정의 레포지토리 추가할때 했던방식대로 하면됨
+	
+	이렇게 하고나서,구현하고 스프링인터페이스에서 메서드가져다쓰면됨
+	그리고 조회쿼리가 너무복잡하거나,뷰에 맞춰지거나 그러면 걍 분리시키는게 나을수있음(스프링데이터jpa사용하지않고)
+	
+	즉,핵심비즈니스로직이거나,재사용성이 있는거만 메인레포지토리에 추가,아닌것들은 별도로 뺴버리는게 나음
+	
+	그리고 사용자정의인터페이스에서 페이징하는건,fetchCount와 fetchResults가 죽어버려서,
+	인터페이스에
+		Page<MemberTeamDto> searchPageComplex(MemberSearchCondition cond, Pageable pageable);
+	선언하고(Pageable받아야함,이떄 org.springframework.data.domain.Pageable 여야함)
+		List<MemberTeamDto> results=qf
+			.select어쩌구저쩌구...
+			.offset(pageable.getOffset())
+			.limit(pageable.getPageSize())
+			.fetch();
+	넣어서 본문을 받고(앞에 select같은거 생략했음),
+	토탈카운트는
+        Long totalCount = qf
+                .select(member.count())
+                .from(member)
+                .leftJoin(member.team, team) //이런거 제거가능
+                .where(조건)
+                .fetchOne();	
+	이렇게 따로 날려서 뽑고
+		return new PageImpl<>(results,pageable,totalCount);
+	이렇게 묶어서 보내주면됨
+	이떄 만약 카운트쿼리에 로우수에 변화가없는(특히 레프트조인같은)것들은 다 제거해버리면됨
+	
+	그리고 페이지시작이면서 컨텐츠사이즈가 페이지사이즈보다 작거나,
+	마지막페이지일땐 카운트쿼리를 생략할수있음(오프셋+컨텐츠사이즈=전체사이즈)
+	이걸 스프링데이터jpa가 자동으로해줌
+		return PageableExecutionUtils.getPage(results,pageable,()->countQuery.fetchOne());
+	이렇게,카운트쿼리를 완성하지말고 쿼리로만 놔두고,마지막에 람다식으로 던져주면됨
+	
+	이때 컨트롤러에선
+		@GetMapping("/v2/members")
+		public Page<MemberTeamDto> searchMemberV2(MemberSearchCondition cond, Pageable pageable){
+			return memberRepository.searchPageComplex(cond,pageable);
+		}	
+	이렇게 페이저블을 받아서 그대로 넘겨주면됨(프론트단에서 ?page=2&size=3로 보내면 그대로해줌)
+	
+	그리고 소팅은,조인들어가고 이러면 지원하는기능이 동작안해서,직접해야함
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	

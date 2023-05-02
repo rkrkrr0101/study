@@ -10,3 +10,15 @@
 	이런식으로 커넥션연결하면됨
 	이러면 드라이버매니저가,현재 등록된 db드라이버를 바탕으로 해당되는 드라이버를(그 핸들러찾는거랑똑같음,입력값으로 체크하고 가능하면 T,아니면 F) 찾음
 	
+	그리고 커넥션을 직접연결할땐,finally로 꼭 닫아줘야함,그리고 각각 try캐치로 묶어줘야함
+	
+	그리고 롬복Data쓰면 EqualsAndHashcode도 같이들어있어서,안에있는값 같으면 같은객체로 취급
+	
+	테스트에서 예외체크는
+		assertThatThrownBy(()->repository.findById(member.getMemberId()))
+			.isInstanceOf(NoSuchElementException.class);
+	이렇게하면됨
+	
+	그리고 테스트에서의 반복성을 위해서,트랜잭션을 사용해서 롤백하는식으로 동작하게해야함(jpa기본동작)
+	
+	

@@ -100,10 +100,91 @@
 	그래서 스프링을 써서 이런문제를 해결할수있음
 
 
+4.스프링과 문제 해결-트랜잭션
+	어플리케이션에서 제일 중요한건 서비스계층임
+	가장 중요하기도 하고,가장 변화도 없고 변화가 잦아도 안되는영역,
+	그래서 뷰나 웹부분을 컨트롤러로 떠넘기고,db처리도 레포지토리로 떠넘긴다음에 순수 자바코드로 비즈니스로직만 있는게 이상적임
+	그래서 서비스는 최대한 특정기술에 종속적이지않게 만들어야하고,레포지토리같은건 인터페이스로 생성해서 인터페이스에 의존하는것
+	좋은 코드는,변경을했을때 변경의 범위가 최소화되는거,그래서 아키텍쳐고민할때 이기준으로 잡으면 도움됨
+	
+	그리고 예외같은건,가급적 자기꺼는 자기안에서 해결하는게 좋음,최소한 자바나 스프링의 예외로 바꿔서 줘야함,
+	그래서 서비스단에 SQLException같은게 올라가면안됨
+	
+	근데 스프링을 안붙이고 깡으로쓰면,비즈니스로직보다 커넥션관리같은 코드들이 잔뜩 들어가게되고(어짜피 트랜잭션단위는 서비스메서드로 잡아야하니)
+	커넥션을 파라미터로 보내야하고,try catch를 다 붙여야하고,예외가 누수되는 이런 문제들도 있음
+	
+	트랜잭션을 특정 기술에 의존적이지 않게만들려면,추상화를 하면됨(단일책임원칙을 지키자),
+	이런방식으로 최종테크에 있는게,@transactional인걸보면,결국 반복되는부분이라는것과,추상화해서 di받는다는걸 알수있음
+	스프링은 PaltformTransactionManager인터페이스를 기반으로,구현체들을 이미 만들어뒀음
+	
+	이 트랜잭션매니저는,트랜잭션추상화와 트랜잭션 동기화 두가지 역할을 함
+	동기화는,결국 트랜잭션은 한메서드안에서는 같은커넥션을 계속 사용해야하니까,이걸 맞춰주는거임,즉 파라미터로 커넥션넣던걸 대신해주는거임
+	이건 쓰레드로컬을 사용해서 일어나는데,얘가 멀티쓰레드상황에서 커넥션을 안전하게 동기화시켜줌(쓰레드로컬은 각 쓰레드마다 전용 저장소를 만들어줘서 이걸사용)
+	
+	이 트랜잭션매니저를 직접사용할땐
+		Connection con = DataSourceUtils.getConnection(dataSource);
+		DataSourceUtils.releaseConnection(con,dataSource);
+	이렇게 하면되는데,getConnection을 하면 없으면 만들고 있으면 가져다주고,릴리즈하면 그냥 풀에 반환함(현재 쓰레드에서 저장정보를 지움)
+	
+	그리고 서비스에서
+		TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
+		transactionManager.commit(status);
+		transactionManager.rollback(status);
+	이렇게 넣어주고,릴리즈는 안해도됨(커밋되거나 롤백될때 알아서함)
+	
+	이렇게되면,서비스에선 트랜잭션 시작과 종료만 트랜잭션매니저를 통해 선언하고,실제 트랜잭션 커넥션사용은 트랜잭션동기화매니저와 레포지토리사이의 일이 됨
+	즉,서비스에선 해당기술에 대해 의존하는게아닌,트랜잭션 매니저만 의존해서 걔한테 실제 커넥션생성이나 획득등은 다 맡겨버리는거임
+	
+	트랜잭션매니저는,커넥션을 생성하고,이걸 오토커밋펄스로 바꾼뒤에 쓰레드로컬에다가 저장해둠
+	서비스가 레포지토리에 요청을 날리면
+	레포지토리는 쓰레드로컬에서 커넥션을 찾아서 작업을 해서,따로 뭘 해주지않아도 같은쓰레드니까 같은커넥션에서 작업을 하게됨
+	
+	이렇게 비즈니스로직이 끝나면,트랜잭션매니저에 커밋이나 롤백을 요청하면,
+	트랜잭션매니저는 트랜잭션 동기화매니저에서 커넥션을 획득하고,
+	이 커넥션으로 db에 커밋이나 롤백을 한다음,
+	리소스를 정리함(동기화매니저를 제거,즉 쓰레드로컬을 제거,오토커밋을 true로 바꿈,con.close()로 커넥션종료나 반환을 함)
+	
+	이런식으로 진행됨
+	
+	
+	트랜잭션을 사용하는 로직들을 보면,같은패턴이 반복됨
+		트랜잭션시작
+		비즈니스로직실행
+		커밋 or 롤백
+	특히 트라이캐치 반복되는게 꼴보기싫음(비즈니스로직뺴곤 다 반복됨)
+	그래서 스프링에선 템플릿콜백패턴을 사용한 트랜잭션탬플릿을 제공함
+	
+	이건 트랜잭션매니저를 di받아서 생성자에서 생성하면됨(관례상 이렇게씀,외부빈으로 트랜잭션템플릿을 주입받아도되긴함)
+		private final MemberRepositoryV3 memberRepository;
+		private final TransactionTemplate txTemplate;
 
-
-
-
+		public MemberServiceV3_2(MemberRepositoryV3 memberRepository, PlatformTransactionManager tm) {
+			this.memberRepository = memberRepository;
+			this.txTemplate=new TransactionTemplate(tm);
+		}	
+	그리고
+	    public void accountTransfer(String fromId, String toId, int money) {
+			txTemplate.executeWithoutResult((status)->{
+				bizLogic( fromId, toId, money);
+			});
+		}
+	이렇게 사용하면됨,즉 트랜잭션관련부분들을 다 알아서처리하고,중간을 람다로 받아서 실행시켜줌
+	얘는 정상수행되면 커밋하고,언체크예외가 발생하면 롤백함,그래서 만약 로직에서 체크예외를 던지면
+		txTemplate.executeWithoutResult((status)->{
+			try{
+				bizLogic( fromId, toId, money);
+			}catch(SQLException e){
+				throw new IllegalStateException(e);
+			}
+		});
+	이렇게 언체크로 바꿔서 던져줘야함(이 람다식안에서 체크예외를 밖으로 던질수없게 코드가 짜져있음)
+	
+	체크예외는 RuntimeException을 상속받지않은 예외들인데,얘들은 복구가능성이 있는 예외라서 반드시 예외처리코드를 작성해서 처리해야함
+	언체크예외는 RuntimeException를 상속받은 예외들인데,얘들은 복구가능성이 없는 예외임(널포인터익셉션등)
+	
+	근데 이렇게 처리해도,트랜잭션로직이 남아있긴함(txTemplate)
+	그래서 관심사가 2개가 되버림
+	그래서 이건 aop(프록시)로 해결함
 
 
 

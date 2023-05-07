@@ -185,13 +185,51 @@
 	근데 이렇게 처리해도,트랜잭션로직이 남아있긴함(txTemplate)
 	그래서 관심사가 2개가 되버림
 	그래서 이건 aop(프록시)로 해결함
+	
+	트랜잭션 aop는,아예 앞단을 새로만들고,거기로 트랜잭션을 가져가서 처리하는방식인데 이건 
+		@Transactional
+	을 사용해서 처리함(물론 직접 만들어도되는데,이미 있는데 왜만들어)
+	이렇게 프록시를 사용해 다른곳에서 처리해버리면,서비스자체에는 비즈니스로직만 남길수있게됨
+	
+	이렇게되면
+		클라이언트가 프록시를 호출
+		프록시가 트랜잭션을 시작하고 실제 서비스호출
+		서비스가 레포지토리 호출후 로직완료하고 서비스종료 후 프록시로 리턴
+		서비스종료되고 프록시가 트랜잭션 종료
+	이런 순서로 진행되게됨
+	이러면
+		@Transactional
+		public void accountTransfer(String fromId, String toId, int money) {
+				bizLogic( fromId, toId, money);
+		}
+	서비스로직은 이렇게 트랜잭션코드들은 다 외부로 빠지고 비즈니스로직만 남게됨
+	그리고 이렇게할땐 주의할게,테스트코드쪽에서 스프링을 안쓰고 유닛테스트로 하면,aop가 없어서 트랜잭션이 안걸리게됨
+	
+	그래서 테스트에 
+		@SpringBootTest
+	붙이고
+		@TestConfiguration
+		static class TestConfig{
+			@Bean
+			DataSource dataSource(){
+				return new DriverManagerDataSource(URL, USERNAME, PASSWORD);
+			}
+			@Bean
+			PlatformTransactionManager transactionManager(){
+				return new DataSourceTransactionManager(dataSource());
+			}
 
+		}
+	이렇게 데이터소스와 트랜잭션매니저를 빈등록해주면됨
+	이때 결국 aop도 트랜잭션매니저와 데이터소스가 있어야 트랜잭션을 시작하기때문에,이게 빈등록되어야함
+	
+	물론 기본적으로 스프링부트를 사용하면 이 데이터소스와 트랜잭션매니저를 등록해주기때문에,직접등록할필요는 없지만
+	기본값이 히카리데이터소스인데 이걸 바꾸고싶다거나 하면 할수있음
+	이 스프링부트가 주는걸 사용하려면 어플리케이션.프로퍼티에서 url,id,password를 등록해주면됨(맨날 세팅할때하던 그거)
 
-
-
-
-
-
+	이때 진짜 aop인지 확인하려면
+		assertThat(AopUtils.isAopProxy(memberService)).isTrue();
+	이렇게 AopUtils를 사용해서 물어볼수있음
 
 
 

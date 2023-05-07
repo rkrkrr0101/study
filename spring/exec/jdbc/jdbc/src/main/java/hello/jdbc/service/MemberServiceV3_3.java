@@ -5,28 +5,22 @@ import hello.jdbc.repository.MemberRepositoryV3;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.DefaultTransactionDefinition;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.Connection;
 
 
 @Slf4j
-public class MemberServiceV3_2 {
+@RequiredArgsConstructor
+public class MemberServiceV3_3 {
     private final MemberRepositoryV3 memberRepository;
-    //private final PlatformTransactionManager transactionManager;
-    private final TransactionTemplate txTemplate;
 
-    public MemberServiceV3_2(MemberRepositoryV3 memberRepository, PlatformTransactionManager tm) {
-        this.memberRepository = memberRepository;
-        this.txTemplate=new TransactionTemplate(tm);
-    }
 
+
+    @Transactional
     public void accountTransfer(String fromId, String toId, int money) {
-        txTemplate.executeWithoutResult((status)->{
             bizLogic( fromId, toId, money);
-        });
     }
 
     private void bizLogic( String fromId, String toId, int money) {

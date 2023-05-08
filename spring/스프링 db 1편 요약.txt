@@ -230,6 +230,72 @@
 	이때 진짜 aop인지 확인하려면
 		assertThat(AopUtils.isAopProxy(memberService)).isTrue();
 	이렇게 AopUtils를 사용해서 물어볼수있음
+	
+	@Transactional같이 어노테이션을 사용해서 하는걸,선언적 트랜잭션이라고 하고,
+	트랜잭션 매니저나 탬플릿으로 직접 작성하는걸 프로그래밍방식 트랜잭션이라고 함
+	요즘은 거의 선언적으로 사용하는데,테스트에서 가끔 프로그래밍적으로 해야할때가 있긴함
+	
+	스프링부트에서 자동등록하는 데이터소스는 이름이 dataSource고,만약 직접 빈으로 데이터소스를 등록하면,스프링부트는 등록하지않음
+	이때 application.properties에 있는 속성들(spring.dataSource.url,username,password)를 보고 이걸가지고 등록함
+	그리고 이때 url이 없으면 메모리db로 생성함
+	스프링부트가 기본으로 생성하는 데이터소스는 히카리데이터소스임
+	
+	스프링부트가 자동등록하는 트랜잭션매니저는,이름이 transactionManager임
+	얘도 직접 등록하면 스프링부트는 등록하지않음
+	이떄 jpa를 사용하면 jpa트랜잭션매니저,jdbc를 사용하면 DataSourceTransactionManager를 사용해야하는데,
+	스프링부트는 이걸 선택할때 현재 등록된 라이브러리를 보고 판단함
+	
+	그래서 테스트에서도 주입받아서쓰려면
+		@TestConfiguration
+		static class TestConfig{
+			private final DataSource dataSource;
+			public TestConfig(DataSource dataSource) {
+				this.dataSource = dataSource;
+			}
+			@Bean
+			MemberRepositoryV3 memberRepositoryV3(){
+				return new MemberRepositoryV3(dataSource);
+			}
+		}
+	이렇게 테스트클래스안에 클래스만들고 @TestConfiguration붙여서 주입받아서 쓰면됨
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 
 
 

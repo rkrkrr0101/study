@@ -414,12 +414,28 @@
 	이렇게 예외를 바꿔서 던지고,서비스에선 처리할수있는예외만 받아서 처리하면되는거임(jdbc나 jpa나 걍 똑같이 던지면됨)
 	
 	물론 이렇게 스프링예외와 스프링변환기를쓰면 스프링에 대한 종속성은 생기긴하는데,어짜피 스프링쓸꺼니까 최대한 스프링만 의존하게 하는게 좋음
+	이러면 스프링이 예외를 추상화해주니까 서비스는 리포지토리의 구현기술에 의존하지않아도되고,
+	그러므로 리포지토리를 추상화해서 인터페이스로 뽑아 di를 사용할수있음(어짜피 스프링은 의존하니까,서비스에서 복구하려면 걍 해도 의존성안늘어남)
 	
 	
+	jdbc의 반복은  jdbc템플릿을 통해 해결할수있음(con받고 pstmt받고..이런거)
+	이건 템플릿콜백패턴(템플릿을 만들어두고,중간에 콜백을 넣은뒤,콜백함수를 받아서 실행시키는 디자인패턴)으로 해결함
+	이건
+		private final JdbcTemplate template;
+
+		public MemberRepositoryV5(DataSource dataSource) {
+			this.template=new JdbcTemplate(dataSource);
+		}
+	이렇게 받고
+	메서드에서
+	    String sql="insert into member(member_id,money) values (?,?)";
+        template.update(sql,member.getMemberId(),member.getMoney());
+        return member;
+	이렇게사용하면끝임
+	이러면 트랜잭션을 위한 커넥션동기화나,스프링예외변환기도 다 들어있음,그래서 sql이나 조회시 매퍼정도만 만들어주면됨
 	
 	
-	
-	
+끝?	
 	
 	
 	

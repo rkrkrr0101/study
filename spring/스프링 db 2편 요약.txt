@@ -38,17 +38,135 @@
 	이때 인조키엔 오토인크리즈먼트나 uuid같은걸 선택하는게좋음
 	
 	
+2.JdbcTemplate
+	sql을 직접 사용해야하는경우엔 JdbcTemplate은 괜찮은선택지임
+	일단 스프링에 들어있어서 뭐 추가로  설정안해도되고,임포트만 하고,그냥 쿼리 날리면됨(커넥션같은거도 받고 반환하고 이런거도안해도됨)
+	단점으로 동적쿼리가 힘듬
+	
+	사용할땐 JdbcTemplate생성자에서 데이터소스받아서 생성하고(데이터소스는 스프링에있으니 di받으면됨)
+	기본적으로 생성할땐,키값을 생성하려면(오토인크리즈먼트)
+	    String sql="insert into(item_name,price,quantity) values (?,?,?)";
+        KeyHolder keyHolder=new GeneratedKeyHolder();
+        template.update(con -> {
+            PreparedStatement ps = con.prepareStatement(sql, new String[]{"id"});
+            ps.setString(1,item.getItemName());
+            ps.setInt(2,item.getPrice());
+            ps.setInt(3,item.getQuantity());
+            return ps;
+        },keyHolder);
+	이런식으로 생성해야함(db에서 id값을 받아와야해서 저렇게복잡해지는거),물론 더 나은방식이 있음
+	업데이트는
+		 template.update(sql,파라미터들...)
+	단일조회는
+	    public Optional<Item> findById(Long id) {
+			String sql="select id,item_name,price,quantity where id=?";
+			try {
+				Item item = template.queryForObject(sql, itemRowMapper(), id);
+				return Optional.of(item);
+			}catch (EmptyResultDataAccessException e){
+				return Optional.empty();
+			}
+		}
+	이렇게하는데,결과가 없어도 예외,둘이상이어도 예외터지니까 주의
+	전체조회는
+	    String sql="select id,item_name,price from item";
+        return template.query(sql,itemRowMapper());
+	이렇게하고,로우매퍼는
+	    private RowMapper<Item> itemRowMapper() {
+			return (((rs, rowNum) -> {
+				Item item=new Item();
+				item.setId(rs.getLong("id"));
+				item.setItemName(rs.getString("item_name"));
+				item.setPrice(rs.getInt("price"));
+				item.setPrice(rs.getInt("quantity"));
+				return item;
+			}));
+		}
+	그냥 값 엔티티에 담아서 리턴해주는거임(결과(rs)를 객체로 매핑해야하니까)
+	근데 그냥
+	    private RowMapper<Item> itemRowMapper() {
+            return BeanPropertyRowMapper.newInstance(Item.class);
+		}
+	이런식으로 빈로우매퍼쓰는게 더편함(해당클래스의 필드명으로 매핑시킴)
+	이경우엔 카멜변환을 지원함
+	
+	만약 동적쿼리를 넣고싶으면,if문으로 sql스트링 파싱해야함 ㅋㅋ
+	그리고 순서바인딩도 이름바인딩으로 바꿀수있음
+	
+	동적쿼리는,그 할때 그 개같앗던거 그거 그대로해야됨,이걸 마이바티스에선 사용하기가 편해짐
+	
+	이름바인딩은 namedParameterJdbcTemplate로 파라미터를 바인딩할수있음
+	이건 namedParameterJdbcTemplate를 jdbcTemplate대신 생성하고
+	인서트는
+	    String sql="insert into item(item_name,price,quantity) values (:ItemName,:price,:quantity)";
+
+        SqlParameterSource param = new BeanPropertySqlParameterSource(item);
+        KeyHolder keyHolder=new GeneratedKeyHolder();
+        
+        template.update(sql,param,keyHolder);
+	이렇게 만들면됨
+	이건 바인딩할때도 ps안만들어도되고 좀더 편하기도함
+	이건,param의 인풋으로 들어온 엔티티의 필드를 보고 그거랑 같은이름으로 매핑시키는거,이거외에도 따로넣을수도있긴함
+	        SqlParameterSource param = new MapSqlParameterSource()
+                .addValue("itemName", updateParam.getItemName())
+                .addValue("price", updateParam.getPrice())
+                .addValue("quantity", updateParam.getQuantity())
+                .addValue("id", itemId);
+	이렇게 만들어주면됨
+	아니면 걍 맵도됨
+		Map<String, Object> param = Map.of("id", id);
+	
+	업데이트는
+		template.update(sql,param);
+	하면되고(똑같음)
+	
+	단일조회도 똑같고
+		Item item = template.queryForObject(sql,param, itemRowMapper());
+	전체조회도 똑같고 동적쿼리도 똑같음
+	
+	이 파라미터는 보통 
+		Map
+		SqlParameterSource인터페이스를 상속받는 
+			MapSqlParameterSource
+			BeanPropertySqlParameterSource
+	를 사용하는데,키 밸류 구조만 맞으면 되는듯
+	
+	MapSqlParameterSource는 맵과 유사한데,sql타입을 저장할수있는등 좀 추가된기능이 있음,
+	그리고 메서드체인(.addValue())으로 편하게넣을수있음
+	
+	BeanPropertySqlParameterSource는,
+	자바빈프로퍼티규약(그 getItemName()이 있으면 itemName을 키로 넣고,게터값을 벨류로 넣는 그거)을 기반으로
+	엔티티나 dto나 아무튼 클래스의 게터기반으로 맵을 만들어냄
+	이게 젤 좋긴한데,만약 dto를 쓰는데 id값이 필요한경우같은(보통 dto엔 id가없으니까),해당 클래스에 해당필드가 없을땐 사용할수없어서
+	그땐 MapSqlParameterSource를 사용해야함
+	
+	BeanPropertyRowMapper도 똑같이 빈프로퍼티기반으로 로우매핑을 해주는애임
+	리절트셋을 빈규약에 맞춰서 set을 호출해서 넣어주는거임
+	그리고 이떄는,만약 이름이 달라도,sql에서 as로 바꿔주면되고,
+	언더바형식으로된건 알아서 없애고(item_name),언더바다음거를 대문자로 바꿈(itemName,카멜변환)
 	
 	
+	simpleJdbcInsert는,인서트sql을 직접 작성하지않아도 되는 기능임
+	이건
+		private final SimpleJdbcInsert jdbcInsert;
+	추가하고
+		public JdbcTemplateItemRepositoryV3(DataSource dataSource) {
+			this.template = new NamedParameterJdbcTemplate(dataSource);
+			this.jdbcInsert=new SimpleJdbcInsert(dataSource)
+					.withTableName("item")
+					.usingGeneratedKeyColumns("id");
+		}	
+	이걸 생성자에 더해주고(데이터소스선택하고,테이블선택하고,pk컬럼선택하는거)
+	    @Override
+		public Item save(Item item) {
+			SqlParameterSource param = new BeanPropertySqlParameterSource(item);
+			Number key = jdbcInsert.executeAndReturnKey(param);
+			item.setId(key.longValue());
+			return item;
+		}
+	이렇게 파라미터만들고 넣으면됨(쿼리필요없음)
 	
-	
-	
-	
-	
-	
-	
-	
-	
+	만약 사용할일있으면,자료 마지막에 기능정리 참조하자
 	
 	
 	

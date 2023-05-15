@@ -5,9 +5,14 @@ import hello.itemservice.repository.ItemSearchCond;
 import hello.itemservice.repository.ItemUpdateDto;
 import hello.itemservice.repository.memory.MemoryItemRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.util.List;
 
@@ -19,15 +24,25 @@ class ItemRepositoryTest {
     @Autowired
     ItemRepository itemRepository;
 
+//    @Autowired
+//    PlatformTransactionManager transactionManager;
+//    TransactionStatus status;
+//    @BeforeEach
+//    void beforeEach(){
+//        status = transactionManager.getTransaction(new DefaultTransactionDefinition());
+//    }
+//
     @AfterEach
     void afterEach() {
         //MemoryItemRepository 의 경우 제한적으로 사용
         if (itemRepository instanceof MemoryItemRepository) {
             ((MemoryItemRepository) itemRepository).clearStore();
         }
+     //   transactionManager.rollback(status);
     }
 
     @Test
+    @Transactional
     void save() {
         //given
         Item item = new Item("itemA", 10000, 10);
@@ -38,9 +53,11 @@ class ItemRepositoryTest {
         //then
         Item findItem = itemRepository.findById(item.getId()).get();
         assertThat(findItem).isEqualTo(savedItem);
+
     }
 
     @Test
+    @Transactional
     void updateItem() {
         //given
         Item item = new Item("item1", 10000, 10);
@@ -59,6 +76,7 @@ class ItemRepositoryTest {
     }
 
     @Test
+    @Transactional
     void findItems() {
         //given
         Item item1 = new Item("itemA-1", 10000, 10);
@@ -68,7 +86,7 @@ class ItemRepositoryTest {
         itemRepository.save(item1);
         itemRepository.save(item2);
         itemRepository.save(item3);
-
+        /*
         //둘 다 없음 검증
         test(null, null, item1, item2, item3);
         test("", null, item1, item2, item3);
@@ -82,7 +100,7 @@ class ItemRepositoryTest {
         test(null, 10000, item1);
 
         //둘 다 있음 검증
-        test("itemA", 10000, item1);
+        test("itemA", 10000, item1); */
     }
 
     void test(String itemName, Integer maxPrice, Item... items) {

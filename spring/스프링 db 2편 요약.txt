@@ -168,8 +168,55 @@
 	
 	만약 사용할일있으면,자료 마지막에 기능정리 참조하자
 	
+
+3.데이터접근기술-테스트
+	테스트에 @SpringBootTest가 붙어있으면,
+	상위패키지로 올라가서 메인으로간뒤 @SpringBootApplication을 찾아서(main실행클래스)그걸 기반으로 밑에있는 설정과 빈을 가져다가사용함
+	즉 @Import같은거도 다 가져감
 	
+	기본적으로 테스트케이스를 실행시킬땐,반복가능성때문에 따로 db를 만들고(테스트전용db)실행시키는게좋음
+	그래서 테스트의 리소스밑에있는 application.properties에다가 전용db 적어두면됨
 	
+	그리고 테스트는 서로 격리되어야하고,반복가능해야함
+	그래서 트랜잭션을 사용해서 테스트가 끝나고 롤백시키는게 필요함(delete sql을 해도 이론상가능하긴 한데,중간에 예외터지면 바로 문제발생임)
+	트랜잭션을 트랜잭션매니저를 통해 직접해도되지만,@Transactional쓰는게 젤 편하고좋음
+	트랜잭션매니저를 통해 할땐
+		@BeforeEach
+		@AfterEach
+	로 메서드만들어두면됨(별거아니니가 교재보자)
+	
+	@Transactional을 사용하면,테스트에서 사용하면 롤백하는데,커밋을 강제로 시키고싶으면 @commit붙이면됨
+	이 @Transactional이 해당 클래스나 메서드에 있으면,그밑에있는게 전부 트랜잭션범위안에 들어감
+	트랜잭션은 기본적으로 전파되기때문에,리포지토리에서 사용하는것도 같은트랜잭션을 사용하게됨(같은 범위안에있으면,모든게 전부 같은트랜잭션에 참여함)
+	
+	임베디드모드db는,스프링은 h2db를 내장하고있고,이걸 메모리모드로 켤수있음
+	그래서 이걸 켜서 넣고 끝나면 메모리에서 날려버리는식으로 사용하는것,즉 라이브러리처럼 사용하는거임
+	이건 db를 별도로 생성하고 운영하기 귀찮으니까 사용하는거
+	
+	이걸 사용할땐
+		@Bean
+		@Profile("test")
+		public DataSource dataSource(){
+			log.info("db초기화");
+			DriverManagerDataSource dataSource=new DriverManagerDataSource();
+			dataSource.setDriverClassName("org.h2.Driver");
+			dataSource.setUrl("jdbc:h2:mem:db;DB_CLOSE_DELAY=-1");
+			dataSource.setUsername("sa");
+			dataSource.setPassword("");
+			return dataSource;
+		}	
+	이걸 메인의 메인클래스에 추가하고(프로필로 구분해서 넣어줘야함)
+	저기서 setUrl에서 mem으로 켜고,드라이버클래스에서 드라이버선택해준거
+	DB_CLOSE_DELAY는 db커넥션이 모두 끊어지면 db도 종료되는데,-1로 넣으면 이게 막힘
+	
+	그리고 테이블자동생성(ddl)이 없는라이브러리면 테이블도 만들어줘야하는데,스프링부트에서 이걸 제공함(jpa쓰면 걍 엔티티보고 만들지만 sql매퍼일경우)
+	test/resources/schema.sql로 생성하고(파일이름경로고정임),여기에 테이블생성쿼리를 넣어두면됨
+	그러면 테스트시작전에 테이블생성하고 테스트를돌림
+	
+	이걸 스프링부트에서 더 간편하게 제공하는데,따로 db에 대한 설정을 안해버리면 디폴트값으로 임베디드db를 사용함
+	
+	즉 결론은
+	따로 db설정하지말고 @Transactional만 붙이면됨
 	
 	
 	

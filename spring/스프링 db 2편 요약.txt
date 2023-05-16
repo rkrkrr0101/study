@@ -218,18 +218,152 @@
 	즉 결론은
 	따로 db설정하지말고 @Transactional만 붙이면됨
 	
+4.데이터접근기술-마이바티스
+	마이바티스는,이거도 sql매퍼인데 jdbcTemplate보다 좋은건 sql을 xml로 뺄수있다는것과 동적쿼리 작성이 매우 편해진다는게 있음
+	그리고 쿼리가 길때,여러줄로 나눌때 +붙이고 띄울필요도없고 많이 편해짐
+	동적쿼리도 그냥 <if>태그사용해서 넣으면 알아서 해줌
+	
+	단,스프링내장이 안돼있어서,직접 넣고 뭐 이런거해야함
+	그래서 jpa쓰면 따로 깔기귀찮으니까 jdbcTemplate쓰는편(sql날릴일이 별로없기도하고)
+	
+	마이바티스 설정은 어플리케이션프로퍼티에
+		mybatis.type-aliases-package=hello.itemservice.domain //경로넣으면 이경로에있는거 자동인식,즉 저기있는 클래스사용가능
+		mybatis.configuration.map-underscore-to-camel-case=true//스네이크케이스를(언더스코어) 카멜케이스로바꿔줌
+		logging.level.hello.itemservice.repository.mybatis=trace //경로마다 로그레벨설정가능
+	당연히 메인에다가 적었으면,테스트에도 적어줘야함(자기밑에만 적용되니)
+	
+	그리고 db와 객체간의 이름이 다르면,이것도 sql에서 as쓰면됨(스네이크케이스는 자동으로 해결되는데,나머지)
+	
+	사용할땐,인터페이스를 만들고,위에 @Mapper를 붙이고
+		@Mapper
+		public interface ItemMapper {
+
+			void save(Item item);
+			void update(@Param("id")Long id, @Param("updateParam")ItemUpdateDto updateParam);
+			List<Item> findAll(ItemSearchCond itemSearch);
+			Optional<Item> findById(Long id);
+		}
+	이렇게 메서드정의하면됨(이떄 파라미터가 하나면 걍둬도되는데,둘이상이면 @Param으로 사용할이름지정을 해줘야함,하나일경우 그냥 필드네임그대로 사용)
+	
+	이 인터페이스의 메서드를 호출하면,xml의 해당 sql을 실행하고 결과를 돌려줌(구현체는 마이바티스가 만듬)
+	xml파일은 인터페이스와 같은경로로 resources에 두면됨(경로는 맞춰줘야함)
+		main/java/hello/itemservice/repository/mybais
+		main/resources/hello/itemservice/repository/mybais
+	이렇게 만들어야함
+	xml은
+		<?xml version="1.0" encoding="UTF-8"?>
+		<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+				"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+		<mapper namespace="hello.itemservice.repository.mybatis.ItemMapper">
+			
+		</mapper>
+	이렇게 만든다음에 mapper안에 넣으면됨(이때 네임스페이스로 인터페이스경로를 넣어서 지정해야함)
+	매퍼안에
+	    <insert id="save" useGeneratedKeys="true" keyProperty="id"  >
+			insert into item (item_name,price,quantity)
+			values (#{itemName},#{price},#{quantity})
+		</insert>
+	이렇게 넣으면됨(안에있는게 실행됨)
+	이때 파라미터는,인터페이스에 있는 @Param이랑 매칭되고,만약 붙이지않았고 그게 클래스면 해당 클래스의 필드명그대로 들어가게됨
+	그리고 인서트의경우는,오토인크리즈먼트하려면 useGeneratedKeys="true"  keyProperty="id" 넣어주면됨
+	
+	즉 일반적으론
+		<update id="update">
+			update item
+			set item_name=#{updateParam.itemName},
+				price=#{updateParam.price},
+				quantity=#{updateParam.quantity}
+			where id=#{id}
+		</update>
+	이렇게들어가게됨	
+	조회는
+	    <select id="findById" resultType="Item">
+			select id,item_name,price,quantity
+			from item
+			where id=#{id}
+		</select>
+	이렇게
+	resultType으로 반환타입 적어주고(어플리케이션프로퍼티에서 설정해서 패키지전체 안적어도됨)
+	동적쿼리는
+	    <select id="findAll" resultType="Item">
+			select id,item_name,price,quantity
+			from item
+			<where>
+				<if test="itemName!=null and itemName != ''">
+					and item_name like concat('%',#{itemName},'%')
+				</if>
+				<if test="maxPrice != null">
+					and price &lt;= #{maxPrice}
+				</if>
+			</where>
+		</select>
+	이런식으로 if사용해서 넣으면,해당값이 참일때만 들어가고 where and 생각안해도됨(if다실패하면 where을 추가하지않고,처음and는 지워버림)
+	그리고 xml이라서 <이나 >를 못써서,이거는 &lt ,&gt로 바꿔서써야함(&는 &amp임)
+	
+	아예 스트링처리해버리는방법도있는데,cdata검색해보면됨(단 이경우엔 <where>나 <if>를못씀)
+	
+	그리고 xml파일경로읽는걸 바꾸고싶으면
+		mybatis.mapper-locations=classpath:mapper/**/*.xml 
+	이걸 어플리케이션 프로퍼티에서 넣어두면됨
+	기본적으로 리소스에서,그밑에서 찾음(테스트도 똑같이해야함)
+	
+	그리고 자바코드에서(인터페이스에서) 반환객체가 하나면 Item이나 Optional<Item>,여러개면 List사용하면됨
+	
+	사용할땐,itemMapper같은 매퍼를 만들고(@Mapper붙이면 구현체를 스프링빈에 등록해두니까 그냥 주입받으면됨) 사용하면됨
+		private final ItemMapper itemMapper;
+
+		@Override
+		public Item save(Item item) {
+			 itemMapper.save(item);
+			return item;
+
+		}
+	이렇게 그냥쓰면됨
+	그리고 설정에서
+	    @Bean
+		public ItemRepository itemRepository() {
+			return new MyBatisItemRepository(itemMapper);
+		}
+	이렇게 등록하고(매퍼를 등록해주면됨,데이터소스나 트랜잭션매니저는 마이바티스가 알아서함)
+	
+	매퍼의 구현체 빈은,마이바티스 스프링연동모듈이 생성하는데,
+	얘는 
+		@mapper가 붙은 인터페이스를 검색하고,
+		그거의 동적프록시객체를 생성하고,
+		그 프록시객체를 스프링빈에 등록함
+	이런식으로 작동함
+	그리고 이 매퍼변환체는,예외변환까지 해줘서,스프링예외로 반환해줌(DataAccessException하위예외)
 	
 	
+	즉 마이바티스를 사용하는이유는,동적쿼리때문임
+	여기서 지원하는건,
+		if와 
+		choose+when+otherwise로 스위치문을 사용할수있음
+		foreach로 컬렉션을 반복처리할수도있음,이건 좀 복잡하니 예제보자(파라미터를 리스트로 받아서,이걸 처리할수있음 in같은거)
+	그리고 <where>로 동적으로 where를 추가할지말지도 알아서해주고
 	
+	그리고 xml대신 어노테이션에 붙일수도 있음
+		@Select("select id from item where id=#{id}")
+	근데 뭐 마이바티스쓰는데 사용할까싶긴함(xml로 각잡고쓰려고 쓰는거니까)
 	
+	그리고 #{}는 파라미터바인딩인데,만약 문자 그대로를 처리하고싶으면 ${}가 있음
+	단 이건 sql인젝션에 노출되니까 사용하지않는게좋음
 	
+	<sql>로 sql코드조각을 재사용할수있음
+		<sql id="userColumns">${alias}.id,${alias}.username  </sql>
+	이렇게 만들고
+		<select>
+			<include refid="userColumns"><property name="alias value="t1" /> </include>
+			<include refid="userColumns"><property name="alias value="t2" /> </include>
+		</select>
+	이런식으로 재사용할수있음(즉 프로젝션대상같은(id,username같은 컬럼들)이 중복되면 이걸 재사용할수있음)
 	
+	resultmaps로 as를 사용하지않고 객체와 컬럼명을 맞춰줄수있음
+	별건아닌데 기니까 자료보자
+	그냥 xml로 맵만드는거임
 	
-	
-	
-	
-	
-	
+	그리고 마이바티스에서도 연관관계가있는 객체들을 조회해서 불러오는게 가능하긴한데,
+	복잡하고 공수도 많이들고 성능도 문제있어서 그냥 jpa쓰는게나음,아니면 그냥 통짜dto만들어서 두개한번에 받거나
 	
 	
 	

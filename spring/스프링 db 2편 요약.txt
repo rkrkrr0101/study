@@ -362,12 +362,42 @@
 	별건아닌데 기니까 자료보자
 	그냥 xml로 맵만드는거임
 	
-	그리고 마이바티스에서도 연관관계가있는 객체들을 조회해서 불러오는게 가능하긴한데,
+	그리고 마이바티스에서도 연관관계가있는 객체들을 조회해서 불러오는게 가능하긴한데(jpa처럼),
 	복잡하고 공수도 많이들고 성능도 문제있어서 그냥 jpa쓰는게나음,아니면 그냥 통짜dto만들어서 두개한번에 받거나
 	
+5.데이터접근기술-jpa	
+	비슷한건 스킵하자 어짜피 다본건데
+	설정은
+		implementation'org.springframework.boot:spring-boot-starter-data-jpa'
+	추가(jdbc도 없어도됨,안에들어있음)
+	jpa트랜잭션매니저같은건 스프링부트가 알아서해줌
 	
+	JPA에서 중요한건
+		객체와 테이블의 매핑(일대다에선 연관관계의 주인이 다에 있어야한다던가)
+		페치조인과 컬렉션 연관관계조회()+lazy설정
+		더티체킹
+	이 3가지인데,젤중요한건 객체와 테이블의 매핑임
 	
+	jpa를 사용할땐
+		private final EntityManager em;
+	를 di받고 사용하면됨
+	jpql사용시엔
+	    String jpql="select i from Item i";
+        List<Item> res = em.createQuery(jpql, Item.class).getResultList();
+        return res;
+	이렇게 날리면되고
+	동적쿼리는 쿼리dsl쓰자
 	
+	jpql은 엔티티객체(엔티티가 붙어있는 하나의 클래스의 모든 객체들,엔티티와 테이블이 같은급이라고 보면됨)를 대상으로 sql을 돌리는거
+	
+	그리고 일반적으론,서비스레벨에서 트랜잭션을 걸어야함(여러 레포지토리 로직들이 묶여서 트랜잭션이 걸려야하기때문)
+	그리고 테스트코드에선 트랜잭션롤백되기때문에,업데이트쿼리가 나가지않음(표시안됨)
+	
+	jpa의 한계는,동적쿼리가 머리아프다는것
+	
+	jpa의경우 예외가 발생하면,jpa예외가 터지는데,이걸 스프링예외로 바꿔줘야함(스프링데이터jpa사용하면 자동으로 예외변환해줌)
+	jpa는 PersistenceException과 IllegalStateException,IllegalArgumentException 3종류의 예외를 발생시킴
+	이걸 변환하는건,@Repository를 붙이면 자동으로 예외변환aop가 적용되면서 자동으로 변환이됨
 	
 	
 	

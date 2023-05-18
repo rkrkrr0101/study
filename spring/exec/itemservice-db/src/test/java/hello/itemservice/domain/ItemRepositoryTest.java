@@ -86,7 +86,7 @@ class ItemRepositoryTest {
         itemRepository.save(item1);
         itemRepository.save(item2);
         itemRepository.save(item3);
-        /*
+
         //둘 다 없음 검증
         test(null, null, item1, item2, item3);
         test("", null, item1, item2, item3);
@@ -100,7 +100,7 @@ class ItemRepositoryTest {
         test(null, 10000, item1);
 
         //둘 다 있음 검증
-        test("itemA", 10000, item1); */
+        test("itemA", 10000, item1);
     }
 
     void test(String itemName, Integer maxPrice, Item... items) {

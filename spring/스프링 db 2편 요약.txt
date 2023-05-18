@@ -399,6 +399,71 @@
 	jpa는 PersistenceException과 IllegalStateException,IllegalArgumentException 3종류의 예외를 발생시킴
 	이걸 변환하는건,@Repository를 붙이면 자동으로 예외변환aop가 적용되면서 자동으로 변환이됨
 	
+6.데이터접근기술-스프링 데이터 jpa	
+	스프링데이터는 
+		crud자동화
+		같은인터페이스
+		페이징처리
+		메서드이름으로 쿼리생성
+		mvc에서 id값만 넘겨도 도메인클래스로 바인딩
+	등을 해줌
+	여기서 젤 중요한건
+		공통인터페이스
+		쿼리메서드(메서드명으로 쿼리자동생성+@Query에 jpql만넣으면 그거실행)
+		페이징처리
+	임,이게 메인기능임
+	그리고 쿼리메서드에서 깡sql을 넣을수도있음
+	공통인터페이스는
+	그냥 jpaRepository만 인터페이스에 상속받으면,구현체는 알아서 만들어주고,어지간한 crud는 다들어있음
+	이건
+		public interface ItemRepository extends JpaRepository<엔티티,엔티티id클래스>{}
+	이렇게 만들면됨
+	
+	기본쿼리메서드는 걍 자잘한건만들만한데,조건여러개되면 ㄹㅇ개길어지니까 @Query에 쓰는게좋음
+		List<Item> findByPriceLessThanEqualAndItemNameLike(Integer price, String itemName);
+	이런건너무기니까
+		@Query("select i from Item i where i.itemName like :itemName and i.price<=:price")
+		List<Item> findItems(@Param("itemName" )String itemName,@Param("price" ) Integer price);	
+	이런식으로 뽑아서 이름줄이는거
+	
+	그리고 스프링데이터jpa도 동적쿼리에 약해서,이런건 queryDSL로 해결해야함
+	그리고 스프링데이터jpa 레포지토리는 이미 jpaRepository를 받고있어서,직접추상화하기 힘들기때문에,
+	위에 추상화전용으로 클래스를 하나 더둬서 그거로 추상화를 하면됨
+		public class JpaItemRepositoryV2 implements ItemRepository {
+			private final SpringDataJpaItemRepository repository;
+			...
+		}
+	그리고 걍
+	    public void update(Long itemId, ItemUpdateDto updateParam) {
+			Item findItem = repository.findById(itemId).orElseThrow();
+			findItem.setPrice(222);
+		}
+	이런식으로 만들어서 저걸사용하면됨
+	
+7.데이터접근기술-queryDSL	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	

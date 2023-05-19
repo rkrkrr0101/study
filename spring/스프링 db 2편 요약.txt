@@ -441,8 +441,37 @@
 	이런식으로 만들어서 저걸사용하면됨
 	
 7.데이터접근기술-queryDSL	
+	queryDSL은 동적쿼리를 해결+쿼리를 자바로 타입세이프하게 작성할수있게 해주는 프레임워크임
+	아예 null을 넣으면 무시하게 만들어서,걍 분기안타고 편하게 동적쿼리를 만들수있고,페이징도 편함
+	그래서,스프링데이터가 약한 조회부분을(특히 동적조회)queryDSL로 채운다는느낌
 	
+	설정할땐,빌드툴 그래들기준 아더에 컴파일자바한번누르면 자동으로 빌드밑에 q파일생성됨(인텔리제이에서 메인이나 테스트실행시키면 걍생김)
+	빌드툴 인텔리제이면 그냥 main실행하면생김(src/main/generated밑에 생김)
 	
+	삭제할땐 그래들에서 클린하면 빌드폴더채로 날려버림
+	
+	사용할땐,JPAQueryFactory가 있어야하는데
+		public JpaItemRepositoryV3(EntityManager em) {
+			this.em = em;
+			this.query = new JPAQueryFactory(em);
+		}
+	이렇게 di받으면됨
+	그리고 걍
+		List<Item> result = query
+			.select(item)
+			.from(item)
+			.where(itemNameLike(itemName),priceLoe(maxPrice))
+			.fetch();
+	이런식으로 만들고,where내부함수는
+	    private BooleanExpression itemNameLike(String itemNameCond) {
+			if( itemNameCond==null || itemNameCond.equals("")) {
+				return null;
+			}
+			return item.itemName.like("%"+itemNameCond+"%");
+		}
+	이런식으로 만들면됨
+	즉 where안에 널이들어오면 무시하니까 그걸 이용하는거
+	where안에 ,로 구분되면,and로 작동함
 	
 	
 	

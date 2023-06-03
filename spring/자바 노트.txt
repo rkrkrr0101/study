@@ -20,6 +20,8 @@
 	즉 T는 대단한게아닌,타입의 변수명임
 	이경우엔 P를 소비해서 R을 리턴한다는것
 	
+	제네릭에서 void를 쓸땐,Void를 넣어줘야함,걍비워두면 취급안됨
+	
 	참고:https://jehuipark.github.io/java/java-generic
 
 

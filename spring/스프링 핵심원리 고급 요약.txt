@@ -154,6 +154,84 @@
 	
 	보통 프록시패턴을 사용하면,클라는 프록시를 의존하고(인터페이스로 di받으니 좀 틀리긴하지만),프록시는 실제객체를 의존하는 그림이 나옴
 	그래서 프록시패턴의 핵심은,구현체와 클라이언트코드를 전혀 변경하지않고,di만을 활용해서 접근제어를 하는거임
+	
+	데코레이터패턴은,프록시를 사용해서 부가기능을 추가하는 패턴임
+	즉 이거도 프록시패턴이랑 생긴건똑같은데,하는일만 좀 다름
+	데코레이터는 계속 체인을 탈수있는데,이러면 계속 부가기능을 추가하는것(각 데코레이터 하나마다 기능하나씩넣는게 단일책임원칙에 좋으니)
+	
+	여기서 데코레이터에서 실제객체를 받을 필드를 만들고,생성자를 받는거에 계속 중복이 일어나기도 하고,실제객체랑 데코레이터를 구분하기위해 사용되는게
+	데코레이터용 추상클래스임(실제객체를 받을 필드를 속성으로 가지고있는)
+	이거까지 있는게 gof에서의 데코레이터임
+	
+	이렇게 인터페이스가 있으면 편하게 넣을수있음
+	스프링에서도 인터페이스가 있으면,그냥 인터페이스 구현하고,매개변수로 그걸 집어넣은 프록시를 메인빈으로 설정한 설정파일을 넣으면됨
+	이때 중요한건,di받을때 무조건 프록시를 호출해야함
+		@Bean
+		public OrderServiceV1 orderService(LogTrace logTrace){
+			OrderServiceV1Impl serviceImpl=new OrderServiceV1Impl(orderRepository(logTrace));
+			return new OrderServiceInterfaceProxy(serviceImpl,logTrace);
+		}
+		@Bean
+		public OrderRepositoryV1 orderRepository(LogTrace logTrace) {
+			OrderRepositoryV1Impl repoImpl=new OrderRepositoryV1Impl();
+			return new OrderRepositoryInterfaceProxy( repoImpl,logTrace);
+		}
+	이렇게 등록된 프록시를 호출해야함
+	즉 프록시만 등록하고,실제객체는 등록하면 안됨
+	어짜피 이래도 싱글톤이니까 실제객체도 하나만 생성돼서(정확히는 생성을 한번만 거쳐서)상관없음
+	이렇게되면 실제객체는 스프링이 관리하지않지만,어짜피 프록시를 통해서만 접근할거니까 상관없어지는거
+	
+	그리고 인터페이스가 없는,구체클래스만 있는곳에 프록시를 적용할때는 클래스기반 프록시를 적용할수있음
+	자바는 인터페이스를 구현하든,클래스를 상속하든 상위타입만 맞으면되니까(다형성),구현클래스를 상속받아서 프록시를 만들겠다는것
+		public class TimeProxy extends ConcreteLogic{}
+	이렇게 상속받고 실제클래스 di받아서 해당메서드 오버라이드한다음
+		프록시에서할일
+		String result = concreteLogic.operation();
+		프록시에서할일
+		return result;
+	이런식으로 똑같이 하면됨,구현대신 오버라이드하는것
+	그리고 똑같이
+	    ConcreteLogic concreteLogic = new ConcreteLogic();
+        TimeProxy timeProxy=new TimeProxy(concreteLogic);
+        ConcreteClient client = new ConcreteClient(timeProxy);
+	이렇게 집어넣어버리면됨(어짜피 상속받았으니 부모자리에 대신들어갈수있으니까)
+	
+	그리고 이때 해당부모클래스가 생성자가 있어서, 부모클래스를 호출해야하면(super()),어짜피 프록시에선 아무것도 안할거니까
+		super(null)
+	하면됨
+	이렇게 클래스기반프록시는 이런 귀찮은게 좀있음
+		super(null)을 쓰거나 부모클래스에서 기본생성자가 있어야함
+		클래스에 final이 붙으면 상속이 불가능
+		메서드에 final이 붙으면 오버라이딩이 불가능
+	그래서 인터페이스가 사용하기 더 편한데,인터페이스의 단점은 인터페이스를 일단 만들어야한다는것(캐스팅관련해서도 문제가 하나 더 있긴함)
+	
+	실무에선 이 두상황이 둘다 사용되기때문에,둘다 알고있어야함
+	
+	근데 이렇게만들면,기존코드를 안건드려도되긴하는데,어짜피 하는일은 똑같은데,대상클래스마다 하나씩 프록시 클래스를 만들어야함(클래스100개면 100개)
+	이걸 클래스 하나로 다 땜빵치는게 동적프록시임
+
+
+
+
+5.동적프록시
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

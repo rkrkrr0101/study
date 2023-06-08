@@ -214,24 +214,148 @@
 
 
 5.동적프록시
+	자바에서 기본으로 제공하는 jdk동적프록시나,cglib같은 프록시생성 오픈소스(바이트코드변경)를 사용해서 프록시 객체를 동적으로 찍어낼수있음
+	근데 기본적으로 코드짤땐 불안정성이 높아서 잘 사용되지않고,다른사람들이 프레임워크같은거로 만들어둔걸 가져다쓰게되지만,어떻게 동작하는지 알고는 있어야함
+	
+	이 jdk동적프록시를 이해하려면,자바의 리플렉션을 이해해야함
+	기본적으로 다똑같고 중간에 호출하는 메서드가 다르면 밖으로 뽑기 빡센데,이부분을 동적으로 처리하는게 리플렉션임(람다로 처리할수있긴함)
+	이건 클래스나 메서드의 메타정보를 사용해서 동적으로 호출하는것
+        Class classHello = Class.forName("hello.proxy.jdkdynamic.ReflectionTest$Hello");
 
+        Hello target=new Hello();
+        Method methodCallA = classHello.getMethod("callA");
+        Object res1 = methodCallA.invoke(target);
+        log.info("res1={}",res1);
+	이런식으로 무슨메서드를 호출할지를 스트링으로 받아서 호출하는거임,이러면 걍 텍스트 파라미터로 받을수있으니 동적지정이 가능해짐(한번 추상화가 된느낌)
+	즉
+	    private void dynamicCall(Method method,Object target) throws Exception {
+			log.info("start");
+			Object res1 = method.invoke(target);
+			log.info("result={}",res1);
+		}
+	이런식으로 해당클래스와 호출할메서드를 받아서 돌리면되는거
+	즉 클래스나 메서드를 추상화해서 메타정보 바꿔치기로 공통화하는거임
+	단,이건 런타임에 동작해서(스트링쓰니까) 컴파일오류가 나지않고,무조건 실행시켜서 에러를 찾아야해서(런타임오류),가급적이면 사용하지않는게 좋음
+	보통 프레임워크만들때나,매우 일반적인 공통처리가 필요할떄,부분적으로 주의해서 사용해야함(막 프록시클래스를 1000개만들어야한다 이러면 사용할수있긴함)
+	
+	동적프록시를 사용하면,런타임에 개발자대신 프록시객체를 만들어주고,원하는 실행 로직을 지정할수 있음
+	그리고 jdk동적프록시는,인터페이스 기반이라서 인터페이스가 필수임
+	이건 InvodationHandler인터페이스를 구현해서 작성하면되는데,제공되는 파라미터는
+		Object proxy  프록시 자신
+		Method method 호출한 메서드
+		Object[] args 메서드 호출할때 전달한 인수
+	이 3개를 받을수있음
+	그리고 invoke를
+		private final Object target; //생성자로 해당클래스 받는용도
+		@Override
+		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+			log.info("타임프록시 실행");
+			long startTime = System.currentTimeMillis();
+			
+			Object invoke = method.invoke(target, args);
+			
+			long endTime = System.currentTimeMillis();
+			long resTime=endTime-startTime;
+			log.info("resTime={}",resTime);
+			return invoke;
+		}
+	이런식으로 구현하면됨
+	사용은
+	    AInterface targe1t=new AImpl();
+        TimeInvocationHandler handler1 = new TimeInvocationHandler(target1);
+        AInterface proxy1 =(AInterface) Proxy.newProxyInstance(AInterface.class.getClassLoader(),
+                new Class[]{AInterface.class}, handler1);
+        proxy1.call();
+		
+		BInterface target2=new BImpl();
+		TimeInvocationHandler handler2 = new TimeInvocationHandler(target2);
+        BInterface proxy2 =(BInterface) Proxy.newProxyInstance(BInterface.class.getClassLoader(),
+                new Class[]{BInterface.class}, handler2);
+        proxy2.call();
+	이런식으로 핸들러를 만들어서 구현체를 넣고,인터페이스기반으로 프록시를 생성함
+	이렇게 TimeInvocationHandler라는 핸들러 하나만 가지고,저안에 있는 로직을 각 구현체마다 바로 적용하고,걔는 또 그대로 할일하는거
+	
+	좀더 자세하게는,수동으로 프록시클래스 만드는거랑 런타임에서 만들어진 클래스 결과는 똑같은데,
+	어짜피 각 프록시클래스마다 구현체메서드콜을 제외한 나머지가 다 똑같으니,
+	그걸 한군데다 모으고 클래스레벨이 아닌 코드레벨에서 프록기기반코드(핸들러)를 기반으로 즉석에서 동적으로 프록시클래스를 만들어서 사용하겠다!라는 컨셉인거임
+	
+	즉 이렇게 즉석으로 인터페이스기반 동적프록시를 생성하고,그 결과를 반환할수있음
+	이렇게하면 프록시를 여러개안만들어도되고,부가기능로직도 한군데에 몰아서 단일책임원칙도 지킬수있게됨
+	
+	그리고 method에서는
+		String message = method.getDeclaringClass().getSimpleName() + "." + method.getName() + "()";
+	이렇게 클래스이름과 호출한메서드이름도 받을수있음
+	그리고 빈등록은
+		@Bean
+		public OrderRepositoryV1 orderRepositoryV1(LogTrace logTrace){
+			OrderRepositoryV1 orderRepository = new OrderRepositoryV1Impl();
 
+			return (OrderRepositoryV1) Proxy.newProxyInstance(OrderRepositoryV1.class.getClassLoader(),
+					new Class[]{OrderRepositoryV1.class},
+					new LogTraceBasicHandler(orderRepository,logTrace));
+		}
+	이렇게 등록하면됨(프록시로 실제객체 싸서)
+	
+	근데 이렇게하면,문제는 클래스단위로 전체를 싸버리기때문에,
+	특정메서드는 적용하기싫을경우라도 전부 적용이 되는데,
+	이것도 필터써서 특정메서드는 지나가게하거나 특정메서드만 로직타게하거나 할수있음
+	이건
+		private final String[] patterns;
+	이렇게 패턴 생성자로 받고
+	    String methodName = method.getName();
+        if(!PatternMatchUtils.simpleMatch(patterns,methodName)){
+            return method.invoke(target,args);
+        }
+	invoke 최상위에 패턴에걸리면 그냥 위임하고 지나가게하면됨(PatternMatchUtils.simpleMatch()를 쓰면,쌍방향*로,*ab*==abc 이렇게 들어감)
+	
+	이 jdk동적프록시의 한계는,인터페이스가 꼭 있어야함
+	그래서 클래스만 있는경우에 동적프록시를 적용할땐,일반적방법으론 어렵고,
+	cglib(코드제너레이터라이브러리)라는 바이트코드를 조작하는 특별한 라이브러리를 써야함
+	
+	cglib는 외부라이브러리지만,스프링쓰면 스프링에서쓰기때문에 포함되어있음
+	그리고 일반적으로 cglib를 직접 사용하는일은 거의없으니(보통 프록시펙토리사용)그냥 개념만 알고가자
+	
+	이건 MethodInterceptor를 구현하면됨
+	여기서 받는 매개변수는
+		obj cglib를 적용할 객체
+		method 호출된 메서드
+		args 메서드를 호출하면서 전달된 인수
+		proxy 메서드호출에 사용
+	이거도 동적프록시랑 코드는똑같음
+	    @Override
+		public Object intercept(Object obj, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+			앞로직
+			Object invoke = methodProxy.invoke(target, args);
+			뒷로직
+			return invoke;
+		}
+	이렇게 똑같이쓰는데,아마 Object[]가 objects가 기본이름일텐데 저게 args라서 이름바꿨음
+	그리고 method로 호출해도되는데,methodProxy쓰면 더 빠르대
+	사용은
+	    ConcreteService target=new ConcreteService();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        Enhancer enhancer=new Enhancer();
+        enhancer.setSuperclass(target.getClass());
+        enhancer.setCallback(new TimeMethodInterceptor(target));
+        ConcreteService proxy =(ConcreteService) enhancer.create();
+        proxy.call();
+	이렇게 인헨서만들고,
+	뭘로만들건지 구체클래스를 클래스타입지정해주고(상속으로 처리함),
+	콜백뭐쓸건지 지정해주고(아까만든 인터셉터넣어주면됨),
+	생성한다음 그거로 메서드부르면됨
+	
+	그리고 cglib는,클래스기반프록시라 상속을 쓰기때문에 제약이 있음
+		부모클래스에서 기본생성자가 있어야함(자식클래스를 동적으로생성해야해서)
+		클래스에 final이 붙으면 상속이 불가능해서 예외발생
+		메서드에 final이 붙으면 오버라이딩이 불가능해서 프록시로직이 동작하지않음(예외는안뜸)
+	이런것들을 처리해줘야함
+	
+	그래서,인터페이스가 있을땐 동적프록시를 쓰고,그렇지않으면 cglib를 적용하려고 하거나,
+	아니면 둘다쓸건데 둘다만들어야하는상황이 싫거나(중복),
+	특정 조건이 맞을때 프록시로직을 적용하고싶으면
+	프록시팩토리를 사용하면됨
+	
+6.스프링이 지원하는 프록시
 
 
 

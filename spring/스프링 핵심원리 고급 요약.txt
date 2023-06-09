@@ -356,12 +356,114 @@
 	프록시팩토리를 사용하면됨
 	
 6.스프링이 지원하는 프록시
+	프록시팩토리는,인터페이스가 있을땐 jdk동적프록시,없으면 cglib를 자동으로 선택해주고(그러니 코드는 한번만만들어도되고,설정변경가능 무조건cglib같은),
+	필터기능도 지원해주는 스프링의 기능임
+	맨날 스프링이 하던,추상화해서 싸주는거임
+	
+	이걸 사용할땐,advice(MethodInterceptor,얘가 어드바이스를 상속받고있음)를 구현하면 알아서 스프링이 조건맞춰서 선택해주고,
+	필터는 pointcut으로 일관성있게 해결할수있음
+	
+	즉 프록시생성은 프록시팩토리로 알아서해주고,우리는 어드바이스만 구현하면 알아서 인터페이스 깡클래스 상관없이 알아서 선택하고,
+	포인트컷으로 필터를 적용할수있음
+	
+	MethodInterceptor안에 MethodInvocation이 있는데,여기안에 현재프록시객체,args,메서드정보등이 전부 다 들어있음
+	그래서 따로 타겟받을필요도없음,이미 프록시팩토리만들때 타겟을 넘겨야하고,그걸 저안에 넣어뒀기때문
+	이때 org.aopalliance.intercept.MethodInterceptor를 받아서
+		앞로직
+		Object invoke = invocation.proceed();
+		뒷로직
+		return invoke;
+	이렇게 실행시키면됨(그냥 args랑 타겟이랑 메서드명이랑 다 invocation이 가지고있으니까 그거 바로실행시키는메서드임)
+	
+	사용은
+	    ServiceInterface target=new ServiceImpl();
+        ProxyFactory proxyFactory = new ProxyFactory(target);
+        proxyFactory.addAdvice(new TimeAdvice());
+        ServiceInterface proxy =(ServiceInterface) proxyFactory.getProxy();
+        proxy.save(); //클래스나 인터페이스의 메서드 그대로 호출하면됨
+	이렇게 프록시팩토리에 타겟넣고,어드바이스(내가 추가할로직)넣고 프록시를 생성한후에 메서드호출하면됨(원래객체쓰는거랑 똑같이쓰면됨)
+	그리고 프록시팩토리를쓰면,
+		AopUtils.isAopProxy(proxy)
+	이렇게 프록시가 적용됐는지도 확인할수있고,
+		AopUtils.isJdkDynamicProxy(proxy)
+		AopUtils.isCglibProxy(proxy)
+	jdk동적프록시인지 cglib프록시인지도 알수있음(이 3개는,프록시팩토리를 써서 생성했어야만 알수있음)
+	그리고 무조건 cglib로 만들고싶으면
+		proxyFactory.setProxyTargetClass(true);
+	추가해서 프록시생성하면됨(나름 쓸일이 있다고함,특히 aop쓰면 스프링이 무조건 이거 켜두고 만들어서,무조건 cglib기반임)
+	
+	포인트컷은 어디에 부가기능을 적용할지 적용하지않을지 판단하는 필터링 로직임,클래스와 메서드이름으로 필터링함
+	어드바이스는 프록시가 호출하는 부가기능,단순하게 프록시로직이라고 생각하면됨
+	어드바이저는 하나의 포인트컷과 하나의 어드바이스를 합쳐둔거
+	
+	즉 포인트컷으로 어디적용할지를 선택하고,어드바이스가 적용할 로직,어드바이저는 이 둘을 합쳐둔거
+	이렇게 필터와 로직을 분리해서,단일책임원칙을 지킬수있음
+	
+	작동로직은,일던 포인트컷을 들러서 여기가 맞나 if문으로 체크하고,맞으면 어드바이스실행후 타겟로직실행,아니면 그냥 바로 타겟로직실행하는식
+		메서드호출-프록시.포인트컷에서 대상확인-대상이면 어드바이스,아니면 타겟인스턴스호출
+	이 어드바이저는
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(Pointcut.TRUE, new TimeAdvice());
+        proxyFactory.addAdvisor(advisor);
+	이렇게 만들어서 넣으면됨(Pointcut.TRUE는 항상 참인,즉 모든곳에 어드바이스를 적용하는거)
+	프록시팩토리에 어드바이저는 필수인데,만약 addAdvice로 넣어도,안에서 포인트컷 true로 해서 어드바이저를 생성해서 넣음
 
-
-
-
-
-
-
+	포인트컷은,기본적으로 스프링이 만들어주는걸 보통 사용하는데,직접 만들수도 있긴함
+	직접구현할땐 classFilter과 MethodMatcher을 둘 다 구현하고,pointcut으로 싸면됨
+	이게 둘다 true를 반환해야 어드바이스를 적용하는거
+	어짜피 만들일없는데 대충보고넘어가자
+	
+	스프링에서는 포인트컷을 대부분 제공함
+	 가장 쉬운건 NameMatchMethodPointCut임,이름그대로 이름매칭으로 적용하는거
+	    NameMatchMethodPointcut pointcut = new NameMatchMethodPointcut();
+        pointcut.setMappedNames("save");
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, new TimeAdvice());
+	이런식으로 사용하면됨
+	보통 많이쓰는건 AspectJExpressionPointCut임,이건 aspectJ표현식으로 사용하게됨,이거만 사용한다고보면됨
+	이건 나중에 나올예정
+	
+	그리고 하나의 타겟에 여러 어드바이스를 적용하려면,
+	가장쉬운방법은 프록시를 여러개만들어서 프록시체인을 거는건데,이건 프록시를 여러번 생성해야하는문제가 있음(각 어드바이저마다 하나의프록시)
+	이건 걍 프록시팩토리 2개만들고,처음은 타겟,두번째는 프록시1을 넣는거,이러면 프록시체인이 걸리니까
+	
+	그래서 스프링에선 하나의프록시에 여러 어드바이저를 넣을수있음
+        DefaultPointcutAdvisor advisor1 = new DefaultPointcutAdvisor(Pointcut.TRUE, new Advice1());
+        DefaultPointcutAdvisor advisor2 = new DefaultPointcutAdvisor(Pointcut.TRUE, new Advice2());
+        proxyFactory1.addAdvisors(advisor1,advisor2);
+        ServiceInterface proxy1 = (ServiceInterface)proxyFactory1.getProxy();	
+	이렇게 addAdvisors넣으면됨,각 어드바이저는 각각 자기가 적용할거만 적용됨,즉 123이 있을떄 2번만 적용되거나 하는게 가능
+	단,순서대로 동작하니까(프록시체인이 이순서대로걸리니까)이건 조심해서 순서맞춰야함(2번,1번,타겟,1번후,2번후 순서)
+	즉 뒤에서부터 먼저 동작함 스택생각하면됨
+	즉 이렇게하면 프록시는 하나만만들고 어드바이저만 여러개만들어서 하나의 프록시에 여러 어드바이저가 적용됨
+	
+	스프링 aop도,aop적용수만큼 프록시가 생성되는게 아닌,프록시는 하나만 만들고 거기에 여러 어드바이저를 적용함
+	
+	이렇게하면 일단 프록시 생성하고,어떤 부가기능을 어디에 적용할지 명확히 지정할수있게됐는데,설정이 매우귀찮고 컴포넌트스캔을 사용못한다는 단점이 있음
+	이걸 해결하는게 빈 후처리기임
+	
+7.빈 후처리기
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 
 

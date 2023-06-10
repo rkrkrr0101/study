@@ -434,6 +434,7 @@
 	단,순서대로 동작하니까(프록시체인이 이순서대로걸리니까)이건 조심해서 순서맞춰야함(2번,1번,타겟,1번후,2번후 순서)
 	즉 뒤에서부터 먼저 동작함 스택생각하면됨
 	즉 이렇게하면 프록시는 하나만만들고 어드바이저만 여러개만들어서 하나의 프록시에 여러 어드바이저가 적용됨
+	즉 프록시가 하나고,프록시가 가지고있는 모든 어드바이저에 대해 foreach돌리는느낌
 	
 	스프링 aop도,aop적용수만큼 프록시가 생성되는게 아닌,프록시는 하나만 만들고 거기에 여러 어드바이저를 적용함
 	
@@ -441,17 +442,111 @@
 	이걸 해결하는게 빈 후처리기임
 	
 7.빈 후처리기
+	빈후처리기는 빈 등록 직전에 뭔가 조작을 하고싶으면 빈 후처리기를 사용하면됨
+	스프링빈등록은
+		빈을생성
+		빈을 후처리기에 전달
+		후처리기는 빈저장소에 리턴값을 넣음(없으면 그냥 바로리턴)
+	이순서로 작동함
+	이거로 빈을 생성한후에 프록시를 끼워버린다던가(빈을 변형),아예다른객체를 넣는다던가 ,빈을 생성한후에 로그를찍는다던가 하는게 가능해짐
+	그래서 컴포넌트스캔으로 등록되는걸 후처리기를 통해 건드릴수있음
+	
+	이 빈 후처리기는,BeanPostProcessor인터페이스를 구현해서 스프링빈으로 등록하면됨
+	이떄
+		postProcessBeforeInitialization //postConstruct가 발생하기전에 호출
+		postProcessAfterInitialization  //postConstruct가 발생한후에 호출
+	로 나뉘어지고,디폴트메서드니까 필요한거만 구현하면됨
+        @Override
+        public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+            log.info("beanName={} bean={}",beanName,bean);
+            if (bean instanceof A){
+                return new B();
+            }
+            return bean;
+        }	
+	이런식으로 그냥 객체 리턴하면됨,프록시넣는거도 이런식
+	이런식으로하면 해당빈이름으로 바꿔치기해서 리턴한게 들어가니까,바꿔치기를 할수있는거
+	이렇게하면 A클래스로 빈을 찾아도 안나오게됨
+	이런식으로 컴포넌트스캔의 대상들도 건드릴수있게됨
+	
+	그리고 @PostConstruct도 이 빈 후처리기를 사용해서 동작함
+	
+	프록시적용할떄도 그냥 빈후처리기 하나 등록해두면,모든애들이(컴포넌트스캔포함) 프록시로 싸서 등록시킬수있고,따로 설정도 안해도됨
+	이때 패키지로 거르려면
+		private final String basePackage;
+		private final Advisor advisor; //이2개는 생성자로받으면됨
+		
+	    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+			String packageName = bean.getClass().getPackageName();
+			if(!packageName.startsWith(basePackage)){
+				return bean;
+			}
+			ProxyFactory proxyFactory = new ProxyFactory(bean);
+			proxyFactory.addAdvisor(advisor);
+			Object proxy = proxyFactory.getProxy();
+			return proxy;
+		}
+	이런식으로 거르면되고(걸러야하는건 생성자스트링으로 받으면됨)
+	이렇게되면 설정파일에서 프록시세팅중복을 없앨수있음(그냥 세팅만하면됨)
+	그리고 이런식으로 프록시적용할때 무조건 거르긴해야함
+	스프링부트가 기본세팅하는빈중에 프록시를 못만드는애도있고,애초에 이렇게 다 프록시를 박는거도 비효율적이니
+	
+	애초에 포인트컷이 있으니 포인트컷을 써도됨
+	이 포인트컷을 사용한 빈 후처리기(프록시등록을 위한)이 스프링엔 이미 있음
+	여기서 포인트컷은,이미 클래스,메서드단위 필터가 있기때문에
+		프록시 적용대상여부를 체크해서 꼭 필요한곳에만 프록시를 적용(프록시생성시,클래스필터사용)
+		프록시의 대상메서드에 어드바이스를 적용해야할지 판단(프록시내부,메서드필터사용)
+	두가지 일을 함,즉 두군데서 다 대상체크를함(클래스기반,메서드기반 따로따로)
+	
+	이 스프링이 주는 빈후처리기를 쓸땐 빌드그래들에
+		implementation 'org.springframework.boot:spring-boot-starter-aop'
+	추가해야함
+	이러면 aspectJ 관련 라이브러리들을 등록하고,aop관련클래스들을 스프링빈에 등록함
+	이러면 AnnotationAwareAspectJAutoProxyCreator이라는 빈 후처리기가 자동으로 등록되는데,얘는 프록시를만드는애임
+	얘는 스프링빈으로 등록된 어드바이저들을찾아 프록시가 필요한곳에 자동으로 프록시를 적용해줌(어드바이스랑 포인트컷이 있으니,이것만가지고있어도됨)
+	즉 어드바이저만 스프링빈에 등록하면됨(얘는 어드바이저뿐아니라 @Aspect도 자동으로 인식해서 프록시를만들고 aop를 적용해줌,즉 aop도 얘담당)
+	
+	얘의 동작과정은
+		우리가 어드바이저 스프링빈으로 등록
+		빈후처리기가 모든 어드바이저 빈 조회해서 자동프록시생성기 init
+		스프링이 객체생성후 프록시생성빈후처리기(자동프록시생성기)에 넣어서 클래스기반대상체크+객체의 모든메서드를 포인트컷에 하나하나매칭
+			그래서 메서드중 하나라도 만족하면,프록시적용대상이 됨(클래스단위로 프록시걸어야하는데 다른메서드가 대상아니면 걍 어드바이스적용안하면되니까)
+		맞으면 프록시끼워서 컨테이너에 프록시빈 등록,아니면 그냥 빈 반환
+	이렇게됨
+	그러니까 어드바이저만 등록하면
+	    @Bean
+		public Advisor advisor1(LogTrace logTrace) {
+			NameMatchMethodPointcut pointcut = new NameMatchMethodPointcut();
+			pointcut.setMappedNames("request*","order*","save*");
+			LogTraceAdvice advice = new LogTraceAdvice(logTrace);
+			return new DefaultPointcutAdvisor(pointcut,advice);
+		}
+	끝임
+	
+	이렇게 그냥 메서드이름으로하면,일반적인 이름으로 잡으면 막 스프링이 만들어둔거도 다같이 걸려버림
+	그래서 패키지로 1단계로 거르고,2단계로 메서드로 거르는게 필요함
+	이게 AspectJ표현식이고,이걸 사용하는게 AspectJExpressionPointCut임(실무에선 이거만씀)
+	이건
+	    AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* hello.proxy.app..*(..))");
+	이런식으로 쓰는데,표현식은 뒤에서 자세히나옴
+	대충 
+		* ->와일드카드
+		hello.proxy.app.. ->저위치부터 해당패키지와 하위패키지
+		*(..) ->모든메서드(*) 파라미터는 상관없음((..))
+	이런거임
+	그래서 특정대상제외하려면
+		execution(* hello.proxy.app..*(..)) && !execution(* hello.proxy.app..noLog(..))
+	이렇게 noLog는 제외할수도있음
+	
+	그리고 이렇게 어드바이저가 하나의 클래스에 여러개 적용된다고 하더라도,프록시는 하나만 생성됨
+	프록시팩토리에선 내부에 어드바이저를 배열로 가질수있기때문에 그냥 그거 포이치돌리는식으로 동작시키는게 싸기때문
+	그래서 시작할때 클래스의 포인트컷을 만족하는 모든 어드바이저를 하나의 프록시에 때려박고,그 프록시만 둘러싸버림
+	그래서 모든 어드바이저적용대상이 아니어야 프록시가 생성되지않고 깡빈으로 등록되게됨
+	이건 aop도 동일하게 동작함
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+8.@Aspect AOP	
 	
 	
 	

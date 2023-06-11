@@ -547,12 +547,39 @@
 	
 	
 8.@Aspect AOP	
-qㅂㅂㅂ배아파ㅏㅏㅏㅏ
+	스프링에선 @Aspect를 붙여서 포인트컷과 어드바이스로 구성된 어드바이저를 생성할수있음
+	일단 클래스에
+		@Aspect
+	붙이고
+	로직은
+		@Around("execution(* hello.proxy.app..*(..)")
+		public Object execute(ProceedingJoinPoint joinPoint)throws Throwable{
+			
+		}
+	이안에 쓰면되는데,@Around가 포인트컷이고 메서드가 어드바이스라고 생각하면됨
+	@Around가 붙은메서드를 어드바이저로만드는느낌이라 그래서 한클래스에서 2개도만들어짐
+	안에서 로직쓸때도
+			앞로직
+		    String message = joinPoint.getSignature().toShortString(); //메서드명을 뽑고싶을땐 getSignature
+            status = logTrace.begin(message);
+            Object request = joinPoint.proceed(); //똑같이 proceed사용하면됨
+			뒷로직
+	이렇게 그대로쓰면됨,즉 포인트컷과 어드바이스를 한 클래스안에서 어노테이션만으로 어드바이저로 만들어 쓸수있다는것
+	이때
+		joinPoint.getTarget() //실제호출대상
+		joinPoint.getArgs()//매개변수
+		joinPoint.getSignature()//호출메서드
+	이렇게 얻을수있음
+	그리고 빈등록만 해주면됨(컴포넌트스캔으로하던가 수동으로하던가 상관없음)
 	
+	이건 사실,자동프록시생성기(AnnotationAwareAspectJAutoProxyCreator)가,
+	이 @Aspect를 찾아서 자동으로 어드바이저로 바꾸고 빈으로등록해줌
+	그래서 AnnotationAware이 이름에 있는거
+	그래서 어드바이저를 만들고나면 동작은 똑같음
 	
+	이렇게 어플리케이션의 여러기능들에서 비슷하게 관심이 있는걸 횡단관심사(로깅,트랜잭션등)라고 하고,aop는 이 횡단관심사를 해결해줌
 	
-	
-	
+9.스프링 aop 개념
 	
 	
 	

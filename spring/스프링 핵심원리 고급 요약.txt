@@ -637,6 +637,181 @@
 	
 	
 10.스프링 aop 구현	
+	aop쓰려면
+		implementation 'org.springframework.boot:spring-boot-starter-aop'
+	추가
+	
+	aop를 구현하는 가장 일반적인방법은,@Aspect를 사용하는것
+	저번에본거처럼 @Aspect를 클래스레벨에 붙이고,
+	하위메서드에서 @Around나 @Before같은걸 붙이고 괄호안에 AspectJ표현식 넣어주면됨
+		@Around("execution(* hello.aop.order..*(..))")
+	그리고 메서드에서 제일첫번째 매개변수로 ProceedingJoinPoint를 받고
+		public Object doLog(ProceedingJoinPoint joinPoint)throws Throwable{}
+	타겟메서드를 실행시킬땐(정확히는 다음애스팩트로 넘김,즉 미들웨어생각하면됨 마지막에 애스팩트의 마지막에 타겟메서드가 있는거)
+		joinPoint.proceed()
+	하면됨
+	타겟메서드 실행시키고 돌아오기때문에,
+	맨마지막에 넣으면 aop전부분-타겟메서드 가 되고,
+	중간에넣으면 aop전부분-타겟메서드-aop후부분
+	젤처음에넣으면 타겟메서드-aop후부분
+	이 됨
+	그리고 joinPoint.proceed()를 호출하지않으면,그 이후 Aspect도 실행되지않음
+	
+	그리고나서 이걸 스프링빈으로 등록하면됨(@Component)
+	
+	이떄 포인트컷을 저렇게 스트링으로 던져도되지만,아예 분리해서 재사용할수도있음(모듈화가능)
+	    @Pointcut("execution(* hello.aop.order..*(..))")
+		private void allOrder(){}//메서드안엔 비워두면됨
+	그리고 
+		@Around("allOrder()")
+	이렇게 사용하면 됨
+	이때 포인트컷메서드를 포인트컷 시그니쳐라고 함
+	이런식으로 같은 포인트컷이 여러군데서 들어가도,관리포인트를 통일할수있음+메서드명으로 포인트컷의 의미를 부여할수있음
+	그리고 이런 포인트컷을 다른클래스에서도 사용할수있는데,그러려면 메서드(포인트컷시그니처) 클래스 둘다 public으로 설정해둬야함
+	그리고 사용할땐
+		@Around("hello.aop.order.aop.Pointcuts.allOrder()")
+	이렇게 패키지명 다 나열하고 메서드까지 넣어주면됨	
+		
+	포인트컷을 여러개를 동시적용할수도있는데
+		@Around("allOrder() && allService()")
+	이렇게 &&(and) ||(or)등 !(not) 똑같음
+	이렇게 여러 포인트컷을 묶어서 포인트컷시그니처로 만들어둘수도있음
+	    @Pointcut("allOrder()&&allService()")
+		public void orderAndService(){}
+	이렇게
+	
+	그리고 클래스의 이름가지고 포인트컷표현식만들땐
+		execution(* *..*Service.*(..))
+	이렇게하면 뒤에 Service가 붙은모든클래스와 인터페이스가 대상이됨(클래스만이 아니라 인터페이스도 포함임)
+	
+	그리고 aop에서 타겟메서드 실행을 제어할수있는걸 이용해서,밸리데이션처리가 가능해지는거
+	값이 맞으면 joinPoint.proceed()를 실행하고,틀리면 그냥 끝내는식으로 분기타는게 가능
+        try{
+            log.info("[트랜잭션 시작] {}",joinPoint.getSignature());
+            Object result = joinPoint.proceed();
+            log.info("[트랜잭션 커밋] {}",joinPoint.getSignature());
+            return result;
+        }catch (Exception e){
+            log.info("[트랜잭션 롤백] {}",joinPoint.getSignature());
+        }finally {
+            log.info("[리소스 릴리즈] {}",joinPoint.getSignature());
+        }
+	이런식으로 로그자리에 실제트랜잭션코드가 들어가면,트랜잭션처리가 가능해지고(그 트랜잭션참여식으로하게되니),예외가 떳냐안떴냐에 따라 분기가 가능해짐
+	
+	그리고 여러 어드바이스를 실행시킬때,기본적으로는 순서를 보장하지않음
+	만약 순서제어를 적용하고싶으면,@Aspect밑에 @Order을 붙여야하는데,문제는 이걸 클래스단위로 붙여야한다는거
+	그래서 만약 한 @Aspect밑에 여러어드바이스가 있고,순서제어를 하고싶으면,각각 하나의 클래스로 분리해야함(별도의파일로 뽑거나,내부클래스쓰거나)
+	그리고
+		@Order(1)
+		@Order(2)
+	일떄,숫자가 작은,그러니 1부터 실행되고 그뒤에 2가 실행됨
+
+
+	어드바이스의 종류엔,@Around말고도 여러가지가 있음
+	이건
+		@Around:메서드 호출 전후에 수행,가장 강력한어드바이스,조인포인트실행여부선택,전달값반환,조작한값반환,예외반환이 가능,즉 http에서 post같은거임
+		@Before:조인포인트 실행이전에 실행(Around에서 proceed사용전이라고 보면됨)
+		@After Returning:조인포인트 정상완료후 실행(Around에서 proceed사용후 정상로직이라고 보면됨)
+		@After Throwing:메서드가 예외를 던지는 경우 실행(Around에서 proceed사용후 catch라고 보면됨)
+		@After:조인포인트가 정상 또는 예외에 관계없이 실행(Around에서 proceed사용후 finally라고 보면됨)
+	이렇게 있음
+	그래서 어라운드를 제외한애들은 이미 위치가 정해져있기때문에,어스펙트에서 따로 실행(proceed)시킬수없음(일반적인상황에서 실행을 막을수없음,예외제외)
+	그래서 받는 joinPoint도 다른데
+		@Before("hello.aop.order.aop.Pointcuts.orderAndService()")
+		public void doBefore(JoinPoint joinPoint){
+			log.info("before{}",joinPoint.getSignature());
+		}	
+	이런 Proceeding이 빠진 일반적인 조인포인트를 받음
+	아예 저런 메서드정보같은 메타정보가 필요없으면 빼버려도됨
+		@Before("hello.aop.order.aop.Pointcuts.orderAndService()")
+		public void doBefore(){
+			log.info("abcd");
+		}
+	이렇게
+	그리고 이렇게 around말고 다른데서도 aop에서 예외가 터지고 못잡으면 그대로 로직실행끝이니까 조심
+	
+	after들은 타겟로직의 실행결과값을 받아올수있음
+		@AfterReturning(value = "hello.aop.order.aop.Pointcuts.orderAndService()",returning = "result")
+		public void doReturn(JoinPoint joinPoint,Object result){
+			log.info("[return]{} return={}",joinPoint.getSignature(),result);
+		}
+	여기서 returning에 있는 스트링과,메서드에서 매개변수로 받고있는 변수의 이름이 같은곳에 들어가게됨
+	단,여기서 result의 값을 변경해서 리턴한다고해서,결과값을 변조할순없음
+	결과값변조하려면 Around써야함
+	@AfterThrowing은 예외를 받을수있음
+		@AfterThrowing(value = "hello.aop.order.aop.Pointcuts.orderAndService()",throwing = "ex")
+		public void doReturn(JoinPoint joinPoint,Exception ex){}
+	위랑 상세내용은같음
+	
+	조인포인트에서 있는 메서드들은
+		joinPoint.getTarget() //실제호출대상반환
+		joinPoint.getArgs()//매개변수반환
+		joinPoint.getSignature()//호출메서드반환
+		joinPoint.getThis()//프록시객체반환
+		joinPoint.toString()
+	들이 있음
+	
+	그리고 returning같은건,해당 매개변수에 지정된 타입을 반환하는메서드만 대상이 됨(부모타입으로 자식타입먹는건 가능)
+	즉 int를 반환하는데 저기에 string이 설정되면 해당어드바이스가 무시됨(void의 경우엔 Object넣어야함),추가포인트컷이라고 생각해도될듯 
+	
+	@Around에서 할수있는일은
+		조인포인트실행여부선택(joinPoint.proceed() 호출여부선택)
+		전달값변환(joinPoint.proceed(args[]) 매개변수 조작)
+		반환값변환(object res=joinPoint.proceed() 이후 값 조작후 리턴)
+		예외변환(catch에서 예외받아서 변환)
+		트랜잭션처럼 try catch finally가 모두들어가야하는 구문을 처리할수있음(이런건 around를 쓸수밖에없음)
+	이 있고,추가적으로 Around는 첫파라미터로 ProceedingJoinPoint를 받아야하고,proceed를 통해 대상을 실행할수있는데,
+	proceed를 여러번 호출할수도있음(실패시 재시도가능,이거도 around를 쓸수밖에없음)
+	
+	Around말고 다른 어드바이스들이 있는 이유는,post도배를 안하는거와 같은이유,즉
+		제약을 통해 좀 더 편하게 역할을 가이드하는것(실수로 proceed호출안해도 Around말고 다른데선 상관없는거처럼)
+		어노테이션명으로 직관적으로 어디서 실행될지 표시(작성한 의도를 명확히 표시)
+	하는데 있음
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	
 	
 

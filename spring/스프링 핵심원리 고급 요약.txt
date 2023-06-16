@@ -852,8 +852,14 @@
 		@Around("execution(* hello.aop..*(..)) && @target(hello.aop.member.annotation.ClassAop)")//같이사용
 		@Around("@target(hello.aop.member.annotation.ClassAop)")//단일사용,이렇게사용하면안됨
 		@Around("execution(* hello.aop..*(..)) && @within(hello.aop.member.annotation.ClassAop)")//같이사용
-		@Around("@within(hello.aop.member.annotation.ClassAop)")//단일사용		
+		@Around("@within(hello.aop.member.annotation.ClassAop)")//단일사용	
+
+	    @Before("allMember() && @target(annotation)") //이렇게도쓸수있음
+        public void atTargetArgs(JoinPoint joinPoint, ClassAop annotation){}		
+			    @Before("allMember() && @within(annotation)") //이렇게도쓸수있음
+        public void atWithinArgs(JoinPoint joinPoint, ClassAop annotation){}		
 	이런식으로 해당 어노테이션경로를 넣으면됨
+	
 	이 둘의 차이는,
 		@target는 해당 인스턴스의 모든 메서드를 조인포인트로 사용하고(부모클래스의 메서드도 허용,인스턴스기준이니까 저때는 이미 다 들어가있는상태니)
 		@within은 해당타입내에 있는 메서드만 조인포인트로 사용함(부모클래스의 메서드는 허용하지않음,단 오버라이드하면 가능)
@@ -869,15 +875,73 @@
 	즉 빈 전체가 스코프에 들어가게 포인트컷을 넣으면안된다는것과 저3개(인스턴스기반으로 체크하는애들)는 서브용으로만 써야한다는것
 
 
+	@annotation은 메서드가 해당 어노테이션을 가지고있는 조인포인트를 매칭,즉 메서드가 해당 어노테이션있으면 포인트컷붙여줌
+		@annotation(hello.aop.member.annotation.MethodAop)
+		@Around("@annotation(hello.aop.member.annotation.MethodAop)")
+	이렇게사용하면됨
+	이러면 해당어노테이션이 붙어있는 모든 메서드에서 어드바이스가 실행됨
+	그리고 어노테이션 인터페이스에 필드를 만들고,거기에 넣은값을 꺼낼수있음
+	    @Before("allMember() && @annotation(annotation)")
+        public void atAnnotationArgs(JoinPoint joinPoint, MethodAop annotation){
+            log.info("[@Annotation]{},annotationValue={}",joinPoint.getSignature(),annotation.value());
+        }//value는 내가 만든 필드
+	이건 가끔 사용될때가있음
+	
+	@args는,전달된 실제인수의 런타임타입이,주어진타입의 어노테이션을 갖는 조인포인트
+	즉 매개변수에 어노테이션을 붙이고,그걸읽을수있음
+		@args(test.Check)
+		...
+		void success(@Check void abcd){}
+	이렇게 있으면 읽는거
+	잘사용하지않음
 
-
-
-
-
-
-
-
-
+	bean은 스프링전용 포인트컷지시자,빈의 이름으로 지정
+		bean(orderService)
+		bean(*repository)
+	이런식으로 사용할수있음
+	이거도 잘 사용하진않음
+	
+	실행시킨 메서드의 파라미터를 뽑아서 볼수도 있음(어드바이스에,타겟메서드의 실제 매개변수를 전달할수있음)
+	이건
+		@Before("allMember() && args(arg...)")
+		public void logArg3(String arg){...}
+	이렇게 포인트컷속의 매개변수이름과,메서드의 매개변수이름을 맞추면 저기로 들어가고,
+	추가적으로 메서드에서 지정한 타입으로 포인트컷으로 거르는게 들어가게됨(여기선 String이 아니면 다 걸러짐)
+	이거도 부모타입포함이라,Object로 두면 다 받을수있음
+	이게
+		joinPoint.getArgs()[0];
+	이런식으로 꺼낼수있긴하지만,배열에서 직접 꺼내는,순서에 종속되는 문제가 있어서(가독성도 떨어지고),이름기반으로 가져오고싶을때 사용하는거
+	
+	그리고 어노테이션들도 넣어서 어노테이션의 매개변수를 전달받을수있음(이거도 메서드에서 파라미터뽑는느낌)
+        @Before("allMember() && @annotation(annotation)")
+        public void atAnnotationArgs(JoinPoint joinPoint, MethodAop annotation){
+            log.info("[@Annotation]{},annotationValue={}",joinPoint.getSignature(),annotation.value());
+        }	
+	이렇게 값을뽑을수있음
+	
+	this는,지금 현재 대상을 프록시를 포함해 가져옴(프록시로 싸져있으면 프록시채로 가져옴,즉 스프링빈객체(스프링aop프록시)를 그대로가져옴)
+	target는,지금 현재 대상을 프록시를 벗겨서 진짜 본체를 가져옴(aop프록시가 가르키는 실제대상)
+	두개 다 *를 사용할수없음(딱 하나만 가져오는거니)
+	
+	별로 중요하진않는데,이 둘의 차이는,aop를 적용하면 그 타겟객체대신 프록시객체가 등록되는데,
+	이때 jdk프록시를 쓸지 cglib를 쓸지에 따라 프록시 생성방식에 차이가 있어서 다른게 생김
+	jdk동적프록시는 인터페이스를 구현해서 생성,cglib는 구체클래스를 상속받아서 생성하는데,이 구현과 상속의 차이때문에 문제가 발생함
+	타겟은 어짜피 실제타겟대상이니까 별상관없는데,this는 프록시객체를 받아오니까,jdk프록시를 쓸때 문제가 생김
+	구체클래스(MemberServiceImpl)를 포인트컷 this에 지정해두고
+		인터페이스를 구현하면(jdk동적프록시),아예 새로운 클래스라 기존 구현체에 대해 전혀 관계가 없어서 aop적용대상이 아니게되고(형제레벨이니),
+		구체클래스를 상속하게되면(cglib),aop 적용대상이 됨(상속이니까 부모클래스라서)
+	즉 프록시를 뭘쓰냐에 따라 결과가 달라지게됨
+	기본적으로 부모타입은 허용해서(지시자따라 케바케긴하지만) 포인트컷이 적용되는데,
+	인터페이스구현의 경우 구현체랑 얘가만든 프록시클래스랑 부모관계가 아니라 형제관계니까 적용이 안되는거
+	
+	뭐 근데 this나 target나 둘다 잘 안써서 걍 교양인듯(어짜피 파라미터바인딩에서나 쓰고),기본적으로 cglib만 사용해서 프록시만드는게 기본값이기도하고
+	그래서 보통은 둘 다 된다고생각해도될듯
+	
+	
+	정리하면
+	기본적으로 execution을 사용하고,가끔 @annotation을 만들어서 사용할순있음
+	타겟메서드의 매개변수를 받을수있고,어노테이션의 필드값도 받을수있음
+	타겟객체를 그대로 받을수도있음(이렇게 부른 타겟객체로 메서드호출할경우 aop를 안거침,무한루프방지)
 
 
 

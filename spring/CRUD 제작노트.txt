@@ -42,3 +42,6 @@ mysql드라이버는
 	val post:Post=target as Post
 이렇게하면됨
 
+page에서 현재페이지의 요소 갯수는 페이지객체.numberOfElements
+테스트시 beforeeach로 계속 엔티티 생성하고 지우고 한다고해도,id값을 오토인크리즈먼트로 해버리면 계속 id는 올라가니까 주의
+

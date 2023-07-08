@@ -261,7 +261,7 @@
 		}
 	이런식으로 구현하면됨
 	사용은
-	    AInterface targe1t=new AImpl();
+	    AInterface target1=new AImpl();
         TimeInvocationHandler handler1 = new TimeInvocationHandler(target1);
         AInterface proxy1 =(AInterface) Proxy.newProxyInstance(AInterface.class.getClassLoader(),
                 new Class[]{AInterface.class}, handler1);

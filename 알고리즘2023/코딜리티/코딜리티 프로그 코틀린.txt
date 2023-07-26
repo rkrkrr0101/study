@@ -1,0 +1,17 @@
+for돌려서 현재값 집합에 담고 같아지면 리턴
+o(n)
+
+
+fun solution(X: Int, A: IntArray): Int {
+    val leafSet = mutableSetOf<Int>()
+    for ((index,e) in A.withIndex()){
+        if(e<=X){
+
+            leafSet.add(e)
+            println(leafSet.size)
+            if(leafSet.size==X)return index
+        }
+    }
+
+    return -1
+}

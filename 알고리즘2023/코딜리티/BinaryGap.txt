@@ -1,0 +1,16 @@
+바이너리로 변환하고,스트링으로 바꿔서 for돌려서,현재값이 0이면 스택에 1씩 쌓아뒀다가 1이되면 현재최고값이랑 현재스택이랑 비교해서 큰거로 치환
+반복문끝나면 리턴
+
+def solution(N):
+    a=bin(N)
+    res=0
+    maxValue=0
+    for i in a[2:]:
+        if i=="0":
+            res=res+1
+            
+        else:
+            maxValue=max(maxValue,res)
+            res=0
+
+    return maxValue

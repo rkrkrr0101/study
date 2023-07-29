@@ -1,0 +1,28 @@
+문자열 슬라이스에 대해 평균이 최소가 되는 값을 리턴해라
+결국 가장 작은 평균은 2나 3개니까,거기에 대해서만 루프돌리기,이러면 o(n)이니까
+
+def solution(A):
+    min_avg_value = (A[0] + A[1])/2.0   # The minimal average
+    min_avg_pos = 0     # The start position of the first
+                        # slice with the minimal average
+
+    for index in range(2, len(A)):
+        # Try the next 2-element slice
+        avg_2 = (A[index-1] + A[index])/2.0
+        if avg_2 < min_avg_value:
+            min_avg_value = avg_2
+            min_avg_pos = index-1
+
+        # Try the next 3-element slice
+        avg_3 = (A[index-2] + A[index-1] + A[index])/3.0
+        if avg_3 < min_avg_value:
+            min_avg_value = avg_3
+            min_avg_pos = index-2
+
+    # Try the last 2-element slice
+    avg_2 = (A[-1] + A[-2])/2.0
+    if avg_2 < min_avg_value:
+        min_avg_value = avg_2
+        min_avg_pos = len(A)-2
+
+    return min_avg_pos

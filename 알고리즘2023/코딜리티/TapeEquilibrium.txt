@@ -1,0 +1,13 @@
+일단 두쪽으로는 무조건 나눠야하고,3개이상으로 못나누니까,sum해서 미리 더해두고,for한번만돌려서,현재까지의 합과 sum-현재합을 계산하고 둘을 빼면될듯
+비어있지 않은 두부분이라서,A에서 마지막루프에서 빈루프를 대상으로 하면 안됨,그래서 -1해줘야함
+
+def solution(A):
+    temp=0
+    minResult=sys.maxsize
+    sumA=sum(A)
+    for i in A[:-1]:
+        temp=i+temp
+        sumA=sumA-i
+        minResult=min( abs(temp-sumA),minResult)
+
+    return minResult

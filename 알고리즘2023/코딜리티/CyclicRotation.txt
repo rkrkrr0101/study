@@ -1,0 +1,8 @@
+파이썬이니까 그냥 for문돌려서 각 원소를 Temp[i+k mod i]=A[i]에 박기
+
+def solution(A, K):
+    # Implement your solution here
+    Temp=[0]*len(A)
+    for index,element in enumerate(A):
+        Temp[(index+K) % len(A)] = A[index]
+    return Temp

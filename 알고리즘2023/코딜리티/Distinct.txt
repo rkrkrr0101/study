@@ -1,0 +1,7 @@
+그냥 유니크갯수니까 집합에 넣어서 len리턴하자
+
+def solution(A):
+    # Implement your solution here
+    setA=set(A)
+    print(setA)
+    return len(setA)

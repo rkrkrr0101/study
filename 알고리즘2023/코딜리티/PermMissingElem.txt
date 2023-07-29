@@ -1,0 +1,9 @@
+그냥 정렬치고 해당값 앞에서부터 for한번돌리면될듯
+전값 저장하고 그거+1해서 현재랑 일치하면 전값갱신하고,아니면 리턴
+
+그냥 전부 다 더하고,n만큼 전부 다 더한거랑 빼면될듯
+def solution(A):
+    N = len(A)
+    total_sum = (N+1)*(N+2)//2
+    array_sum = sum(A)
+    return total_sum - array_sum

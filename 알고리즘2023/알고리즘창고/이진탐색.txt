@@ -1,0 +1,38 @@
+def binsearch(arr,start,end,target):
+    if start>end:
+        return -1
+    mid=(start+end)//2
+    if arr[mid]==target:
+        return mid
+    if arr[mid]<target:
+        return binsearch(arr,mid+1,end,target)
+    if arr[mid]>target:
+        return binsearch(arr,start,mid-1,target)
+res=''        
+for i in resarr:
+    if binsearch(arr,0,len(arr)-1,i)==-1:
+        res+='no'
+    else:
+        res+='yes'
+		
+		
+파라메트릭
+arr=[19,15,10,17]
+tar=6
+arr.sort(reverse=True)
+
+start=0
+end=max(arr)
+res=0
+
+while start<end:
+    mid=(start+end)//2
+    total=0
+    for i in arr:
+        if i-mid>0:
+            total+=i-mid
+    if tar<=total:
+        res=mid
+        start=mid+1
+    else:
+        end=mid-1

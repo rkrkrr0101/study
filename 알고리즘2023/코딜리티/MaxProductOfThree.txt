@@ -1,0 +1,12 @@
+정렬치고 맨마지막3개 곱하면될듯
+그러면 -가 2개이상나왔을때 케이스 처리못하는듯
+그러면 제일작은거 2개곱하고 제일큰거 1개곱한거랑,맨마지막3개 곱한거랑 max치면될듯
+
+
+def solution(A):
+    # Implement your solution here
+    sortA=sorted(A)
+
+    resA=sortA[len(sortA)-3]*sortA[len(sortA)-2]*sortA[len(sortA)-1]
+    resMinA=sortA[0]*sortA[1]*sortA[len(sortA)-1]
+    return max(resA,resMinA)

@@ -1,0 +1,13 @@
+1.범위내 루프돌려서 처리
+2.k를 곱해서 범위안에 있는거의 갯수세기 이게맞을듯-효율성실패
+3.그냥 a를 k로 나눈 몫과 b를 k로 나눈 몫을 빼고(몫의 갯수가 갯수니까)거기서 나누어떨어질경우를 체크해서 1더해주기
+
+def solution(A, B, K):
+    countB=B//K
+    countA=A//K
+    result=countB-countA
+
+    if A % K ==0:
+        result+=1
+
+    return result

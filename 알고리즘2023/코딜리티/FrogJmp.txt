@@ -1,0 +1,10 @@
+X+D*n<y 이니까 n을 찾으면됨
+D*n<y-x
+y-x를 d로 나눈 몫일듯? 여기서 올림하면될듯
+1보다크고 x=y는 보장되니까 0으로 나누는거 걱정안해도되고
+
+import math
+def solution(X, Y, D):
+    # Implement your solution here
+    res=(Y-X)/D
+    return math.ceil(res)

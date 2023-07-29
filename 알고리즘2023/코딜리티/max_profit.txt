@@ -1,0 +1,13 @@
+for루프 한번 돌리면서,현재값이 이때까지의 최저값인지랑 최고값인지를 체크해서 넣어두고,둘을 뺀값을 계속갱신
+for루프 한번돌리면서 현재값이 최저값인지를 체크해서 넣어두고,현재가격과 최저가격을 빼서 max쳐서 현재까지 최대이익과 max한번더치기
+
+
+def solution(A):
+    money=0
+    maxMoney=0
+    minValue=410000
+    for i,v in enumerate(A):
+        minValue=min(minValue,v)
+        money=max(0,v-minValue)
+        maxMoney=max(maxMoney,money)
+    return maxMoney

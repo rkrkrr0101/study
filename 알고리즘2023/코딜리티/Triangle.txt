@@ -1,0 +1,9 @@
+정렬쳐서 중간에있는 3개를 가지고,2/1로해서 2가 3번이기면 1리턴,지면0리턴
+그럼 중앙에서 가장 큰게 그전꺼2개보다 작으면 될듯
+
+def solution(A):
+    if(len(A)<3):return 0
+    sortA=sorted(A)
+    for index,value in enumerate(sortA[:-2]):
+       if sortA[index]+sortA[index+1]>sortA[index+2]:return 1
+    return 0

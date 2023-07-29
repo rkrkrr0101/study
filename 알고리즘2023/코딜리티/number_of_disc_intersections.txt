@@ -1,0 +1,20 @@
+1.정렬쳐서 인덱스랑 반지름이랑 더한거보다 작은애들 찾기(2중반복문)
+2.앞뒤를 구분해서 배열에 넣고,값으로 정렬을 친다음에,앞에서부터 반복문돌려서 -1이면 원갯수+1,+1이면 원갯수-1하고,-1나올때마다 res에 값추가
+즉 현재 포함된 원갯수를 카운트하면서,원이 시작할때마다 원갯수에 추가하는거
+
+
+def solution(A):
+    events = []
+    for i, v in enumerate(A):
+        events.append((i-v, -1))
+        events.append((i+v, 1))
+    events.sort()
+    intersections = 0
+    intervals = 0
+    for i, v in enumerate(events):
+        if v[1] == 1:
+            intervals -= 1
+        if v[1] == -1:
+            intersections += intervals
+            intervals += 1
+    return -1 if intersections > 10000000 else intersections

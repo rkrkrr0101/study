@@ -1,0 +1,16 @@
+2중반복문을 쓰면안될거같으니까,전체1더한거랑 현재까지1더한거랑 두개 두고,0이나올때마다 둘을 뺀거를 결과에 더함,결과가 10억넘어가면 -1반환
+1이나오면 sumOne에 1추가
+
+
+def solution(A):
+    # Implement your solution here
+    sumOne=0
+    sumAll=sum(A)
+    res=0
+    for index,value in enumerate(A):
+        if(value==0):
+            res+=sumAll-sumOne
+            if(res>1000000000): return -1
+        else:
+            sumOne=sumOne+1
+    return res

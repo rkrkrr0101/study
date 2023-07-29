@@ -1,0 +1,13 @@
+그냥 카운터로 전체 검색해서 1인거 찾아서 리턴
+딕셔너리 키밸류뒤집어서 1인거찾아서 리턴 ->1개가 아닌 홀수일경우 처리불가로 실패
+그냥 카운터한다음 홀수찾아서 리턴->성공
+
+
+import collections
+def solution(A):
+    # Implement your solution here
+    x=collections.Counter(A)
+    for key,value in x.items():
+        if (value%2)!=0:
+            return key
+    pass

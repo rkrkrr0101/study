@@ -1,0 +1,37 @@
+맥스값변수 만들어두고,빈배열 만들어두고 for문 한번돌리면서 해당위치에 1씩 더하고,더한거랑 max랑 비교해서 큰거 미리 담아두다가
+N보다 큰거들어오면 맥스로 덮기->효율성실패,배열할당부분에서 n*m이 되나봄
+
+maxValue를 하나 더두고(saveMaxValue),갱신할때 그거보다 작으면 그거로 변경후+1,어짜피 변경일어나는건 그방법밖에없으니
+그리고 마지막에 배열에 루프돌려서 saveMaxValue보다 작으면 그거로 덮자
+
+def solution(N, A):
+    # Implement your solution here
+    array = [0] * N
+    maxValue=0
+    saveMaxValue=0
+    for i in A:
+        if i>N:
+            saveMaxValue=maxValue
+            continue
+        if array[i-1]<saveMaxValue:
+            array[i - 1] = saveMaxValue + 1
+        else:array[i-1]=array[i-1]+1
+        maxValue=max(maxValue,array[i-1])
+    for i in range(len(array)):
+        if array[i-1]<saveMaxValue:array[i-1]=saveMaxValue
+    return array
+
+
+효율성실패
+def solution(N, A):
+    # Implement your solution here
+    array = [0] * N
+    maxValue=0
+    for i in A:
+        if i>N:
+            array=[maxValue]*N
+            continue
+        array[i-1]=array[i-1]+1
+        maxValue=max(maxValue,array[i-1])
+
+    return array

@@ -1,0 +1,66 @@
+p와 q의 같은위치랑,문자열의 위치랑 비교해서,거기서 가장 작은값을 뽑아서 출력
+이런문제는 결과의 갯수가 항상 정해져있으니까,결과배열을 만들고 해당 배열을 채워나가는식으로 항상 동작시켜야 시간복잡도아웃이 안나는듯
+
+
+def solution(S, P, Q):
+    N = len(S)
+    M = len(P)
+
+    # Initialize the prefix sums
+    prefix_sums = [[0]* (N+1) for _ in range(4)]
+
+    # Calculate the prefix sums
+    for i in range(N):
+        for j in range(4):
+            prefix_sums[j][i+1] = prefix_sums[j][i]
+
+        if S[i] == 'A':
+            prefix_sums[0][i+1] += 1
+        elif S[i] == 'C':
+            prefix_sums[1][i+1] += 1
+        elif S[i] == 'G':
+            prefix_sums[2][i+1] += 1
+        elif S[i] == 'T':
+            prefix_sums[3][i+1] += 1
+
+    # Prepare the results
+    result = []
+
+    # Answer each query
+    for K in range(M):
+        start = P[K]
+        end = Q[K] + 1
+
+        for i in range(4):
+            if prefix_sums[i][end] - prefix_sums[i][start] > 0:
+                result.append(i+1)
+                break
+
+    return result
+
+
+
+효율성아웃
+def solution(S, P, Q):
+    sList=list(S)
+    resList=list()
+    myDict={'A':1,'C':2,'G':3,'T':4}
+    for index,value in enumerate(P):
+        a=list(sList[P[index]:Q[index]+1])
+        resList.append(a)
+
+    items=list(list([tuple(set(resList))for resList in resList]))
+    res2List=list()
+    for item in items:
+        a=list()
+        for value in item:
+
+            a.append(myDict[value])
+        res2List.append(a)
+    returnList=list()
+    for i in res2List:
+        returnList.append(min(i))
+    print((items))
+    print(returnList)
+    #resList=[myDict[k] for k in resList]
+    return returnList

@@ -1,0 +1,22 @@
+현재 a를 이전값,b를 이후값으로 봤을때,n+1의 a값보다 n의 b값이 더 크면 겹치는거,즉 안겹치는애들만 +1하고,루프다돌면 max
+
+maxRes=0
+
+for i in alen-1루프:
+	res=0
+	for j in alen-전루프
+		b[i]가 a[i+1]보다 작으면:
+			res+1
+	maxRes=max(res,maxRes)
+	
+	
+def solution(A, B):
+    # Implement your solution here
+    maxRes=0
+    lenA=len(A)
+    for i in range(lenA):
+        res=0
+        for j in range(i,lenA):
+            if B[i]<A[j]: res=res+1
+        maxRes=max(maxRes,res)
+    return maxRes

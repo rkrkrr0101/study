@@ -1,0 +1,22 @@
+0을만나면 스택에 뭐가 있으면 꺼내고,없으면 결과에 1추가,있으면 스택이랑 비교해서 0이크면 무시,1이크면 스택에 1다시 추가
+1을만나면 스택에 1을추가하고 결과에 1추가
+
+
+def solution(A, B):
+    # Implement your solution here
+    stack=[]
+    res=0
+    for i,v in enumerate(B):
+        if v==0:
+            if len(stack)!=0:
+                while(len(stack)!=0):
+                    pop = stack.pop()
+                    if(A[i]<pop):
+                        stack.append(pop)
+                        break
+                else:res+=1
+            else:res=res+1
+        else:
+            stack.append(A[i])
+
+    return res+ len(stack)

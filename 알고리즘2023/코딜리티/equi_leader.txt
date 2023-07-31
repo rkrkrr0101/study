@@ -1,0 +1,57 @@
+일단 왼쪽딕셔너리 오른쪽딕셔너리를 만들어두고,오른쪽에 모든값을 다 추가한다음,
+배열에서 한칸움직일때마다 해당값을 오른쪽에서 뺴고 왼쪽에 더하고 리더체크
+둘이 같으면+1
+
+
+
+def solution(A):
+    res=0
+    rightA = collections.Counter(A)
+    rightALen= len(A)
+    leftA = collections.Counter()
+    leftALen=0
+    leftALeader=0
+    leftALeaderCount=0
+
+    for index,value in enumerate(A):
+
+        rightA[value]=rightA[value]-1
+        rightALen=rightALen-1
+        leftA[value]=leftA[value]+1
+        leftALen=leftALen+1
+
+        if(leftA[value]>leftALeaderCount):
+            leftALeader=value
+            leftALeaderCount=leftA[value]
+
+        if (leftALeaderCount>leftALen/2 and rightA[leftALeader]>rightALen/2):
+                res=res+1
+
+
+    return res
+
+
+
+
+
+
+
+
+
+현재위치에서의 왼쪽과 오른쪽의 리더가 같은값을 가지면 1을 추가
+즉 for돌려서 안에서 카운터2번돌리고,둘의 리더가 같으면 +1
+
+실패
+def solution(A):
+    res=0
+    for index,value in enumerate(A):
+        if index==0:continue
+        leftA=collections.Counter(A[:index])
+        rightA=collections.Counter(A[index:])
+        if (leftA.most_common()[0][1]*2> len(leftA)
+                and
+                rightA.most_common()[0][1]*2>len(rightA)):
+            if leftA.most_common()[0][0]==rightA.most_common()[0][0]:
+                res=res+1
+
+    return res

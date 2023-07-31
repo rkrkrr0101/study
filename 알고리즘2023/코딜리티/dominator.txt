@@ -1,0 +1,36 @@
+전체len체크한다음,
+집합을 하나만들어서 유니크체크하고,
+해당값을 키로하고,갯수를 밸류로하는 딕셔너리에 박아두고(계수정렬),
+루프돌려서 전체len의 절반되는지체크
+
+그냥 카운터로 갯수세서,비교하면되는듯 굳이 내가하지말고
+
+
+인덱스 하나만 찾기
+import collections
+def solution(A):
+    lenA= len(A)
+    counterA=dict(collections.Counter(A))
+    for key,value in counterA.items():
+        if value*2>lenA:
+            return A.index(key)
+    return -1
+
+
+
+
+
+배열전체찾기
+def solution(A):
+    lenA= len(A)
+    counterA=dict(collections.Counter(A))
+    print(A.index(3))
+    for key,value in counterA.items():
+        if value*2>=lenA:
+            resList=[]
+            for aIndex,aValue in enumerate(A):
+                print(value,aValue)
+                if key==aValue:
+
+                    resList.append(aIndex)
+    return resList

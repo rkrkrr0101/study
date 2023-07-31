@@ -22,12 +22,68 @@ dfs(graph,1,visited)
 bfs(graph,1,visited)
 
 
+board = [[0] * n for _ in range(m)] //n,m크기의 빈배열생성
+
+
+특정문자배열 숫자배열로 초기화,x가 세로(1차원)y가 가로(2차원)  graph[x][y],시작점 -1
+    x=0
+    y=0
+    goalX=0
+    goalY=0
+    m, n =  len(board),len(board[0])
+    graph= [[0] * n for _ in range(m)]
+    for i in range(0,n):
+        for j in range(0,m):
+            if board[j][i] == 'R':
+                x=j
+                y=i
+                graph[j][i]=-1
+            elif board[j][i] == 'G':
+                goalX, goalY = j, i
+                graph[j][i] = 1
+            if board[j][i]=='.':
+                graph[j][i]=1
+    print(graph)
 
 
 미로찾기 bfs(벽이있는 +1단위이동에서는 이거쓰면될듯,+n단위 이동에서는 좀 커스텀해야함)
-한방향으로 쭉 긁어야할땐
+한방향으로 쭉 긁어야할땐(리코타로봇)
 https://velog.io/@mimmimmu/PGS-%EB%A6%AC%EC%BD%94%EC%B3%87-%EB%A1%9C%EB%B4%87-%ED%8C%8C%EC%9D%B4%EC%8D%AC
 이건 다똑같은데,이동부분에서만 장애물만나거나 벽만날때까지 무한루프돌게 커스텀됨
+
+def bfs(graph,x, y,n,m):
+    # 큐(Queue) 구현을 위해 deque 라이브러리 사용
+    queue = deque()
+    queue.append((x, y))
+    # 큐가 빌 때까지 반복하기
+    while queue:
+        x, y = queue.popleft()
+        # 현재 위치에서 4가지 방향으로의 위치 확인
+        for i in range(4):
+            nx,ny=x,y
+            while True:
+                nx = nx + dx[i]
+                ny = ny + dy[i]
+
+            # 미로 찾기 공간을 벗어난 경우 무시
+                if nx < 0 or nx >= n or ny < 0 or ny >= m:
+                    nx = nx - dx[i]
+                    ny = ny - dy[i]
+                    break
+            # 벽인 경우 무시
+                if graph[nx][ny] == 0:
+                    nx = nx - dx[i]
+                    ny = ny - dy[i]
+                    break
+            # 해당 노드를 처음 방문하는 경우에만 최단 거리 기록
+
+            if graph[nx][ny] == 1:
+                if graph[x][y] == -1:graph[nx][ny]=2
+                else:graph[nx][ny] = graph[x][y] + 1
+                queue.append((nx, ny))
+    # 가장 오른쪽 아래까지의 최단 거리 반환
+    return graph
+graph=bfs(graph,x,y,len(board),len(board[0]))
 
 골인점도 정해져있으니까,골인점xy받아서 해당위치출력하면될듯
 graph = []
@@ -38,8 +94,11 @@ for i in range(n): //맵 넣기
 dx = [-1, 1, 0, 0]
 dy = [0, 0, -1, 1]
 
-# BFS 소스코드 구현,xy는 시작위치
-def bfs(x, y):
+# BFS 소스코드 구현,graph는 배열(0,0~n,m),xy는 시작위치,n은 x축 m은 y축 len
+from collections import deque
+dx = [-1, 1, 0, 0]
+dy = [0, 0, -1, 1]
+def bfs(graph,x, y,n,m):
     # 큐(Queue) 구현을 위해 deque 라이브러리 사용
     queue = deque()
     queue.append((x, y))
@@ -61,4 +120,10 @@ def bfs(x, y):
                 graph[nx][ny] = graph[x][y] + 1
                 queue.append((nx, ny))
     # 가장 오른쪽 아래까지의 최단 거리 반환
-    return graph[n - 1][m - 1]
+    return graph
+
+사용
+graph= bfs(maps,0,0,len(board),len(board[0]))
+bfs(graph,x,y,m,n)
+
+시작점을 뭘로치냐에 따라 -1해야할수도있음(첫움직임을 1로하냐 2로하냐)

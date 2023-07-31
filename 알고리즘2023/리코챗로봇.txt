@@ -1,0 +1,65 @@
+from collections import deque
+
+dx = [-1, 0, 1, 0]
+dy = [0, 1, 0, -1]
+def bfs(graph,x, y,n,m):
+    # 큐(Queue) 구현을 위해 deque 라이브러리 사용
+    queue = deque()
+    queue.append((x, y))
+    # 큐가 빌 때까지 반복하기
+    while queue:
+        x, y = queue.popleft()
+        # 현재 위치에서 4가지 방향으로의 위치 확인
+        for i in range(4):
+            nx,ny=x,y
+            while True:
+                nx = nx + dx[i]
+                ny = ny + dy[i]
+
+            # 미로 찾기 공간을 벗어난 경우 무시
+                if nx < 0 or nx >= n or ny < 0 or ny >= m:
+                    nx = nx - dx[i]
+                    ny = ny - dy[i]
+                    break
+            # 벽인 경우 무시
+                if graph[nx][ny] == 0:
+                    nx = nx - dx[i]
+                    ny = ny - dy[i]
+                    break
+            # 해당 노드를 처음 방문하는 경우에만 최단 거리 기록
+
+            if graph[nx][ny] == 1:
+                if graph[x][y] == -1:graph[nx][ny]=2
+                else:graph[nx][ny] = graph[x][y] + 1
+                queue.append((nx, ny))
+    # 가장 오른쪽 아래까지의 최단 거리 반환
+    return graph
+def solution(board):
+
+    x=0
+    y=0
+    goalX=0
+    goalY=0
+    m, n =  len(board),len(board[0])
+    graph= [[0] * n for _ in range(m)]
+    for i in range(0,n):
+        for j in range(0,m):
+            if board[j][i] == 'R':
+                x=j
+                y=i
+                graph[j][i]=-1
+            elif board[j][i] == 'G':
+                goalX, goalY = j, i
+                graph[j][i] = 1
+            if board[j][i]=='.':
+                graph[j][i]=1
+    print(graph)
+   # print(board[6][0])
+    print(goalX,goalY)
+
+    graph=bfs(graph,x,y,len(board),len(board[0]))
+    print(graph)
+    print("goal", graph[goalX][goalY])
+    if graph[goalX][goalY]==1:res=-1
+    else:res=graph[goalX][goalY]-1
+    return res

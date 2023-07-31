@@ -1,0 +1,15 @@
+정렬쳐두고 n크기만큼의 for돌리고 현재스테이지 체류유저수 센다음 총유저랑 나눠서 실패율계산후 dict에 삽입,그 후 총유저에서 현재스테이지유저 빼고 루프진행
+루프끝나면 실패율기준으로 정렬
+
+
+
+def solution(N, stages):
+    #sortStage=sorted(stages)
+    userCount= len(stages)
+    countDict={}
+    for i in range(1,N+1):
+        countStageUser=stages.count(i)
+        countDict[i]=countStageUser/userCount
+        userCount=userCount-countStageUser
+    ( )
+    return list(dict(sorted(countDict.items(),key=lambda x:x[1],reverse=True)).keys())

@@ -1,0 +1,11 @@
+import java.util.Arrays;
+
+public class SortedSearch {
+    public static int countNumbers(int[] sortedArray, int lessThan) {
+        int res= Arrays.binarySearch(sortedArray, lessThan);
+        if (res<0){
+            res=res*-1;
+            res=res-1;
+        }
+        return res;
+    }

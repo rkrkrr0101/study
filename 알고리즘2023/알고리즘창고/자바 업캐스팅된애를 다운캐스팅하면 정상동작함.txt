@@ -1,0 +1,16 @@
+자식을 부모의 부모타입으로 업캐스팅한다음,그 변수를 부모타입으로 다운캐스팅할경우 정상동작함
+
+public class Cache{}
+public class DiskCache extends Cache{}
+public class MemoryCache extends Cache{}
+public class OptimizedDiskCache extends DiskCache{}
+
+일때
+
+OptimizedDiskCache optimizedDiskCache=new OptimizedDiskCache();
+Cache cache=(Cache) optimizedDiskCache;
+DiskCache diskCache=(DiskCache) cache;
+
+이건 정상동작함
+조부모타입으로 캐스팅한다고 해도,해당인스턴스자체는 최종자식타입인건 변하지않기때문에 바로 위로 다시 캐스팅이 가능한거
+즉 다운캐스팅해서 원래대로 돌리고,그걸 다시 업캐스팅한다고 받아들여도됨

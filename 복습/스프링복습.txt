@@ -16,3 +16,54 @@ Throwable을 캐치에서 잡아버리면안됨,이러면 oom같은거도 잡혀
 
 트랜잭션 aop에선,내부객체의 다른메서드에서 트랜잭션 메서드를 호출할때,트랜잭션이 안걸리는걸 조심해야함(프록시를 안거치기때문)
 트랜잭션메서드 안에서 트랜잭션메서드를 호출하면,외부트랜잭션에 내부트랜잭션이 편입하고,둘중 하나라도 실패하면 예외가터짐(기본값)
+
+프론트컨트롤러패턴은,모든 http요청을 한군데서 받아서 거기서 모든 공통로직을 실행시키고 각 url에 맞게 배분하는거임(디스패쳐서블릿)
+
+여러 url을 한메서드로 묶어서 던질수있음(배열로넣으면됨)
+그래서 /abc와 /abc/를 같이 묶어서 던지는게좋음
+
+요청파라미터를 받을땐
+	@requestParam("헤더명") String name
+필수값이라면
+	@requestParam(required=false) String name
+@requestBody로 json을 받을땐,content-type가 application/json이어야함
+
+멀티쓰레드에선 ConcurrentHashMap과 AtomicLong써야함
+
+post를 하고나서 새로고침을하면 post가 반복되니,prg를 통해 포스트끝에 리다이렉트로 겟으로 다시던져줘야함,이건 멱등성이 없을때 필수임
+
+
+한군데다가 특정 텍스트들을 모아두고,거기서 값을 불러다쓰는게 메시지기능임
+이건 국제화같은걸할때 잘 사용됨(MessageSource),파일은 /resources/messages.properties
+
+prg에서 p를하다 실패하면,현재값을 모델에 담아 다리 리턴해서 원래url로 돌려주는게 좋음
+
+스프링에서 오류처리는 Validator로 할수있음,이걸 구현하고,컨트롤러에 붙이면됨
+		@InitBinder
+		public void init(WebDataBinder dataBinder){
+			dataBinder.addValidators(itemValidator);
+			dataBinder.addValidators(orderValidator);
+		}
+그리고 메서드의 매개변수에 @Validated가 있고,해당매개변수 뒤에 bindingResult가 있으면,해당 매개변수에 밸리데이터가 동작하게됨
+
+엔티티에 값검증을 자동으로 달수있음
+	@NotNull
+	@Range(min=10,max=30)
+이렇게 검증을 하고,@Validated를 해당 엔티티에 붙이면됨
+
+공통처리를 해야하는데,웹과 관련된 관심사는 필터나 인터셉터를 쓰는게 편함(어지간하면 인터셉터)
+
+api에서 예외처리는,각 오류상황에 맞는 응답스펙을 정하고,json으로 던져주면됨
+그리고 @ExceptionHandler를 사용할수있음
+
+MultipartFile로 멀티파트파일을 업로드할수있음
+그리고 다운로드할땐 헤더에 content-disposition을 붙여야함
+
+
+
+
+
+
+
+
+

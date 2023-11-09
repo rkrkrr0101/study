@@ -1,0 +1,28 @@
+정렬하고
+가장큰값 뽑고
+정렬된배열 마지막거뺀거에서 반씩나누고 왼쪽넣고가장큰거넣고오른쪽배열 내림차순정렬해서 넣고(마지막거제외)
+
+
+def findZigZagSequence(a, n):
+    a.sort()
+    big=a[-1]
+    reverseA=sorted(a,reverse=True)[1:]
+    
+    res=[]
+    for i in a[:n//2]:
+        res.append(i)
+    res.append(big)
+    for i in reverseA[:n//2]:
+        res.append(i)
+    printRes=""
+    for i in res[:-1]:
+        #printRes+=str(i)+" "
+        print(i,end=' ')
+    print(res[-1],end='')
+    #print(printRes[:-1])
+
+test_cases = int(input())
+for cs in range (test_cases):
+    n = int(input())
+    a = list(map(int, input().split()))
+    findZigZagSequence(a, n)

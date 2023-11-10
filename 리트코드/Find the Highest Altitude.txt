@@ -1,0 +1,29 @@
+현재의 높이와 최대높이변수를 만들어둔다음,
+
+높이배열로 for문을 돌려서
+
+     최대높이와 현재높이를 max해서 더 높은걸 최대높이에 저장
+
+리턴
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+class Solution {
+    fun largestAltitude(gain: IntArray): Int {
+        var maxNum=0
+        var curHigh=0
+        for (i in gain) {
+            curHigh+=i
+            maxNum= maxOf(maxNum,curHigh)
+        }
+        return maxNum
+    }
+}​

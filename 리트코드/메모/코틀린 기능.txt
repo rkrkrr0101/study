@@ -1,0 +1,2 @@
+Collections.nCopies(size, value) //저사이즈만큼 밸류로 채운 리스트 반환,선언을 mutableList로하거나 List로 하는식으로 변형여부바꾸면됨
+val ints: MutableList<Int> = ArrayList(Collections.nCopies(size, value))

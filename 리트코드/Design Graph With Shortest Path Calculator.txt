@@ -1,0 +1,66 @@
+다익스트라 사용
+
+import java.util.Collections
+import java.util.PriorityQueue
+
+class Graph(n: Int, edges: Array<IntArray>) {
+    val edgesList= mutableListOf<MutableList<Node>>()
+    val n=n
+
+    private val INF = 1000000000
+    init{
+        for (i in 0..n){
+            edgesList.add(mutableListOf())
+        }
+        for (i in edges) {
+            edgesList[i[0]].add(Node(i[1],i[2]))
+        }
+        for (i in edgesList){
+            print(i)
+        }
+
+    }
+
+
+    fun addEdge(edge: IntArray) {
+        edgesList[edge[0]].add(Node(edge[1],edge[2]))
+    }
+
+    fun shortestPath(node1: Int, node2: Int): Int {
+        val queue=PriorityQueue<Node>()
+        queue.add(Node(node1,0))
+        val costList:MutableList<Int> = ArrayList(Collections.nCopies(n,INF))
+
+        while (queue.isNotEmpty()){
+            val curTo=queue.peek().to
+            val curCost=queue.peek().cost
+            queue.poll()
+
+            if(costList[curTo]<curCost)continue
+
+            for ( i in 0 until edgesList[curTo].size){
+                val nextTo=edgesList[curTo][i].to
+                val nextCost=curCost+edgesList[curTo][i].cost
+
+                if(nextCost<costList[nextTo]){
+                    costList[nextTo]=nextCost
+                   // println("""$curTo:$nextTo:$nextCost""")
+                    queue.add(Node(nextTo,nextCost))
+                }
+            }
+        }
+
+        //println("""$node1 ::: $node2 ::= ${costList[node2]} """)
+        if (costList[node2]==INF){
+            return -1
+        }
+        return(costList[node2])
+    }
+
+}
+class Node(val to:Int,val cost:Int): Comparable<Node>{
+    override fun toString(): String {
+        return "Node( to=$to, cost=$cost)"
+    }
+    override fun compareTo(other: Node): Int = cost-other.cost
+}

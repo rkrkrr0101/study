@@ -1,0 +1,184 @@
+bfs써야할거같음
+일단 코스트를 inf로 초기화하고
+모든 위치에서 접근가능한 버스배열을 만들어두고(미로의 길),
+현재위치에서 접근가능한곳들을 1,그다음을 2 이런식으로 하고,해당위치 최저코스트라인에 비교후 더작으면 덮기
+
+정답1
+class Solution {
+
+    data class Route(val reach: MutableSet<Int> = mutableSetOf(), val index: Int)
+
+    data class BfsElement(val stop: Int, val height: Int)
+
+    fun numBusesToDestination(rawRoutes: Array<IntArray>, source: Int, target: Int): Int {
+        val routes = mutableListOf<Route>()
+        val positionToRoute = mutableMapOf<Int, MutableList<Int>>()
+        for((i, r) in rawRoutes.withIndex()) {
+            val rte = Route(index = i)
+            r.forEach {
+                rte.reach.add(it)
+                val routesForPos = positionToRoute[it] ?: mutableListOf()
+                routesForPos.add(i)
+                positionToRoute[it] = routesForPos
+            }
+            routes.add(rte)
+        }
+        val q = LinkedList<BfsElement>()
+        q.offer(BfsElement(source, 0))
+        val qIncl = mutableSetOf<Int>()
+        qIncl.add(source)
+        val visited = mutableSetOf<Int>()
+        while(!q.isEmpty()) {
+            val next = q.poll()!!
+            if(visited.contains(next.stop)) {
+                continue
+            }
+            //println("Visiting >> ${next}")
+            visited.add(next.stop)
+            if(next.stop == target) {
+                return next.height
+            }
+            for(r in positionToRoute[next.stop] ?: mutableListOf()) {
+                for(stop in routes[r].reach) {
+                    if(!visited.contains(stop) && !qIncl.contains(stop)) {
+                        q.offer(BfsElement(stop, next.height+1))
+                    }
+                }
+                routes[r].reach.clear()
+            }
+        }
+        return -1
+    }
+}
+
+
+정답2
+
+class Solution {
+    fun numBusesToDestination(routes: Array<IntArray>, source: Int, target: Int): Int {
+        if(source == target) return 0
+        val busStopToBusNum = mutableMapOf<Int, MutableList<Int>>()
+    val busTaken = Array(routes.size) { false }
+    routes.forEachIndexed { index, ints ->
+        ints.forEach { stop ->
+            val busNum = busStopToBusNum.getOrDefault(stop, mutableListOf())
+            busNum.add(index)
+            busStopToBusNum[stop] = busNum
+        }
+    }
+    val deq = ArrayDeque<Pair<Int, Int>>()
+    busStopToBusNum[source]?.let { busNums -> deq.addAll(busNums.map { it to 1 }) }
+    while (deq.isNotEmpty()) {
+        val (busNum, count) = deq.removeFirst()
+        if (!busTaken[busNum]) {
+            busTaken[busNum] = true
+            routes[busNum].forEach { stop ->
+                if (stop == target) return count
+                busStopToBusNum[stop]?.let { busNums -> deq.addAll(busNums.map { it to count + 1 }) }
+            }
+        }
+    }
+    return -1
+    }
+}
+
+
+
+1차실패
+import java.util.*
+import kotlin.math.min
+
+class Solution {
+    fun numBusesToDestination(routes: Array<IntArray>, source: Int, target: Int): Int {
+        val routeList=routes.map{it.toList()}.toList()
+        val maxStation:Int=routeList.flatten().max()
+        val INF=1000000000
+
+        val costList= MutableList(maxStation+1){INF}
+
+        val busRouteList= MutableList(maxStation+1){ mutableSetOf<Int>() }
+
+        for (bus in routeList){
+            for (route in bus){
+                busRouteList[route].addAll(bus)
+                busRouteList[route].remove(route)
+
+            }
+
+        }
+
+        costList[source]=0
+        val queue=PriorityQueue<Int>()
+        queue.add(source)
+        while (queue.isNotEmpty()){
+            val curLocation=queue.poll()
+            for(i in busRouteList[curLocation]){
+                if (costList[i]>costList[curLocation]+1){
+                    costList[i]= costList[curLocation]+1
+                    queue.add(i)
+                }
+            }
+        }
+
+
+        if (costList[target]==INF){
+            return -1
+        }
+        return  costList[target]
+    }
+}
+
+
+
+2차실패
+
+import java.util.*
+import kotlin.math.min
+import kotlin.reflect.typeOf
+
+class Solution {
+    fun numBusesToDestination(routes: Array<IntArray>, source: Int, target: Int): Int {
+        val routeList=routes.map{it.toList()}.toList()
+        val maxStation:Int=routeList.flatten().max()
+        val INF=1000000000
+
+        val costList= MutableList(maxStation+1){INF}
+
+        val busRouteList= MutableList(maxStation+1){ mutableSetOf<Int>() }
+
+        if (target==source) return 0
+
+        for (bus in routeList){
+            for (route in bus){
+                busRouteList[route].addAll(bus)
+                busRouteList[route].remove(route)
+
+            }
+
+        }
+        costList[target]=0
+        val queue:Queue<Int> =LinkedList()
+        queue.add(target)
+
+        while (queue.isNotEmpty()){
+            val curLocation=queue.poll()
+            for(i in busRouteList[curLocation]){
+
+                if (costList[i]>costList[curLocation]+1){
+                    costList[i]= costList[curLocation]+1
+                    queue.add(i)
+                    
+                    if (i==source){
+                        return costList[i]
+                    }
+                }
+            }
+        }
+
+
+
+        return -1
+
+
+    }
+}

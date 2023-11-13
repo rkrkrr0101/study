@@ -1,0 +1,26 @@
+자음은 그대로두고 모음만 정렬
+기본스트링을 for돌려서 모음만 빼고,
+해당인덱스 위치를 배열에 담아두고,
+모음을 정렬한뒤 기본스트링에다가 인덱스배열로 for돌려서 정렬된모음 삽입
+
+
+class Solution {
+    fun sortVowels(s: String): String {
+        val indexList = mutableListOf<Int>()
+        val sortVowelList = mutableListOf<Char>()
+        val vowelList= listOf<Char>('a','e','i','o','u','A','E','I','O','U')
+        for((index,char) in s.withIndex()){
+            if (char in vowelList){
+                indexList.add(index)
+                sortVowelList.add(char)
+            }
+        }
+        sortVowelList.sort()
+        val sb=StringBuilder(s)
+        for ((index,j) in indexList.withIndex()){
+            sb.also { it.setCharAt(j,sortVowelList[index]) }
+        }
+
+        return sb.toString()
+    }
+}

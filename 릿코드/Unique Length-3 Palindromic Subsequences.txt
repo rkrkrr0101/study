@@ -1,0 +1,40 @@
+3글자 고정 회문이니까 
+자기부터 뒷라인에 같은글자가 있고,해당글자와 나 사이에 글자가 하나라도 있으면 집합에 넣기
+
+
+타임아웃
+class Solution {
+    fun countPalindromicSubsequence(s: String): Int {
+        val resSet= mutableSetOf<String>()
+        for ((index,char) in s.withIndex()){
+            val sliceString=s.slice(index+1 until s.length)
+            val sIndex=sliceString.indexOfLast {it==char}
+            if (sIndex>0){
+                for (sChar in sliceString.slice(0..sIndex-1)){
+                    resSet.add(char.toString()+sChar+char)
+
+                }
+            }
+
+        }
+        return resSet.size
+    }
+}
+
+
+정답
+class Solution {
+
+    fun countPalindromicSubsequence(s: String): Int {
+        val freq = s.groupBy { it }.filterValues { it.size > 1 }
+        var count = 0
+        for ((l, f) in freq) {
+
+            if (f.size > 2) count++
+            val visited = HashSet<Char>()
+            for (i in s.indexOf(l)..s.lastIndexOf(l))
+                if (s[i] != l && visited.add(s[i])) count++
+        }
+        return count
+    }
+}

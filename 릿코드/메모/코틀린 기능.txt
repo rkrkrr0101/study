@@ -20,3 +20,14 @@ Array<IntArray>를 리스트로 변환하는방법
 		sb.also { it.setCharAt(j,sortVowelList[index]) }
 	}
 	return sb.toString()
+	
+코틀린 until은 해당숫자-1한거,rangeTo는 정직하게 해당범위까지 반복돌릴떄 사용,이두개로 ..을 대체할수있음
+
+스트링의 마지막 인덱스 찾기
+	sIndex=sliceString.indexOfLast {it==char}
+
+
+
+
+
+

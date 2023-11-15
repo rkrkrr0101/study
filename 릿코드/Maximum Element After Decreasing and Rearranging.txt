@@ -1,0 +1,26 @@
+그냥 집합으로 바꾸고 정렬친다음에 갯수세서 리턴->같은 큰 숫자가 여러개있을경우 커버불가능
+배열 정렬친다음에 포인터만들어두고 그거늘려가면서 갯수세기 
+
+집합정렬치고 
+현재위치포인터와 리턴값(현재포인터보다 큰수)을 만들어두고
+for문돌려서
+	i가 포인터보다 작으면 컨티뉴
+	크거나 같으면 결과값+1 포인터+1
+
+class Solution {
+    fun maximumElementAfterDecrementingAndRearranging(arr: IntArray): Int {
+        arr.sort()
+        
+        var res=0
+        var pointer=1
+        for (i in arr){
+            println("""${i} : ${pointer} == ${i<pointer}""")
+            if (i<pointer){
+                continue
+            }
+            res+=1
+            pointer+=1
+        }
+        return res
+    }
+}

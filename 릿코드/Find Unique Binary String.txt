@@ -1,0 +1,22 @@
+같은길이에 현재 배열에 없는이진숫자를 리턴
+
+배열 정렬친다음에 그냥 for돌려서 전체돌려서 있는지없는지 확인
+현재 length의 최대십진수(2^n-1)를 구한다음,해당 십진수까지 반복돌리기
+
+import kotlin.math.pow
+
+class Solution {
+    fun findDifferentBinaryString(nums: Array<String>): String {
+        val numList=nums.toList().sorted()
+        val arrLength = numList[0].length
+        val maxNum = ((2.0).pow(arrLength) - 1).toInt()
+        for (i in 0 ..maxNum){
+            val toBinaryString = Integer.toBinaryString(i)
+            val format = String.format("""%0${arrLength}d""",toBinaryString.toInt())
+            if(!numList.contains(format)){
+                return format
+            }
+        }
+        return "a"
+    }
+}

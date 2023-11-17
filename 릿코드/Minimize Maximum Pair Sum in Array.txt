@@ -1,0 +1,14 @@
+정렬쳐서 맨앞과 맨뒤를 더하고 그걸 집합에 추가,그중 max쳐서 리턴
+
+
+
+class Solution {
+    fun minPairSum(nums: IntArray): Int {
+        val numList= nums.toList().sorted()
+        val resSet = mutableSetOf<Int>()
+        for (i in numList.indices){
+            resSet.add(numList.asReversed()[i]+numList[i])
+        }
+        return resSet.max()
+    }
+}

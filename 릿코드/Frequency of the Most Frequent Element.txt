@@ -1,0 +1,48 @@
+일단 정렬치고,리스트 집합에 넣고(같은숫자처리),집합 루프돌려서 리스트의 라스트인덱스뽑고
+리스트의 라스트인덱스부터 거꾸로 올라가면서 i-j만큼 k에서 뺴고,k가 없으면 컨티뉴
+
+정렬치고 맨뒤부터 루프돌리면서,자기자신을 포함해서 1개씩 늘려가면서 arr[0]+arr[1]+k가 arr[0]*2보다 크면 max값 2로 변경하는걸 반복
+->시간초과
+
+class Solution {
+    fun maxFrequency(nums: IntArray, k: Int): Int {
+        val numList = nums.sorted().asReversed()
+        var maxFrequency = 0
+        for (i in numList.indices){
+            var forMaxFrequency=0
+            for (j in 0 until numList.size-i){
+                val numSubList = numList.subList(i, i+1+ j)
+                val sum = numSubList.sum()+k
+                //println("""i:${numList[i]} j:${j} list:$numSubList sum:${sum} if:${numList[i]*(j+1)}""")
+                if (sum<numList[i]*(j+1)){
+                    break
+                }
+
+
+                forMaxFrequency=j+1
+                //println(forMaxFrequency)
+            }
+            maxFrequency= maxOf(maxFrequency,forMaxFrequency)
+        }
+        //println(maxFrequency)
+        return maxFrequency
+    }
+}
+정답
+class Solution {
+   fun maxFrequency(nums: IntArray, k: Int): Int {
+      nums.sort()
+      var from = 0
+      var inc = 0
+      var max = 1
+      for (to in 1..<nums.size) {
+        inc += (to - from) * (nums[to] - nums[to - 1])
+        while (from <= to && inc > k)
+          inc -= nums[to] - nums[from++]
+        max = max(max, to - from + 1)
+      }
+      return max
+    }
+}
+그냥 포인터를 2개두고 그거가지고 밀고당기고 하는게 맞았던듯
+일단 저 서브리스트같은거도 그냥 포인터가지고 해결했어야했고(그냥 포인터로 해당위치 찍어서 더했어야했음)

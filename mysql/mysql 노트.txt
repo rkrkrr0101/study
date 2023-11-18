@@ -1,0 +1,4 @@
+explain에서 type이
+	index:인덱스풀스캔
+	range:인덱스 레인지 스캔
+	All:풀스캔

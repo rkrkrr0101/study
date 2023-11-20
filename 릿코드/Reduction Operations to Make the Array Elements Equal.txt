@@ -1,0 +1,32 @@
+가장큰값을 찾고(같은수가 여러개면 가장앞에거) 해당값보다 바로밑에있는 작은거로 변환
+전부 같아지면 변환횟수리턴
+
+그냥 딕셔너리에 현재 값들 갯수 넣고 뒤에서부터 변형해서 가도될듯
+
+
+import java.lang.IllegalArgumentException
+
+class Solution {
+    fun reductionOperations(nums: IntArray): Int {
+        val numHashMap = hashMapOf<Int, Int>()
+        for (i in nums){
+            numHashMap[i]= numHashMap[i]?.plus(1) ?:1
+        }
+        val numSet = nums.toSet().sorted().reversed()
+        println("numSet = ${numSet}")
+        var res=0
+        var count=0
+        val min= nums.min()
+        for (key in numSet){
+            println("""${key} ${numHashMap[key]}""")
+            val value=numHashMap[key]?:throw IllegalArgumentException("잘못된에러")
+            if (key!=min){
+                count += value
+                res+=count
+            }
+        }
+        println(res)
+
+        return res
+    }
+}

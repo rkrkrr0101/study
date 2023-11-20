@@ -32,6 +32,10 @@ Array<IntArray>를 리스트로 변환하는방법
 스트링 0갯수맞추기
 	String.format("""%0${0갯수}d""",toBinaryString.toInt())//형식,대상 순서로 넣으면됨
 
-
-
+코틀린 해시맵(딕셔너리) 사용법
+	var t_hashMap = HashMap<String, Any>()		
+	t_hashMap.put("name","투케이")
+	for ((key, value) in t_hashMap) { 
+		println("전체 : ${key} : ${value}")
+	}
 

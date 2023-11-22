@@ -41,4 +41,5 @@ Array<IntArray>를 리스트로 변환하는방법
 	for ((key, value) in t_hashMap) { 
 		println("전체 : ${key} : ${value}")
 	}
-
+엘비스연산
+	numHashMap[i]=numHashMap[i]?.plus(1)?:1

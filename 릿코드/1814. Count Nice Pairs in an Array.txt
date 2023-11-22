@@ -1,0 +1,109 @@
+이중루프로 하나씩 비교해서 만족하면 리턴
+
+당연히 타임아웃
+import kotlin.math.pow
+
+class Solution {
+    fun countNicePairs(nums: IntArray): Int {
+        val numList = nums.toList().sorted()
+        var res = 0
+        for ((iIndex,iValue) in numList.withIndex()){
+            for ((jIndex,jValue) in numList.withIndex()){
+                if (iIndex==jIndex){
+                    continue
+                }
+                val reverseIValue = iValue.toString().reversed().toInt()
+                val reverseJValue = jValue.toString().reversed().toInt()
+                if (iValue+reverseJValue==reverseIValue+jValue){
+                    //println("""${iValue} : ${jValue}""")
+                    res+=1
+                }
+            }
+        }
+        res=res/2
+        //println(res)
+        val modNum=10.0.pow(9).toInt()
+        return res % (modNum+7)
+    }
+}
+
+
+nums[i] + rev(nums[j]) == nums[j] + rev(nums[i])->
+nums[i] - rev(nums[i]) == nums[j] - rev(nums[j])
+니까
+for돌려서 현재 저값을 맵에 담아두고 조합갯수연산
+
+import java.math.BigInteger
+import kotlin.math.pow
+
+class Solution {
+    fun countNicePairs(nums: IntArray): Int {
+        val numList = nums.toList().sorted()
+        val reverseMinusList= mutableListOf<Long>()
+        var res:Int = 0
+
+        for (i in numList){
+            val reverseIValue = i.toString().reversed().toLong()
+            reverseMinusList.add(i-reverseIValue)
+        }
+        val numHashMap = HashMap<Long, Int>()
+        for (i in reverseMinusList){
+            numHashMap[i]=numHashMap[i]?.plus(1)?:1
+        }
+        //println(numHashMap)
+        for ((key,value) in numHashMap){
+            //println("""${key}  :  ${value}  = ${combinationCount(value)}""")
+
+            res+=combinationCount(value)
+        }
+
+        //println(res)
+        val modNum=10.0.pow(9).toInt()
+        println(4999950000%(modNum+7))
+        return res % (modNum+7)
+    }
+    private fun combinationCount(inputInt:Int):Int{
+        var res=0
+        for(i in 0 until inputInt){
+            res+=i
+        }
+        return res
+    }
+}
+맵에 넣는거까진 맞는데 조합계산이 틀린듯
+
+정답
+class Solution {
+    fun countNicePairs(nums: IntArray): Int {
+        var res = 0
+        val mod = 1e9.toInt() + 7
+        var map: HashMap<Int, Int> = HashMap<Int, Int>()
+        for(num in nums) {
+            val diff = num - getReverse(num)
+            val count = map.getOrDefault(diff, 0)
+            map.put(diff, count + 1)
+            res = (res + count) % mod
+        }
+        return res
+    }
+    
+    fun getReverse(n: Int): Int {
+        var rem = 0
+        var num = n
+        while(num > 0) {
+            rem = (rem * 10) + (num % 10)
+            num /= 10
+        }
+        return rem
+    }
+}
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,34 @@
+nums범위내에서 lr의 인덱스가 같은거끼리 서브배열이고(nums.subList(l[i],r[i])),그안에서 산술수열인가뭔가 arr[n]-arr[n+1]이 같아야함
+서브배열내에서 재배열가능=>정렬가능
+s[2]-s[1]==s[1]-s[0]
+
+단순시뮬돌려도될듯 범위보면
+
+정답
+class Solution {
+    fun checkArithmeticSubarrays(nums: IntArray, l: IntArray, r: IntArray): List<Boolean> {
+        val numsArithmeticList = mutableListOf<Int>()
+        val resList = mutableListOf<Boolean>()
+
+        for (index in l.indices){
+            val subNumList=nums.toList().subList(l[index],r[index]+1).sorted()
+            //println(subNumList)
+            if (subNumList.size<1){
+                continue
+            }
+            var minusCount=subNumList[1]-subNumList[0]
+            var resBoolean=true
+            for (i in 0..subNumList.size-2){
+                resBoolean = (minusCount == subNumList[i+1]-subNumList[i])
+                if (resBoolean==false){
+                    break
+                }
+            }
+            resList.add(resBoolean)
+        }
+        println(resList)
+        return resList
+    }
+}
+
+

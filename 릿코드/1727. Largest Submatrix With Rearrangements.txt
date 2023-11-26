@@ -1,0 +1,34 @@
+각 열기준으로 이전위치에 값이 있으면 +1을 계속 더하고
+행레벨로 정렬해서 각요소의 값*행인덱스중 max값 리턴
+
+모르면 맞아야지인듯 이건
+
+정답
+import kotlin.math.max
+
+class Solution {
+    fun largestSubmatrix(matrix: Array<IntArray>): Int {
+
+        for (i in 1 until matrix.size) {
+            for (j in matrix[0].indices) {
+                if (matrix[i][j] == 1){
+                    matrix[i][j] += matrix[i - 1][j]
+                }
+            }
+        }
+        val matrixList = matrix.map { it.toList().sorted().reversed() }.toList()
+
+        println(matrixList)
+
+        var res=0
+        for (i in 0 until matrixList.size) {
+            for (j in 0 until matrixList[0].size) {
+                res= max(res,matrixList[i][j]*(j+1))
+                //println(matrixList[i][j]*(j+1))
+
+            }
+        }
+        println(res)
+        return res
+    }
+}

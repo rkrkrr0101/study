@@ -1,0 +1,91 @@
+다이얼을 배열에 담아두고(0은 11로잡고),각위치마다 갈수있는거 해시맵에 담기
+큐에 1부터 10까지 다때려박고,while(큐 null or n==0)돌려서 현재위치에서 갈수있는곳이 있으면 res+1하고 큐에 다시담기
+
+
+
+
+타임아웃
+import java.lang.IllegalArgumentException
+import java.util.LinkedList
+import java.util.Queue
+
+class Solution {
+    fun knightDialer(n: Int): Int {
+        if (n==1){
+            return 10
+        }
+        val numList = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 0)
+        val moveHashMap = hashMapOf<Int, MutableList<Int>>()
+
+        moveHashMap[1]= mutableListOf(6,8)
+        moveHashMap[2]= mutableListOf(7,9)
+        moveHashMap[3]= mutableListOf(4,8)
+        moveHashMap[4]= mutableListOf(0,3,9)
+        moveHashMap[5]= mutableListOf()
+        moveHashMap[6]= mutableListOf(0,1,7)
+        moveHashMap[7]= mutableListOf(2,6)
+        moveHashMap[8]= mutableListOf(1,3)
+        moveHashMap[9]= mutableListOf(2,4)
+        moveHashMap[0]= mutableListOf(4,6)
+        val queue:Queue<Int> =LinkedList()
+        queue.addAll(numList)
+        var res:Long=0
+        var nCount=n-1
+        while ( (nCount>0) ){
+            val tempList= mutableListOf<Int>()
+            while ((queue.isNotEmpty())){
+                val queNum=queue.poll()
+                tempList.addAll(moveHashMap[queNum]?:throw IllegalArgumentException())
+                res+=moveHashMap[queNum]?.size?:throw IllegalArgumentException()
+            }
+            nCount=nCount-1
+            queue.addAll(tempList)
+
+        }
+
+
+
+
+
+        println(queue)
+        println(res)
+
+
+        return res.mod(1000000000+7)
+    }
+}
+
+정답
+
+class Solution {
+    val MODULO = (1e9 + 7).toLong()
+    
+    val nextNums = arrayOf<IntArray>(
+        intArrayOf(4, 6),
+        intArrayOf(8, 6),
+        intArrayOf(7, 9),
+        intArrayOf(4, 8),
+        intArrayOf(3, 9, 0),
+        intArrayOf(),
+        intArrayOf(1, 7, 0),
+        intArrayOf(6, 2),
+        intArrayOf(1, 3),
+        intArrayOf(4, 2)
+    )
+    
+    fun knightDialer(n: Int): Int {
+        var dp = LongArray(10) { 1 }
+    
+        for (i in 1 until n) {
+            val newDp = LongArray(10)
+            for (j in 0 until 10) {
+                nextNums[j].forEach { num ->
+                    newDp[num] += dp[j] % MODULO
+                }
+            }
+            dp = newDp
+        }
+
+        return (dp.sum() % MODULO).toInt()
+    }
+}

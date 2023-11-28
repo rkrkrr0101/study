@@ -1,0 +1,25 @@
+의자카운트랑 마지막의자인덱스 저장해두고,의자카운트가 2배수면 정답에 인덱스-마지막의자인덱스 추가
+
+
+정답
+
+class Solution {
+    fun numberOfWays(corridor: String): Int {
+        val MOD = 1000000007
+        val SEAT = 'S'
+        val PLANT = 'P'
+        var seatCount = 0
+        var ans = 1L
+        var lastSeatIndex = -1
+        for ((index, ch) in corridor.withIndex()) {
+            if (ch == SEAT) {
+                seatCount++
+                if (seatCount > 1 && seatCount % 2 != 0) {
+                    ans = (ans * (index - lastSeatIndex)) % MOD
+                }
+                lastSeatIndex = index
+            }
+        }
+        return if (seatCount < 2 || seatCount % 2 != 0) 0 else maxOf(ans  % MOD , 1L).toInt()
+    }
+}

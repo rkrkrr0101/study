@@ -1,0 +1,8 @@
+그냥 숫자 바이너리로 바꾸고 거기서 1세기
+
+정답
+class Solution {
+    fun hammingWeight(n:Int):Int {
+        return Integer.toBinaryString(n).count{it=='1'}
+    }
+}

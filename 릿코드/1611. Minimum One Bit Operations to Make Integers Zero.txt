@@ -1,0 +1,57 @@
+오른쪽끝은 맘대로 바꿀수있고,그뒤로는 바꾸려면 x100...0을 만족해야함
+
+왼쪽끝부터 한자리씩 바꿔가며 0으로 만들고 줄여나가면 되는데 dp문제라서 손으로 하나하나 바꿔봐야함
+
+즉 점화식 찾아낸다음에 n까지 모든 숫자를 메모이제이션으로 해시맵에 집어넣고,return hashmap[n]하면 됨
+
+십진수 이진수 다음숫자
+
+0 0  _
+1 1   0
+2 10 11  
+3 11 1 
+
+4 100 101
+5   101 111
+6   110 10
+7 111    110  
+
+8 1000 1001
+9   1001        1011
+10  1010        1110
+11 1011 1010
+12  1100 100
+13  1101 1100
+14 1110 1100
+15 1111 1110
+
+ 
+
+31까진 해봐야할거같은데 손으로 바꾸고있으려니까 넘짜증나서 답지봤다
+
+정답
+
+class Solution {
+  fun minimumOneBitOperations(n: Int): Int {
+    val f = HashMap<Int, Int>()
+    f[0] = 0
+    f[1] = 1
+    var curr = 2
+    while (curr > 0) {
+      f[curr] = curr + f[curr / 2]!!
+      curr *= 2
+    }
+
+    var res = 0
+    var sign = 1;
+    for (i in 0..31) {
+      val bit = 1 shl i
+      if (n and bit != 0) {
+        res += sign * f[bit]!!
+        sign = -sign
+      }
+    }
+
+    return Math.abs(res)
+  }
+}

@@ -35,6 +35,9 @@ Array<IntArray>를 리스트로 변환하는방법
 스트링에서 특정 문자 수
 	value.count { it=='M' }
 
+배열을 스트링으로 변환
+	스트링어레이.joinToString("") //인자는 구분자를 받음,디폴트는 , ""를 넣으면 빈칸없이채움
+
 코틀린 해시맵(딕셔너리) 사용법
 	var t_hashMap = HashMap<String, Any>()		
 	t_hashMap.put("name","투케이")

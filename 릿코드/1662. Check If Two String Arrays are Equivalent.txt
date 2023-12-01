@@ -1,0 +1,11 @@
+그냥 배열두개 스트링으로 만들어서 ==리턴
+
+class Solution {
+    fun arrayStringsAreEqual(word1: Array<String>, word2: Array<String>): Boolean {
+        var a = ""
+        var b = ""
+        word1.forEach { a=a+it}
+        word2.forEach { b=b+it}
+        return a==b
+    }
+}

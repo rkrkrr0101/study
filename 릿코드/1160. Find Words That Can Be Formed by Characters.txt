@@ -1,0 +1,25 @@
+해당 스트링에 배열에있는 스트링들이 포함(같은캐릭터 중복불가)되는지 확인하고,중복되면 길이를 res에 더해서 리턴
+
+
+정답
+class Solution {
+    fun countCharacters(words: Array<String>, chars: String): Int {
+        var res=0
+        for (word in words){
+            var trueCount=true
+            var changeWord=chars
+            for (i in word){
+                if (changeWord.count { it==i }==0){
+                    trueCount=false
+                }else{
+                    changeWord=changeWord.replaceFirst(i,'_')
+                }
+            }
+            if (trueCount){
+                res=res+word.length
+            }
+        }
+        return res
+
+    }
+}

@@ -1,0 +1,19 @@
+그냥 다음꺼 xy뺀거중 양좌표의 이동최대값(뺀거의 절대값으로 맥스)을 고르고 그걸 res에 추가를 반복
+
+
+정답
+import kotlin.math.abs
+import kotlin.math.max
+
+class Solution {
+    fun minTimeToVisitAllPoints(points: Array<IntArray>): Int {
+        var prev = points.first()
+        var res=0
+        for ((x,y) in points){
+            res+=max(abs(x-prev[0]),abs(y-prev[1]))
+            prev=(intArrayOf(x,y))
+        }
+        println(res)
+        return res
+    }
+}

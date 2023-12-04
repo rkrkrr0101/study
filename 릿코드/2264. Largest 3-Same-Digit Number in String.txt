@@ -1,0 +1,33 @@
+그냥문제그대로 풀면됨
+
+열나니까 뭐 딴거생각못하겠다 그냥 ㄴ구현만했음
+
+class Solution {
+    fun largestGoodInteger(num: String): String {
+        var prev=""
+        var count=0
+        var res=-1
+        for (i in num){
+            if (prev==""){
+                prev=i.toString()
+                continue
+            }
+            if (prev==i.toString()){
+                count+=1
+            }else{
+                prev=i.toString()
+                count=0
+            }
+            if (count==2){
+                println("""$res,$prev""")
+                res=Integer.max(res,prev.toInt())
+                count=0
+            }
+        }
+        if (res==-1){
+            return ""
+        }
+        println(res.toString()+res.toString()+res.toString())
+        return res.toString()+res.toString()+res.toString()
+    }
+}

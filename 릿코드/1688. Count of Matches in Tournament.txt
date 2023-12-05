@@ -1,0 +1,9 @@
+값보고 n절반으로 나눠가면서 res에 더하라는거같은데 걍 n-1하면 그값인듯
+
+
+class Solution {
+    fun numberOfMatches(n: Int): Int {
+        return n-1
+        
+    }
+}

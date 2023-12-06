@@ -1,0 +1,22 @@
+매일1씩 이자를 추가로주고(1,2,3,4) 주단위로 1씩 추가이자붙는걸 시뮬레이션
+
+그냥 n을 div하고 mod하고나서,div로 반복문돌려서 일주일풀데이이자+7*(i-1)를 res에 더하고
+mod로도 반복문돌려서 i+divMoney를 res에 더해서 리턴
+
+class Solution {
+    fun totalMoney(n: Int): Int {
+        val divMoney=n/7
+        val modMoney=n%7
+        val fullDayMoney=28
+        var res=0
+        
+        for (i in 1 ..divMoney){
+            res+=fullDayMoney+(7*(i-1))
+        }
+        for (i in 1 .. modMoney){
+            res+=i+(divMoney)
+        }
+        
+        return res
+    }
+}

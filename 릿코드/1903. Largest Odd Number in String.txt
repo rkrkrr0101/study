@@ -1,0 +1,42 @@
+앞에서부터 temp에 더하고 홀수면 res덮어쓰기
+
+타임아웃(이지인데 10^5네)
+class Solution {
+    fun largestOddNumber(num: String): String {
+        var res=""
+        var temp=""
+        for (i in num){
+            temp+=i
+            if (Character.getNumericValue(i)%2==1){
+                res=temp
+            }
+        }
+        println(res)
+        return res
+    }
+}
+뒤에서부터 홀수찾은다음 그위치까지 서브스트링
+
+정답
+
+class Solution {
+    fun largestOddNumber(num: String): String {
+        var res=""
+        var count=-1
+        for ((index,i) in num.reversed().withIndex()){
+            if (Character.getNumericValue(i)%2==1){
+                count=index
+                println("""index:${index} i:${i}""")
+                break
+            }
+        }
+
+        if (count==-1){
+            return ""
+        }
+        println("""count:${count}""")
+        res=num.substring(0,num.length-count)
+        println(res)
+        return res
+    }
+}

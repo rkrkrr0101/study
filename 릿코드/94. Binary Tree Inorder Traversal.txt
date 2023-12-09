@@ -1,0 +1,35 @@
+이진트리를 순서대로 처음부터 끝까지 방문
+중위탐색하라니까 왼쪽방문+자기자신+오른쪽방문순으로 재귀돌려서 리스트만들면됨
+
+
+정답
+class Solution {
+    fun inorderTraversal(root: TreeNode?): List<Int> {
+        if (root== null){
+            return listOf<Int>()
+        }
+        val resList = inorder(root!!)
+
+        println(resList)
+
+        return resList
+    }
+    fun inorder(root: TreeNode):List<Int>{
+        if (root.left == null && root.right==null){
+            return mutableListOf(root.`val`)
+        }
+        val resList= mutableListOf<Int>()
+        if (root.left !=null) {
+            resList.addAll(inorder(root.left!!))
+        }
+        resList.add(root.`val`)
+        if (root.right !=null) {
+            resList.addAll(inorder(root.right!!))
+        }
+        return resList
+    }
+}
+class TreeNode(var `val`: Int) {
+         var left: TreeNode? = null
+         var right: TreeNode? = null
+}

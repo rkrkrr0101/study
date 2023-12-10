@@ -1,0 +1,27 @@
+세로줄을 가로줄로 만들어서 리턴
+
+정답
+class Solution {
+    fun transpose(matrix: Array<IntArray>): Array<IntArray> {
+        val lenX=matrix[0].size
+        val lenY=matrix.size
+        val resList= mutableListOf<List<Int>>()
+
+        println("matrix = ${lenX}")
+        println("matrix = ${lenY}")
+
+        for (i in 0 until lenX){
+            val tempList = mutableListOf<Int>()
+            for(j in 0 until lenY){
+                tempList.add(matrix[j][i])
+            }
+
+            resList.add(tempList)
+
+        }
+
+
+
+        return resList.map { it.toIntArray() }.toTypedArray()
+    }
+}

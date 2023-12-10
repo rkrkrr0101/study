@@ -10,7 +10,8 @@ Collections.nCopies(size, value) 이건 사용금지,이상하게나옴
 
 Array<IntArray>를 리스트로 변환하는방법
 	어레이.map{it.toList()}.toList()
-
+리스트를 Array<IntArray>로 변환하는방법
+	리스트.map { it.toIntArray() }.toTypedArray()
 이중리스트에서 최대값찾기
 	val maxStation:Int=routeList.flatten().max()
 

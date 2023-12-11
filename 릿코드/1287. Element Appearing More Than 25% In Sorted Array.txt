@@ -1,0 +1,14 @@
+그냥 해쉬맵에 다때려박고 젤 많은거 키 리턴
+
+
+정답
+class Solution {
+    fun findSpecialInteger(arr: IntArray): Int {
+        val arrHashMap = hashMapOf<Int, Int>()
+        for (i in arr){
+            arrHashMap[i]= arrHashMap[i]?.plus(1)?:1
+        }
+        
+        return arrHashMap.maxBy { it.value }.key
+    }
+}

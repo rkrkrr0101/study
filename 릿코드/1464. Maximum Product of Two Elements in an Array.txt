@@ -1,0 +1,9 @@
+정렬후 0이랑 1번 -1해서 곱하기
+
+정답
+class Solution {
+    fun maxProduct(nums: IntArray): Int {
+        val sortNums=nums.sorted().reversed()
+        return (sortNums[0]-1)*(sortNums[1]-1)
+    }
+}

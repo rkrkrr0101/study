@@ -1,0 +1,31 @@
+가로로 쫙더한거랑 세로로 쫙더한거 만들어두고,전체for돌려서 둘다 1이고 자기자신도 1인거 찾으면+1
+가로세로있는건 헷갈리니까 row,column으로 ij대신하자
+
+정답
+class Solution {
+    fun numSpecial(mat: Array<IntArray>): Int {
+
+        var res=0
+        val rowList= MutableList(mat.size){0}
+        val columnList=MutableList(mat[0].size){0}
+
+        for (row in 0 until mat.size){
+            for (column in 0 until  mat[0].size){
+                if (mat[row][column]==1) {
+                    rowList[row]++
+                    columnList[column]++
+                }
+            }
+        }
+
+        for (row in 0 until mat.size){
+            for (column in 0 until  mat[0].size){
+                if (mat[row][column]==1 && rowList[row]==1 && columnList[column]==1){
+                    res+=1
+                }
+            }
+        }
+        println(res)
+    return res
+    }
+}

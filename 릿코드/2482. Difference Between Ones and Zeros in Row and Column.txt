@@ -1,0 +1,34 @@
+가로랑 세로 0갯수 1갯수 다 만들어두고
+해당위치 계산해서 리턴
+
+정답
+
+class Solution {
+    fun onesMinusZeros(grid: Array<IntArray>): Array<IntArray> {
+        val oneRowList= MutableList(grid.size){0}
+        val oneColumnList=MutableList(grid[0].size){0}
+        val zeroRowList= MutableList(grid.size){0}
+        val zeroColumnList=MutableList(grid[0].size){0}
+        val resList= Array(grid.size,{IntArray(grid[0].size,{0})})
+
+        for (row in 0 until grid.size){
+            for (column in 0 until  grid[0].size){
+                if (grid[row][column]==1) {
+                    oneRowList[row]++
+                    oneColumnList[column]++
+                }
+                if (grid[row][column]==0) {
+                    zeroRowList[row]++
+                    zeroColumnList[column]++
+                }
+            }
+        }
+        for (row in 0 until grid.size){
+            for (column in 0 until  grid[0].size){
+                resList[row][column]=oneRowList[row]+oneColumnList[column]-zeroRowList[row]-zeroColumnList[column]
+            }
+        }
+        //println(resList.map{it.toList()}.toList())
+        return resList
+    }
+}

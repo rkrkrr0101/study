@@ -1,0 +1,17 @@
+스트링2개 각각 해시맵에 넣고 두개 비교해서 같으면 true 다르면 false 리턴
+
+정답
+class Solution {
+    fun isAnagram(s: String, t: String): Boolean {
+        val sHashMap = hashMapOf<Char, Int>()
+        val tHashMap = hashMapOf<Char, Int>()
+        for (i in s){
+            sHashMap[i]=sHashMap[i]?.plus(1)?:1
+        }
+        for (i in t){
+            tHashMap[i]=tHashMap[i]?.plus(1)?:1
+        }
+
+        return sHashMap==tHashMap
+    }
+}

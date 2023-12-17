@@ -1,0 +1,88 @@
+점수 나라 이름
+이름와 나라명으로 해시맵1
+나라명과 (이름,최고점점수)로 해시맵2
+
+
+
+
+실패,음식-점수조합 해시맵을 안만들어두니 현재 최고점음식의 점수가 떨어졌을때를 처리하지못함
+	class FoodRatings(foods: Array<String>, cuisines: Array<String>, ratings: IntArray) {
+		private val countryHashMap= hashMapOf<String,String>()
+		private val ratingHashMap= hashMapOf<String,Pair<String,Int>>()
+		init {
+			for (i in foods.indices){
+				countryHashMap[foods[i]]=cuisines[i]
+				val curHighRate=ratingHashMap[cuisines[i]]?.second ?: -1
+				val curHighName=ratingHashMap[cuisines[i]]?.first ?: ""
+
+				if (curHighRate==ratings[i]){
+					if (curHighName >= foods[i]){
+						ratingHashMap[cuisines[i]]= Pair(foods[i],ratings[i])
+					}
+				}
+				if (curHighRate<ratings[i]){
+					ratingHashMap[cuisines[i]]= Pair(foods[i],ratings[i])
+				}
+			}
+		}
+
+		fun changeRating(food: String, newRating: Int) {
+			val country=countryHashMap[food]?:""
+			val curHighRate=ratingHashMap[country]?.second ?:-1
+			val curHighName=ratingHashMap[country]?.first ?: ""
+
+			if(food==curHighName){
+				ratingHashMap[country]= Pair(food,newRating)
+				return
+			}
+
+			if (curHighRate==newRating){
+				if (curHighName >= food){
+					ratingHashMap[country]= Pair(food,newRating)
+					return
+				}
+			}
+			println("""${curHighRate} : ${newRating}""")
+			if (curHighRate<newRating){
+
+				println("""aaa ${curHighRate} : ${newRating}""")
+				ratingHashMap[country]= Pair(food,newRating)
+				return
+			}
+		}
+
+		fun highestRated(cuisine: String): String {
+			return ratingHashMap[cuisine]?.first ?: ""
+		}
+
+	}
+
+정답
+class FoodRatings(foods: Array<String>, cuisines: Array<String>, ratings: IntArray) {
+
+    private val foodToCuisine: Map<String, String> =
+        foods.asSequence().zip(cuisines.asSequence()).associate { it }
+
+    private val foodToRating: MutableMap<String, Int> =
+        foods.asSequence().zip(ratings.asSequence()).associate { it }.toMutableMap()
+
+    private val cuisineToRatings: Map<String, SortedSet<Pair<Int, String>>> = buildMap {
+        val pairComparator = compareByDescending { it: Pair<Int, String> -> it.first }
+            .thenComparing { it: Pair<Int, String> -> it.second }
+
+        for (i in foods.indices) {
+            getOrPut(cuisines[i]) { sortedSetOf(pairComparator) } += ratings[i] to foods[i]
+        }
+    }
+
+    fun changeRating(food: String, newRating: Int) {
+        val rating = foodToRating[food]!!
+        foodToRating[food] = newRating
+
+        val cuisineRatings = cuisineToRatings[foodToCuisine[food]!!]!!
+        cuisineRatings -= rating to food
+        cuisineRatings += newRating to food
+    }
+
+    fun highestRated(cuisine: String): String = cuisineToRatings[cuisine]!!.first().second
+}

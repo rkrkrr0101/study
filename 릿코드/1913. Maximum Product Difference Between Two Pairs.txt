@@ -1,0 +1,12 @@
+정렬치고 가장큰값2개 가장작은값2개 곱해서 빼기
+
+
+정답
+class Solution {
+    fun maxProductDifference(nums: IntArray): Int {
+        val sortedList = nums.sorted()
+        val listSize = sortedList.size
+
+        return (sortedList[listSize-1]*sortedList[listSize-2])-(sortedList[0]*sortedList[1])
+    }
+}

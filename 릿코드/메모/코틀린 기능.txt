@@ -5,6 +5,7 @@
 이때 이중리스트인경우엔
 이경우엔
 	val busRouteList = MutableList(maxStation+1){ mutableSetOf<Int>() }
+	val smmothImgList = MutableList(img.size){ MutableList(img[0].size){0} }
 이렇게해도 얕은복사안남
 Collections.nCopies(size, value) 이건 사용금지,이상하게나옴
 

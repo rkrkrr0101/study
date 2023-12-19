@@ -1,0 +1,33 @@
+배열크기와 똑같은 배열만들고,자기자신+주변1칸의 평균을 해당위치값으로 설정,범위벗어나면 분모분자 둘다 안더하는식으로
+
+
+정답
+class Solution {
+    fun imageSmoother(img: Array<IntArray>): Array<IntArray> {
+        val smoothImgList = MutableList(img.size){ MutableList(img[0].size){0} }
+
+        for (i in smoothImgList.indices){
+            for (j in smoothImgList[0].indices){
+                smoothImgList[i][j]=smoothValueCal(img,i,j)
+
+            }
+        }
+        println(smoothImgList)
+        return smoothImgList.map { it.toIntArray() }.toTypedArray()
+    }
+    fun smoothValueCal(img:Array<IntArray>,x:Int,y:Int):Int{
+        var tempCount=0
+        var tempValue=0
+        val imgXSize=img.size
+        val imgYSize=img[0].size
+        for (i in 0..2){
+            for (j in 0 ..2){
+                if ((x+i-1)>=0 && (x+i-1)<imgXSize &&(y+j-1)>=0 && (y+j-1)<imgYSize){
+                    tempCount+=1
+                    tempValue+=img[x+i-1][y+j-1]
+                }
+            }
+        }
+        return Math.floor(tempValue.toDouble()/tempCount.toDouble()).toInt()
+    }
+}

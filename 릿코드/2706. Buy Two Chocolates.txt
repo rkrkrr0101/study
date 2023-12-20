@@ -1,0 +1,15 @@
+그냥정렬치고 맨앞2개랑 int비교해서 int가 크면 빼고리턴 작으면 그냥리턴
+
+정답
+class Solution {
+    fun buyChoco(prices: IntArray, money: Int): Int {
+        val sortList = prices.sorted()
+        val chocoPrice=sortList[0]+sortList[1]
+
+        if ((money-chocoPrice)>=0){
+            return money-chocoPrice
+        }
+
+        return money
+    }
+}

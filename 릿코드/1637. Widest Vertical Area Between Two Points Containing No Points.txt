@@ -1,0 +1,22 @@
+그냥 x만빼다가 정렬치고 집합에 넣고,이전거랑 현재거랑 빼서 max값 뽑아낸다음 리턴
+
+정답
+import kotlin.math.max
+
+class Solution {
+    fun maxWidthOfVerticalArea(points: Array<IntArray>): Int {
+        val pointXList=points.asSequence().map { it[0] }.sorted().toSet()
+        var max=0
+        var prev=-1
+        for (i in pointXList){
+            if (prev==-1){
+                prev=i
+                continue
+            }
+            max=max(i-prev,max)
+            prev=i
+        }
+        println(max)
+        return max
+    }
+}

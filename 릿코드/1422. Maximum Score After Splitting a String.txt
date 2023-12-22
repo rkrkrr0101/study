@@ -1,0 +1,25 @@
+그냥 스트링 인덱스로 for 돌려서,왼쪽은 인덱스-sum값,오른쪽은 sum값을 더해서 maxRes랑 비교
+
+
+
+정답
+import kotlin.math.max
+
+class Solution {
+    fun maxScore(s: String): Int {
+        var maxRes=0
+        var leftValue=0
+        var rightValue=s.sumOf { it.digitToInt() }
+        for (i in s.indices){
+            if (i==s.length-1){
+                break
+            }
+            leftValue+=s[i].digitToInt()
+            rightValue-=s[i].digitToInt()
+
+            maxRes= max(maxRes,((i+1)-leftValue+rightValue))
+        }
+
+        return maxRes
+    }
+}

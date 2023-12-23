@@ -1,0 +1,38 @@
+그냥 x,y현재좌표만들고 트래킹하면서 현재위치 방문리스트에 있으면 true리턴 없으면 방문리스트에 현재위치추가
+
+정답
+class Solution {
+    fun isPathCrossing(path: String): Boolean {
+        var curXY:Pair<Int,Int> = Pair(0,0)
+        val coordinateList = mutableListOf<Pair<Int, Int>>()
+        coordinateList.add(Pair(0,0))
+
+        for (i in path){
+            val tempXY=curCoordinate(i)
+            curXY=Pair(curXY.first+tempXY.first,curXY.second+tempXY.second)
+            if (coordinateList.contains(curXY)){
+                return true
+            }
+            coordinateList.add(curXY)
+        }
+
+        return false
+    }
+    private fun curCoordinate(way:Char):Pair<Int,Int>{
+        var x=0
+        var y=0
+        if (way=='N'){
+            y+=1
+        }
+        if (way=='S'){
+            y-=1
+        }
+        if (way=='E'){
+            x+=1
+        }
+        if (way=='W'){
+            x-=1
+        }
+        return Pair(x,y)
+    }
+}

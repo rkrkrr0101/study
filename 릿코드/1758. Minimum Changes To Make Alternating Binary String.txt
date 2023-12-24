@@ -1,0 +1,38 @@
+처음부터 1로시작하는거랑 0으로시작하는거 두개두고 for2개돌려가면서 현재스트링이랑 비교해서 작은거리턴
+
+정답
+
+import kotlin.math.min
+
+class Solution {
+    fun minOperations(s: String): Int {
+        var firstZeroCur=0
+        var firstZeroRes=0
+        var firstOneCur=1
+        var firstOneRes=0
+		
+        for (i in s){
+            if (i.digitToInt()==firstZeroCur){
+                firstZeroRes+=1
+            }
+            if (firstZeroCur==0){
+                firstZeroCur=1
+            }else{
+                firstZeroCur=0
+            }
+        }
+        for (i in s){
+            if (i.digitToInt()==firstOneCur){
+                firstOneRes+=1
+            }
+            if (firstOneCur==0){
+                firstOneCur=1
+            }else{
+                firstOneCur=0
+            }
+        }
+        println(min(firstZeroRes,firstOneRes))
+
+        return min(firstZeroRes,firstOneRes)
+    }
+}

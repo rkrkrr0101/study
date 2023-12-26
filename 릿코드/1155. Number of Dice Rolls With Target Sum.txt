@@ -1,0 +1,37 @@
+타겟까지 배열만들고
+k로 반복문돌려
+
+1 2 3 4 5 6
+
+2 3 4 5 6  7
+3 4 5 6 7  8
+4 5 6 7 8  9
+5 6 7 8 9  10
+6 7 8 9 10 11
+7 8 9 10 11 12
+
+
+
+class Solution {
+
+    val mod = 1e9.toLong() + 7
+
+    fun numRollsToTarget(n: Int, k: Int, target: Int): Int {
+        val dp = Array(n+1) { Array(target+1) {0L} }
+        dp[0][0] = 1
+
+        for (i in 1..n) {
+            for (j in 1..target) {
+                var ans: Long = 0
+                for (x in 1..k) {
+                    if (j - x >= 0) {
+                        ans = (ans + dp[i - 1][j - x]) % mod
+                    }
+                }
+                dp[i][j] = ans
+            }
+        }
+
+        return (dp[n][target]%mod).toInt()
+    }
+}

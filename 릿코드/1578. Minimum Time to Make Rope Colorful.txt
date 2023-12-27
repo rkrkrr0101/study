@@ -1,0 +1,81 @@
+컬러 하나 복제해둔다음 
+컬러로 반복문돌리고
+	현재위치에서 다른색만날때까지 반복문돌리고
+		1개빼고 다 제거후 제일 작은수하나말고 나머지 제거시간 res에 추가
+		제거한건 -1로 바꾸고 -1만나면 컨티뉴
+		
+		
+타임아웃
+class Solution {
+	fun minCost(colors: String, neededTime: IntArray): Int {
+		var tempColor=colors
+
+		var res=0
+		for (i in colors.indices){
+			if (tempColor[i]=='0'){
+				continue
+			}
+			val tempTimeList= mutableListOf(neededTime[i])
+			for (j in i+1 until tempColor.length){
+				if (tempColor[i]!=tempColor[j]){
+					break
+				}
+				tempTimeList.add(neededTime[j])
+				tempColor=tempColor.replaceRange(j,j+1,"0")
+			}
+			tempTimeList.remove(tempTimeList.max())
+			println(tempTimeList)
+			res+=tempTimeList.sum()
+
+		}
+		println(tempColor)
+		println(res)
+
+		return res
+	}
+}
+그냥 
+현재추가스택배열 만들어두고
+for 한번만 돌려서 이전값 하나 기억해두고,달라질때마다 현재추가스택배열에서 제일큰거하나빼고 나머지 res에 추가
+
+정답
+class Solution {
+    fun minCost(colors: String, neededTime: IntArray): Int {
+        var tempColor=colors
+
+        var res=0
+        var prevValue='0'
+        val tempTimeList= mutableListOf(neededTime[0])
+        for (i in colors.indices){
+            if (prevValue==colors[i]){
+                tempTimeList.add(neededTime[i])
+            }else{
+                tempTimeList.remove(tempTimeList.max())
+                res+=tempTimeList.sum()
+                prevValue=colors[i]
+                tempTimeList.clear()
+                tempTimeList.add(neededTime[i])
+            }
+
+        }
+        tempTimeList.remove(tempTimeList.max())
+        res+=tempTimeList.sum()
+        println(tempTimeList)
+        println(res)
+
+        return res
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

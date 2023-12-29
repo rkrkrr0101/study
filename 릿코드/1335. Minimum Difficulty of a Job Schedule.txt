@@ -1,0 +1,25 @@
+
+
+class Solution {
+    fun minDifficulty(jobDifficulty: IntArray, d: Int): Int {
+        val n = jobDifficulty.size
+        if (n < d) return -1
+        val dp = Array(n) { IntArray(d + 1) { -1 } }
+
+        for (i in 1..d) dp[n - i][i] = jobDifficulty[n - i] + if (i > 1) dp[n - i + 1][i - 1] else 0
+        fun solve(i: Int, j: Int): Int {
+            if (dp[i][j] != -1) return dp[i][j]
+            else if (j == 1) return maxOf(jobDifficulty[i], if (i < n - 1) solve(i + 1, j) else 0).also {
+                dp[i][j] = it
+            }
+            var max = jobDifficulty[i]
+            var ans = max + solve(i + 1, j - 1)
+            for (t in i + 1..n - j) {
+                max = maxOf(max, jobDifficulty[t])
+                ans = ans.coerceAtMost(max + solve(t + 1, j - 1))
+            }
+            return ans.also { dp[i][j] = it }
+        }
+        return solve(0, d)
+    }
+}

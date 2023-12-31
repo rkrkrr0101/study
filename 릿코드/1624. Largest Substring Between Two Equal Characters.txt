@@ -1,0 +1,26 @@
+다 해시맵에 넣고 2이상인거 퍼스트인덱스 라스트인덱스해서 max랑 비교후 max리턴
+
+
+import kotlin.math.max
+
+class Solution {
+    fun maxLengthBetweenEqualCharacters(s: String): Int {
+        val charHashMapOf = hashMapOf<Char, Int>()
+        var res=-1
+        for (i in s){
+            charHashMapOf[i]=charHashMapOf[i]?.plus(1)?: 1
+        }
+        for ((key,value) in charHashMapOf){
+            if (value<=1){
+                continue
+            }
+            val tempLength=s.indexOfLast { it==key }-s.indexOfFirst { it==key }-1
+            res= max(res,tempLength)
+        }
+        println(charHashMapOf)
+        println(s.indexOfFirst { it=='a' })
+        println(s.indexOfLast { it=='a' })
+        println(res)
+        return res
+    }
+}

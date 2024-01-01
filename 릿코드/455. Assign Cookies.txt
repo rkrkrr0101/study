@@ -1,0 +1,40 @@
+s,g를 정렬한다음 비교후 쿠키제거
+이중루프안쓰는법이있을거같은데 생각이안나네
+그냥 포인터쓰면될거같기도 둘다 정렬되어있으니까
+
+
+정답
+class Solution {
+    fun findContentChildren(g: IntArray, s: IntArray): Int {
+        val greedList=g.toList().sorted()
+        val cookieList=s.sorted().toMutableList()
+        var res=0
+
+        for (i in greedList){
+            for (j in cookieList){
+                if (i<=j){
+                    res+=1
+                    cookieList.remove(j)
+
+                    break
+                }
+            }
+        }
+        println(res)
+        return res
+    }
+}
+
+정답2(포인터사용)
+class Solution {
+    fun findContentChildren(g: IntArray, s: IntArray): Int {
+        g.sort()
+        s.sort()
+        var (i, j) = 0 to 0
+        while (i < g.size && j < s.size) {
+            if (g[i] <= s[j]) i++
+            j++
+        }
+        return i
+    }
+}

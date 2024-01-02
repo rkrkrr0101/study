@@ -1,0 +1,33 @@
+그냥 해시맵에 때려박고 제일 많은거만큼 배열생성해서 하나씩넣기
+
+
+
+
+정답
+class Solution {
+    fun findMatrix(nums: IntArray): List<List<Int>> {
+        val numHashMap = hashMapOf<Int, Int>()
+        val resList= mutableListOf<MutableList<Int>>()
+        for (i in nums){
+            numHashMap[i]=numHashMap[i]?.plus(1)?:1
+        }
+        val maxValue=numHashMap.values.max()
+        for (i in 0..maxValue){
+            val tempList = mutableListOf<Int>()
+            for ((key,value) in numHashMap){
+                if (value!=0){
+                    tempList.add(key)
+                    numHashMap[key]=numHashMap[key]!!-1
+                }
+            }
+            if (tempList.size!=0) {
+                resList.add(tempList)
+            }
+        }
+        println(resList)
+        println()
+
+
+        return resList
+    }
+}

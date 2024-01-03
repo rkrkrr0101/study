@@ -1,0 +1,22 @@
+각 행을 전부 더한다음 for돌려서 현재가 0이아니면 이전값과 현재값 곱해서 res에 추가
+
+
+정답
+class Solution {
+    fun numberOfBeams(bank: Array<String>): Int {
+        //println(bank.map { i -> i.sumOf { it.digitToInt() } }.toList())
+        val bankSumList=bank.map { i -> i.sumOf { it.digitToInt() } }.toList()
+        var res=0
+        var prev=0
+        for (i in bankSumList){
+            if (i==0){
+                continue
+            }
+            res+=prev*i
+            prev=i
+        }
+
+        //println(res)
+        return res
+    }
+}

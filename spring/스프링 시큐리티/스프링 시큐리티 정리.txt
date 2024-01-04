@@ -154,6 +154,217 @@
 	그래서 한번이라도 패킷탈취를 당하거나,클라앱이 메모리덤프를 한번이라도 당하면 비밀번호가 그대로 노출되고 위험성도 높음
 	그래서,특정작업을 승인할수있을정도의 단기인증정보를 보유하는식으로 해야하고,비밀번호는 절대 어떤방식으로도 보유하고있으면 안됨
 
+	
+	비밀번호는 장기적으로 매우 민감한 인증정보이고,몇분간만 사용할수있는 자격증명이 필요함
+	이떄 사용하는게 OAuth임
+	OAuth는 3가지 주체가 있음
+		데이터에 액세스하고 서비스를 제공하는 클라앱(내가만들앱)
+		데이터를 보관하고 보호하는 리소스서버(네이버,카카오같은 실제 회원가입한곳,restAPI로 통신해서 api서버라고도 부름)
+		클라가 데이터에 엑세스할수있게 권한을 부여하는 인증서버
+	로 구성됨
+	
+	유저가 클라에 요청하면
+		1.클라는 인증서버에 리소스서버와 통신할수있는 권한을 요청
+		2.인증서버는 권한을 부여할지 여부를 결정
+		3.인증서버가 권한을 부여하기로했으면,액세스토큰을 생성함,이 액세스토큰은 클라에게 부여된 권한을 설명함
+		4.클라가 리소스서버에 액세스토큰을 포함한 요청을 함
+		5.리소스서버는 액세스토큰에 올바른 권한이 있는지 확인하고 그에 따라 응답함
+	이런식으로 동작함,그래서 클라는 비밀번호를 절대 볼수없음,하지만 리소스서버는 여전히 주체를 인증해야해서 액세스토큰을 봐야함
+	토큰은 비밀번호보다 안전하지만,자격증명이라는 중요한 보안기능을 수행하므로 안전하게 보관해야함
+	
+	jwt(json web token)은 액세스토큰을 인코딩하는 표준임
+	가장 기본적으로 디코딩된 jwt는 헤더와 클레임(권한)의 집합임,json이라 구조는 json과같음
+		{
+			"키1":"밸류1",
+			"키2":"밸류2"
+		}
+	헤더는 해당json이 jwt라는걸 보여주는거고,클레임은 해당 토큰이 가진 권한들을 나타냄
+	이때
+		iss클레임:토큰을 발급한 인증서버 식별자
+		exp클레임:토큰만료시점
+		scp클레임:인증서버가 부여한 권한집합
+		sub클레임:토큰이 나타내는 주체에 대한 참조
+	가장 중요한건 jwt의 서명임,좋은 서명은 하나의 주체에 의해서만 생성될수있으며,이건 본인이 서명했다는 증거로 사용됨
+	서명은 메시지무결성도 제공함,그래서 발급과정의 일부는 인증서버가 jwt에 서명하고,리소스서버가 해당서명을 확인하는것(이때 공개키비밀키로 확인함)
+	
+	스프링시큐리티는 클라와 리소스서버,인증서버를 모두 지원함,단 여기선 리소스서버만 봄
+	리소스서버는
+		1.리퀘스트를 자격증명으로 구문분석:Authorization:Bearer ${JWT} 헤더를 찾음(bearer은 jwt or OAuth의 타입임)
+		2.해당 자격증명을 테스트:jwtDecoder인스턴스를 사용하여 인증서버에 키를 쿼리하고 해당키를 사용해 jwt서명을 확인하고,
+			신뢰할수있는 발급자인지와 만료기간을 확인함
+		3.해당 자격증명을 소유자 및 권한으로 변환:클레임을 주체로 저장하고,
+			범위클레임을 가져와서 각 개별값을 SCOPE_${값}패턴의 권한으로 파싱한 후(배열)
+			주체와 권한을 스프링시큐리티에 저장해 나머지요청에 액세스함
+	같은 순서로 진행함
+	
+	추가적으로 세션처럼 스테이트풀로 jwt를 사용하고싶을수도있는데,이건 거의항상 틀렸음
+		jwt의 만료는 업데이트할수없지만,세션의 만료는 요청할때마다 업데이트되거나(둘의 불일치발생)
+		사용자가 로그아웃했을때 세션은 만료되지만,토큰기한은 남아있거나
+	이런거때문에 세션관리같은 상태저장방식에서 상태비저장토큰을 사용하면 불일치가 발생함
+
+	내앱을 리소스서버로 만들땐
+		1.implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server' 추가
+		2.src/main/resources/application.yml에
+		spring:
+		  security:
+			  oauth2:
+				  resourceserver:
+				    jwt:
+					  public-key-location: classpath:authz.pub
+		추가
+	이렇게하면 리소스서버가 자동 활성화되고,저기있는 공개키를 사용하여 인증서버를 확인함(공개키비밀키)
+	이렇게되면 실행시킬떄 uuid패스워드가 표시되지않음
+	이상태로 http요청을 날리면,401이 뜨면서,WWW-Authenticate헤더가 Bearer로 들어있음
+	보통 jwt는 인증서버에 인증을 요청하는 클라이언트에서 제공함
+	
+	jwt를 디코딩하고,exp를 보면 해당 토큰의 만료시간을 알수있고,sub를 보면 연결할 계정을 알수있음
+	그리고
+		http :8080/cashcards "Authorization: Bearer $토큰"
+	이런식으로 날리면됨
+
+	
+	
+	spring mvc에서 인증에 접근해야하는경우는
+		본인프로필 또는 기타 세부정보확인
+		쿼리에 사용할 본인의 id(프라이머리키)가 필요
+		본인에게 해당작업을 수행할 권한이 있는지 여부 선언이 필요할떄
+		다운스트림에 자격증명 전파를 해야할때
+	같은 경우가 있음,이럴때 현재 인증된 주체를 가져와야함
+	
+	가장 기본적인 방법은(안쓰는)
+		@GetMapping
+		public ResponseEntity<Iterable<CashCard>> findAll(Authentication authentication) { ... }
+	이런식으로 메서드의 매개변수에 Authentication authentication를 추가하는것
+	이러면 자동으로 인증인스턴스를 조회하여 저안에 넣어둠
+	이러면 필요에따라 권한,자격증명등을 메서드본문에서 접근할수있고,여기에는 앱의 서비스 및 리포지토리계층으로 사용자정보를 전달할수있는기능도 포함함
+	
+	그리고 Authentication#getPrincipal은 object를 반환함,이건 사용자정의를 할때 유용함
+	단 이걸쓰면 원치않는 형변환이 발생해서,대신 @CurrentSecurityContext를 제공함
+	@CurrentSecurityContext어노테이션은 사용자이름같은 특정값을 가져오는것같은 사용구를 제거할수있음
+	이건
+		@GetMapping
+		public ResponseEntity<Iterable<CashCard>> findAll(
+			@CurrentSecurityContext(expression = "authentication.principal") Jwt jwt) { ... }
+	같은식으로 사용함,이건 jwt관련 정보를 얻어야할때 유용함(jwt객체에 담김),
+	참고로 이 어노테이션은 어디든 붙일수있지만,컨트롤러에서만 처리되니 주의
+	그리고 jwt가 아닌
+		@GetMapping
+		public ResponseEntity<Iterable<CashCard>> findAll(
+			@CurrentSecurityContext(expression = "authentication.name") String owner) { ... }
+	이런식으로 인증의 특정값만 가져올수도있음
+	그리고 이건 메타어노테이션(어노테이션 여러개묶은거)도 지원함,이걸통해 이름을 바꿀수도있고,긴 어노테이션을 간결하게 사용할수도있음
+	@CurrentSecurityContext(expression = "authentication.name")를 @CurrentOwner로 바꾸는식
+	
+	스프링에서 자체지원하는거도 이런게있는데
+		@CurrentSecurityContext(expression = "authentication.principal")
+		@AuthenticationPrincipal
+	이거 두개는 같음(그냥 이름줄인거)
+	
+	
+	@WithMockUser는 자동으로 사용자인증을 모킹하는 어노테이션임,
+	이걸 @WithMockUser(username ="sarah1") 이런식으로 특정사용자로 고정하는거도 가능함
+	Authentication authentication은
+		authentication.getName();
+	이런식으로 값을 가져오면됨,이걸 스프링데이터jpa나 jdbc같은거에 넘겨서 서치하는식
+	인증은 컨트롤러단에서 알아서 다 처리하고 값만 밑으로 내려보내는게 이상적
+	
+	@CurrentSecurityContext(expression = "authentication")를 사용하면,좀 더 정교하게 값을 가져오는게 가능해짐
+		@CurrentSecurityContext(expression="authentication.name") String owner //이름 바로받기
+	이건 너무기니까,메타어노테이션을 사용해서 길이를 줄일수있음
+
+
+	스프링 시큐리티는,서블릿필터로 동작하는데,이때 필터는 여러개의 필터체인으로 구성됨
+	이 필터체인은,자기의 조건을 만족하지못하면 뒤로 보내지않고 바로 에러응답을 날림(미들웨어라고 생각하면됨)
+	즉,통과,무시,반송 3가지선택지가있음
+	이 필터체인은
+		방어필터
+		인증필터
+		권한부여필터
+		인프라필터
+	로 구성됨
+	
+	방어필터는 필터체인의 제일위에있고,얘는 악성요청으로부터 앱을 보호함
+	여기엔
+		csrfFilter:csrf토큰을 검사하고 새토큰을 발급함
+		headerFilter:리퀘스트의 보안헤더를 작성함
+	가 포함되어있음
+	
+	인증필터는,각 인증필터별로 하나의 인증체계를 처리함
+		BasicAuthenticationFilter:http기본인증처리
+		BearerTokenAuthenticationFilter:베어러인증(jwt)를 처리
+		UsernamePasswordAuthenticationFilter:폼로그인처리
+		AnonymousAuthenticationFilter:널 오브젝트로 컨텍스트를 채움
+	등이 있음
+	이 인증필터의 동작은
+		1.리퀘스트를 토큰으로 파싱
+		2.해당토큰을 테스트하고 주체와 권한을 반환함
+		3.주체와 권한을 구성함
+	순임,이떄 토큰생성은 성공했는데 권한이 없을경우 리퀘스트를 거부함
+
+	인증은 인증토큰(jwt)과 인증결과(인증자료)를 모두 나타내는 스프링시큐리티 인터페이스임
+	각 인증 인스턴스는 토큰인지 인증결과인지에 따라 서로 다른값을 포함함
+	토큰은
+		principal ("who")	
+		credentials ("proof")	
+		authenticated = false	
+	인증결과는
+		principal ("who")
+		credentials ("proof")
+		authenticated = true
+		authorities ("permissions")
+	이렇게 구성됨
+	이때 인증에 실패하면 바로 예외를 던지니,Authentication을 반환했으면 성공했다는거임
+
+	AuthenticationManager는 인증토큰을 테스트하는 인터페이스임
+	테스트에 성공하면 얘가 인증결과를 생성함
+	이건 여러 AuthenticationProvider들로 구성되고,얘들은 각각 하나의 인증체계를 처리하고,그중 jwt처리하는애가 있음(핸들러선택하는방식)
+	
+	SecurityContext는 현재 인증을 보관하는 객체임(쓰레드로컬로 동작)
+	얘안에는 Authentication이 선언되어있고,여기에 생성자주입으로 넣는식으로 SecurityContext는 생성됨
+	이걸 사용해서 한 스레드안에서 하나의 인증을 계속 가져갈수있음
+
+	인증필터에서 jwt인증을 하는 순서는
+		1.BasicAuthenticationFilter가 jwt를 jwtAuthenticationToken객체로 추출
+		2.해당토큰을 AuthenticationManager에 전달,얘는 jwtAuthenticationProvider인스턴스를 보유하고있음
+		3.jwtAuthenticationProvider는 jwt를 인증하고,
+			파싱된 jwt와 부여된 권한이 포함된 인증된 jwtAuthenticationToken인스턴스를 반환
+			또한 실패시 AuthenticationException을 던짐
+		4.마지막으로 필터는 인증결과를 SecurityContext에 보관함
+	순서로 진행됨
+	
+	즉,방어필터를 통과한 안전한 요청은,인증필터를 거치는데 이 인증필터에서 요청이 인증되지않으면 필터가 요청을 거부함
+	인증필터는 권한부여필터보다 우선함
+	
+	필터체인은 SecurityFilterChain이라는 단일 빈으로 구성됨
+	이 빈은 모든 요청에 대해 실행할 임의의수의 보안필터를 보유할수있음
+	이 빈은 기본적인 디폴트세팅이 되어있고,변경이 필요한거만 바꾸면됨
+	얘는 HttpSecurity를 받는데,이걸 사용해서 스프링시큐리티의 대부분의 설정을 할수있음
+		url접근권한
+		인증실패시 이동페이지
+		인증로직을 커스텀하기위한 커스텀필터
+		csrf,강제 https호출 등
+	설정을 다하고 http.build()해서 리턴하면됨
+	이 필터체인빈은 인증+권한부여라서 이 빈을 선언할떄 두가지를 모두 지정해야한다는걸 기억해야함
+	물론 안건드리면 기본값으로 알아서 생성하는데
+		spring-security-oauth2-resource-server종속성 추가후
+		yaml에 spring.security.oauth2.resourceserver.jwt.issuer-uri 추가하면
+		OAuth2.0리소스서버 빈을 자동생성
+	커스텀필요할경우가 있으니까
+
+
+	SecurityContextHolder를 사용하면 스프링mvc없이도 인증인스턴스에 접근할수있음
+	그래서 서블릿필터나 비동기처럼 요청컨텍스트 외부에서 처리할떄도 인증인스턴스에 접근할수있음
+	이건
+		SecurityContext context = SecurityContextHolder.getContext();
+		Authentication authentication = context.getAuthentication();//인증정보받기
+		
+		Jwt owner = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();//토큰받기
+	이런식으로 받아올수있음,이런식으로 어디서나 현재스레드의 인증에 접근할수있음
+	이렇게 정적 SecurityContextHolder를 사용해서 인증인스턴스를 수동으로 받아오면,pojo에서도 인증정보에 접근할수있다는 장점이 있음
+	이건 스레드로컬로 저장되니,해당 어플리케이션의 한 리퀘스트 전체에서 같은 인증정보에 접근할수있음
+	단 이렇게되버리면 종속성이 생겨서 pojo가 아니겠지만 ㅋㅋ
+	
+	그리고 필터체인은 익명 인증 인스턴스로 securityContext를 채우기때문에,안에서 null건드릴걱정은 안해도됨
 
 
 

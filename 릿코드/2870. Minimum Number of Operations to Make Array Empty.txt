@@ -1,0 +1,44 @@
+배열을 비우는데 들어가는 최저연산수 계산,2,3개를 묶어서 날릴수있음,못날리면 -1리턴
+해시맵으로 모은다음 
+3으로 div쳤을때 값이 1이상이고 mod쳐봤을때 0이면 값을 res에 (div)만큼 더하고(3나누기+4를 2*2로 나누기)
+3으로 div쳤을때 값이 1이상이고 mod쳐봤을때 1이면 값을 res에 (div-1)+2만큼 더하고(3나누기+4를 2*2로 나누기)
+3으로 div쳤을때 값이 1이상이고 mod쳐봤을때 2이면 값을 res에 (div)+1만큼 더하고(3나누기+4를 2*2로 나누기)
+3으로 div쳤을때 값이 0이고 mod쳐봤을때 2이면 res+=1
+3으로 div쳤을때 값이 0이고 mod쳐봤을때 1이면 -1리턴
+
+7=3+2*2
+8=3*2+2*1
+
+정답
+class Solution {
+    fun minOperations(nums: IntArray): Int {
+        val numHashMap = hashMapOf<Int, Int>()
+        var res=0
+        for (i in nums){
+            numHashMap[i]=numHashMap[i]?.plus(1)?:1
+        }
+        for ((key,value) in numHashMap){
+            val divValue=value / 3
+            val modValue=value % 3
+            if (divValue>=1){
+                if (modValue==0){
+                    res+=divValue
+                }else{
+                    res+=divValue+1
+                }
+            }
+            if(divValue==0){
+                if (modValue==2){
+                    res+=1
+                }
+                if (modValue==1){
+                    return -1
+                }
+            }
+
+
+        }
+
+        return res
+    }
+}

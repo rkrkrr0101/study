@@ -1,0 +1,39 @@
+가장 긴 증가하는 수열 찾기
+현재위치포인터를 만들고,
+현재위치보다 해당값이 크면 마지막에 삽입하고 포인터증가
+현재위치보다 해당값이 작으면 a1<=해당값<a2에서 a1이랑 치환
+
+
+
+정답
+class Solution {
+    fun lengthOfLIS(nums: IntArray): Int {
+
+        val lengthList = mutableListOf<Int>()
+        lengthList.add(nums[0])
+        for (i in nums){
+            val prevValue = lengthList.last()
+            if (i>prevValue){
+                lengthList.add(i)
+            }else{
+                val lowerBoundValue=lowerBound(lengthList,i)
+                lengthList[lowerBoundValue]=i
+            }
+        }
+
+        return lengthList.size
+    }
+    fun lowerBound(calList:List<Int>,target:Int):Int{
+        var left=0
+        var right=calList.size
+        while (left<right){
+            val mid=(left+right)/2
+            if(calList[mid]<target){
+                left=mid+1
+            }else{
+                right=mid
+            }
+        }
+        return right
+    }
+}

@@ -444,10 +444,125 @@
 	저 commence는 호출되면 저게 콜되니 저기안에 동작할방식을 그대로 넣으면됨
 	
 	
+3.권한부여
+	스프링 시큐리티에서 권한을 지정하는건,리퀘스트(url)단위로 할수도있고 메서드단위로 할수도있음
+	즉 해당 uri접근이나 메서드 접근을 하려면 해당 권한이 있어야한다는걸 지정하는걸 말함
+	
+	가장 러프하게 사용하는건 필터체인에다가 사용하는거
+		@Bean
+		SecurityFilterChain appSecurity(HttpSecurity http) throws Exception {
+			http
+				.authorizeHttpRequests((authz) -> authz
+					.requestMatchers("/cashcards").hasAuthority("cashcard:read")
+					.anyRequest().authenticated()
+				)
+				// ...
+		}	
+	이런식으로
+		.requestMatchers("url명").hasAuthority("권한명:상세권한")
+	이렇게 넣으면됨
+	이때 .anyRequest().authenticated()는 모든 요청에 대해 인증을 요구하는것(최소인증이라고 생각하면됨,로그인은 해서 토큰은 제대로줬냐정도)
+	이런식의 url에 권한을 매핑하는건,위에서부터 순서대로 조건을 만족하면 거기서 끝남(if elif반복이라고 생각하면됨)
+	
+	url수준말고 메서드수준으로도 권한요구를 할수있음
+	이건 일단 스프링 @Configuration클래스에 @EnableMethodSecurity어노테이션 추가하고
+	이후 붙일 메서드에
+		@GetMapping("/cashcards")
+		@PreAuthorize("hasAuthority(‘cashcard:read')")
+		public void 메서드명(){}
+	이렇게 @PreAuthorize를 붙이면됨
+	메서드수준권한요구에선 응답값검사도 가능함
+		@PostAuthorize("returnObject.body.owner == authentication.name")
+	이러면 응답값을 검사해서 아니면 에러를 던질수있음
+	
+	url수준 권한요구는 
+		좀 러프한범위로 묶어서 처리하기가 좋음(전체범위의 최소권한요구같은)
+		메서드호출로 확인되지않은 정적컨텐츠(css,js파일)도 보호할수있음
+		아직 생성되지않은 엔드포인트도 넓은범위로 묶어서 처리할수있음
+		단,http요청밖에 권한을 요구할수가 없음(메시지큐나 그런곳에서 필요하더라도)
+		단,같은 메서드를 여러군데서 쓰는경우,권한요구의 중복이 발생할수있음
+		단,리퀘스트는 보호할수있지만,리스폰스는 보호할수없음
+	메서드수준 권한요구는,
+		http요청말고 다른요청이라도 별도의 수정없이 권한을 요구할수있음
+		해당 메서드에 대한 권한요구라서,따로 밖에서 별도의 권한요구기입을 할필요가없음
+		리퀘스트와 리스폰스 둘다 보호할수있음(리스폰스검사때문에 하위계층인 서비스와 리포지토리도 보호할수있음)
+		단,전체범위처리같은게 매우 귀찮음
+		단,생성되지않은 엔드포인트는 처리할수없음
+		단,정적컨텐츠는 처리할수없음
+	같은 차이점이 있음,그래서 둘다 같이사용하는편임
+	보통 url은 전체범위로 걸어두거나,특정 컨트롤러에서의 와일드카드(/cashcards/*)같은식으로 러프하게 사용하고
+	메서드수준 권한요구는 해당 메서드의 세분화된 권한을 요구하는식(매개변수,반환값 등)으로 사용함
+	
+
+	oauth2에서 권한은 scp클레임에 들어감,이 scp클레임은 단일일수도,배열일수도있음
+	이 권한에대한 표준규칙은 없고,대충 리소스명:작업(cashcard:read) 이런식으로 사용하거나 그냥 쌩으로 권한명만(cashcard)적는식으로 사용함
+	보통 외부사이트에서 권한을 받을때,엔드유저가 해당권한 사용을 동의하면(구글에서 ~를해도될까요 이런거)해당권한이 추가되는식
+	즉
+		클라는 인증서버에 해당 영역에 접근하거나 동작시킬수있는 권한을 요청
+		인증서버는 엔드유저에 이런권한줘도 되냐고 질문
+		ok가 나오면 해당권한을 추가한 scp클레임이 들어있는 jwt를 생성해서 리턴해줌
+	이런식임
+	
+	추가적으로,권한의 앞에 SCOPE_가 붙어있으면 jwt에서 나온 권한일 확률이 높고,ROLE_가 붙어있으면 db에서 가져온것일 가능성이 높음
+	그래서,SCOPE_는 여러개의 ROLE_를 포함한다고 볼수도있어서,
+	여러개의 ROLE를 모두 요구하지않고 모든권한을 포함하는 SCOPE_1개를 요구하는식으로 코드를 줄일수있음
+
+
+	리퀘스트단위 권한요구는,기본값은 모든요청에 인증필요임
+		http.authorizeHttpRequests((authz) -> authz.anyRequest().authenticated())
+	즉 모든요청에 인증을 해야하면
+		.anyRequest().authenticated()
+	임
+	특정 url에 특정 권한을 요구하고싶으면
+		.requestMatchers("/cashcards").hasAuthority("SCOPE_cashcard:read")
+	를 사용하면됨
+	그리고 따로 rest메서드를 명시하지않으면 모든 메서드에 적용됨
+		.requestMatchers(HttpMethod.GET,"/cashcards/**").hasAnyAuthority("SCOPE_cashcard:read")
+		.requestMatchers("/cashcards/**").hasAnyAuthority("SCOPE_cashcard:write")
+	여기서 위는 get에만,아래는 모든(get은 위에서 빠져나갔으니 사실상 제외되고 나머지)메서드들에 적용됨
+	
+	그리고 중요한건,이건 if-elif처럼 일치하는 첫번째규칙을 만나면 탈출하니,세세한걸 위에올리고 러프한걸 밑으로 내려야함
+	이건 와일드카드를 사용할때도 특히 주의해야함
+		.requestMatchers("/cashcards/**").authenticated()
+		.requestMatchers("/cashcards/{id}").hasAuthority("SCOPE_cashcard:read")
+	이런식으로 사용하면 무조건 와일드카드에 가기때문에 밑에 접근할수가 없어짐
+	그래서 순서를
+		.requestMatchers("/cashcards/{id}").hasAuthority("SCOPE_cashcard:read")
+		.requestMatchers("/cashcards/**").authenticated()
+	이런식으로 둬야함
+
+	이런 리퀘스트단위 권한요구는
+		정적리소스
+		restful리소스
+		catch-all(전체잡기)
+	에서 유용함
+	
+	정적리소스는 resources폴더속에 있는 리소스들임,이거도 권한없는애들은 접근못하게 막아야함
+	그리고,추가적으로 일단 모든요청에 대해 보안헤더로 응답하게 막는게 편함
+	스프링 시큐리티의 기본값은 모든 정적리소스에 대해 인증없이 요청을 허용함
+		.requestMatchers("/error", "/css/**", "/js/**", "/images/**").permitAll()
+	여기서 permitAll를 authenticated()로 바꾸면 최저인증필요가 되는거
+	그리고 /error은 스프링부트의 오류보고를 위한 엔드포인트임,보통 개발중엔 이걸 항상 볼수있게하는게 일반적
+	
+	restful리소스는,리소스를 구성한 방식에 따라 권한부여규칙을 명확히 설명할수있다면 리퀘스트단위를 사용할수있음
+			GET /cashcards/{id}	read
+			GET /cashcards/	    read
+			POST /cashcards	    write
+	이런식으로 같은 메서드에서 상위와 하위가 같거나,항상 하위가 상위를 포함할때처럼 명확할때는 리퀘스트단위로 권한요구를 할수있음
+	이러면 해당 컨트롤러에 새 url을 추가할때,권한이 같다면 따로 권한요청추가할게 없어지니 편함
+	
+	catch-all은 스위치문의 default같은거임,즉 다른 모든게 실패하면 여기로 오는거
+	그래서 맨 마지막에 anyRequest().authenticated()를 넣으면 최소한 이수준의 보안을 제공하니,반드시 마지막엔 이걸 넣는게좋음
+	더 공격적으로 막으려면 anyRequest().denyAll() 이렇게 인증받지못한 모든걸 거부할수도있음
 	
 	
-	
-	
+	테스트에서 권한부여할땐
+		@WithMockUser(username = "sarah1",authorities = {"SCOPE_cashcard:read"})
+	여기에 권한추가하면됨
+
+
+
+
 
 
 

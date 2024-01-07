@@ -561,9 +561,49 @@
 	여기에 권한추가하면됨
 
 
-
-
-
+	메서드 권한요구는 기본값으로 활성화되어있지않아서 일단 이거부터 켜줘야함
+	이건 @Configuration클래스에 @EnableMethodSecurity어노테이션을 붙이면됨
+		@EnableMethodSecurity
+		@Configuration
+		public class SecurityConfig { ... }
+	이렇게
+	
+	메서드권한요구에는 2종류가있음
+		@PreAuthorize("규칙") //사전승인
+		@PostAuthorize("규칙")//사후승인
+	사전승인은 요청이 해당규칙을 통과하지않으면 메서드진입자체를 막고,사후승인은 응답이 해당규칙을 통과하지않으면 반환을 막음
+	
+	메서드권한요구는 보통
+		앱의 비http계층 보안
+		세분화된 인증수행
+	두가지에서 사용됨
+	
+	메서드권한요구는 앱의 비 http계층을 보호할떄 유용함(보통 서비스단이나 도메인단에서 사용)
+	서비스컴포넌트에서도 그냥 어노테이션을 박아버리면 해당 권한이 있어야 통과할수있으니까
+	또한 세분화된 인증수행에서도 유용함
+	해당 권한체크뿐 아니라,해당 사용자같은정보까지 묶어서 체크를,로직이 아닌 어노테이션만 가지고 할수있음(PostAuthorize)
+		@PostAuthorize("returnObject.body.owner == authentication.name")
+	여기서 returnObject는 ResponseEntity의 슈퍼타입인 특수변수임
+	
+	
+	그리고 서비스가 아닌 레포지토리단에서 막을수도있는데,이러면 엑세스가 승인되지않은경우 쿼리가 결과를 반환하지않아 성능상의 이점을 얻을수있지만,
+	서비스위쪽에선 더이상 403 포비든과 404낫파운드를 구분할수없어짐(둘다 결과가 없다는 리턴으로 나옴)
+	
+	레포지토리단에서 권한요구를 하려면
+		implementation 'org.springframework.security:spring-security-data'
+	만약
+		SpelEvaluationException: EL1008E
+	가 뜨면 저걸 추가하지않은거
+	를 build.gradle에 추가하고나면 쿼리에서 인증인스턴스를 참조할수있음
+		@Query("SELECT * FROM cash_card cc WHERE cc.owner = :#{authentication.name}")
+		Iterable<CashCard> findAll();
+	이렇게 막으면,사용자간의 민감한정보가 유출되는걸 방지할수있음(무조건 해당 토큰의 값을 보고 쿼리하니까)
+	이러면 보일러플레이트를 제거할수있고,실수로 findAll을 호출해서 사용자데이터가 유출되는걸 방지할수있음,즉 보안표면적을 줄일수있음
+	
+	이거도 장단점이 있는데,이렇게쓰면 메서드명에 따른 명확성을(findAll보단 findByOwner이 더 알기쉬움)잃어버릴수있음
+	그래서 findAll을 예외던지게 재정의한다음(사용불가능하게),findBy메서드를 만들어서 사용하는식으로 하는방법도있음
+	
+	
 
 
 	

@@ -1,0 +1,16 @@
+class Solution {
+    data class Job(val startTime: Int, val endTime: Int, val profit: Int)
+
+    fun jobScheduling(startTime: IntArray, endTime: IntArray, profit: IntArray): Int {
+        val profits = TreeMap<Int, Int>().apply { set(0, 0) }
+
+        Array(startTime.size) { Job(startTime[it], endTime[it], profit[it]) }
+            .sortedBy { it.endTime }
+            .forEach { job -> 
+                val profitBefore = profits.floorEntry(job.startTime)?.value ?: 0
+                profits[job.endTime] = maxOf(profits.lastEntry()!!.value, job.profit + profitBefore)
+            }
+
+        return profits.lastEntry()!!.value
+    }
+}

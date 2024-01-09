@@ -52,3 +52,22 @@ Array<IntArray>를 리스트로 변환하는방법
 	arrHashMap.maxBy { it.value }.key
 처음값에 콜렉션의 각 요소를 누적으로 더하거나 할때 사용	
 	콜렉션.scan(처음값){더해진값,더할값->더해진값+더할값}//{처음값,처음값더할값1,처음값더할값1더할값2,...}
+
+
+트리 전체순회후 리프만 추가(왼쪽우선)
+    fun leftFirstTreeLeafSearch(root1: TreeNode?):List<Int>{
+        val tempList = mutableListOf<Int>()
+        if (root1==null){
+            throw IllegalArgumentException()
+        }
+        if (root1.left==null && root1.right==null){
+            tempList.add(root1.`val`)
+        }
+        if(root1.left!=null){
+            tempList.addAll( leftFirstTreeLeafSearch(root1.left))
+        }
+        if(root1.right!=null){
+            tempList.addAll( leftFirstTreeLeafSearch(root1.right))
+        }
+        return tempList
+    }

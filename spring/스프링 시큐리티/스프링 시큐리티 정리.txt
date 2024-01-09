@@ -604,7 +604,55 @@
 	그래서 findAll을 예외던지게 재정의한다음(사용불가능하게),findBy메서드를 만들어서 사용하는식으로 하는방법도있음
 	
 	
-
+	외부기관에서 권한을 받을땐
+		1.spring-security-oauth2-resource-server 종속성추가
+		2.필터체인에 oauth2ResourceServer DSL호출 추가
+		3.yaml에  issuer-uri: https://example.org/oauth2 (인증서버url) 추가
+	이렇게 사전작업을 해야함,이러면 yaml에있는 인증서버로 iodc검색요청을 공식화함(저 url로)
+	즉 이건 public-key-location을 대체한다고 봐도됨
+		https://example.org/oauth2 ->
+		https://example.org/oauth2/.well-known/openid-configuration
+	이렇게 바꿔서 가지고있음(oidc표준)
+	그리고 토큰에 jwks_url에 있는 url에서 공개키를 가져와 복호화하고 이 값들로 jwtDecoder빈을 생성함
+	
+	즉 스프링부트가 시작되고,
+	리소스서버와 통신하려면 권한부여(인증)서버가 지원하는 부여플로우중 하나를 따라서 토큰을 요청해야함
+	
+	그리고 토큰은 스테이트리스기반이기때문에,스테이트풀이 들어가는 요구사항이 있으면 문제가 될수있음
+	즉 단순히 아이디와 패스워드를 묶어서쓰려고 토큰화하는건 괜찮지만,
+	사용자가 아직 로그인중인지,세션만료,로그아웃등을 알고싶어지면 jwt만으로는 할수없음
+	이런경우엔 스프링시큐리티가 지원하는 oidc/OAuth2.0같은 표준을 사용할수있음
+	
+	외부에서 토큰을 받을땐
+		http -a <client_id>:<client_secret> --form <auth_server_endpoint> 
+			grant_type=<the_grant_type> scope=<scopes>
+		http -a cashcard-client:secret --form :9000/oauth2/token 
+			grant_type=client_credentials scope=cashcard:read
+	이렇게 날리면됨
+	이때
+		client_id:클라이언트앱의 공개식별자,인증서버에서 클라신원과 해당리소스접근권한을 확인하기위해 사용
+		client_secret:클라와 인증서버만 아는 공개키-비밀키 기반 패스워드
+		auth_server_endpoint:토큰받기위해 접근해야할 인증서버 엔드포인트
+		the_grant_type:권한부여의 타입을 설정
+		scopes:요청할 권한
+	이런식임
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 
 	
 		

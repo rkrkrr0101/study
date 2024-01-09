@@ -1,0 +1,31 @@
+모든 노드 돌면서 값을 배열에 다 박고나서,그거 필터+sum돌리면될듯
+
+
+정답
+import java.util.LinkedList
+import java.util.Queue
+
+class Solution {
+    fun rangeSumBST(root: TreeNode?, low: Int, high: Int): Int {
+        val queue:Queue<TreeNode> =LinkedList()
+        val numList = mutableListOf<Int>()
+        queue.add(root)
+        while (queue.isNotEmpty()){
+            val tempNode=queue.poll()
+            if (tempNode.right!=null) {
+                queue.add(tempNode.right)
+            }
+            if (tempNode.left!=null) {
+                queue.add(tempNode.left)
+            }
+            numList.add(tempNode.`val`)
+        }
+
+        println(numList.asSequence().filter { it>=low && it<=high }.sum())
+        return numList.asSequence().filter { it>=low && it<=high }.sum()
+    }
+}
+class TreeNode(var `val`: Int) {
+    var left: TreeNode? = null
+    var right: TreeNode? = null
+}

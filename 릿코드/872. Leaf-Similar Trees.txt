@@ -1,0 +1,36 @@
+노드순회하면서 리프면 배열에 추가후 비교
+재귀사용
+
+
+정답
+class Solution {
+    fun leafSimilar(root1: TreeNode?, root2: TreeNode?): Boolean {
+        println(leftFirstTreeLeafSearch(root1))
+        println(leftFirstTreeLeafSearch(root2))
+        return leftFirstTreeLeafSearch(root1)==leftFirstTreeLeafSearch(root2)
+
+    }
+    fun leftFirstTreeLeafSearch(root1: TreeNode?):List<Int>{
+        val tempList = mutableListOf<Int>()
+        if (root1==null){
+            throw IllegalArgumentException()
+        }
+        if (root1.left==null && root1.right==null){
+            tempList.add(root1.`val`)
+        }
+        if(root1.left!=null){
+            tempList.addAll( leftFirstTreeLeafSearch(root1.left))
+        }
+        if(root1.right!=null){
+            tempList.addAll( leftFirstTreeLeafSearch(root1.right))
+        }
+        return tempList
+    }
+}
+class TreeNode(var `val`: Int) {
+    var left: TreeNode? = null
+    var right: TreeNode? = null
+}
+
+
+

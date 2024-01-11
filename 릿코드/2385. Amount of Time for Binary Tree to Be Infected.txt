@@ -1,0 +1,51 @@
+그냥 bfs쓰면 쉽게끝날듯
+
+
+
+class Solution {
+    fun amountOfTime(root: TreeNode?, start: Int): Int {
+        root ?: return 0
+        
+        val map = hashMapOf<Int, MutableList<Int>>()
+        val queue = LinkedList<TreeNode>()
+        queue.offer(root)
+        while (queue.isNotEmpty()) {
+            val n = queue.size
+            for (i in 0 until n) {
+                val cur = queue.poll()
+                cur.left?.let {
+                    map.getOrPut(cur.`val`) { mutableListOf() }.add(it.`val`)
+                    map.getOrPut(it.`val`) { mutableListOf() }.add(cur.`val`)
+                    queue.offer(it)
+                }
+                cur.right?.let {
+                    map.getOrPut(cur.`val`) { mutableListOf() }.add(it.`val`)
+                    map.getOrPut(it.`val`) { mutableListOf() }.add(cur.`val`)
+                    queue.offer(it)
+                }
+            }
+        }
+
+        if (map.isEmpty()) return 0 
+
+       
+        val queue2 = LinkedList<MutableList<Int>>()
+        val visited = hashMapOf<Int, Boolean>()
+        var level = 0
+        queue2.offer(map[start])
+        visited[start] = true
+        while (queue2.isNotEmpty()) {
+            level++
+            val n = queue2.size
+            for (i in 0 until n) {
+                queue2.poll().forEach {
+                    if (visited[it] != true) {
+                        visited[it] = true
+                        queue2.offer(map[it])
+                    }
+                }
+            }
+        }
+        return level - 1
+    }
+}

@@ -1,0 +1,45 @@
+bfs돌리면서,현재위치에서 연결된 모든트리들의 값을 계산하면서 max치면될듯
+미리 해당위치에서 하위의 맥스값계산하는함수 만들어두면편할듯
+
+정답
+class Solution {
+    fun maxAncestorDiff(root: TreeNode?): Int {
+        //val maxValue=maxValueNodeCal(root,root!!.`val`)
+        var maxValue=0
+        val queue:Queue<TreeNode> =LinkedList()
+        
+        queue.add(root)
+        while (queue.isNotEmpty()){
+            val tempNode=queue.poll()
+            if (tempNode.right!=null) {
+                queue.add(tempNode.right)
+            }
+            if (tempNode.left!=null) {
+                queue.add(tempNode.left)
+            }
+            
+            maxValue=max(maxValue,maxValueNodeCal(tempNode,tempNode.`val`))
+        }
+        
+
+        
+        return maxValue
+    }
+    fun maxValueNodeCal(curNode: TreeNode?,rootNodeValue:Int):Int{
+        var maxValue=0
+        if (curNode==null){
+            throw IllegalArgumentException()
+        }
+            
+        if(curNode.left!=null){
+            val leftValue=( maxValueNodeCal(curNode.left,rootNodeValue))
+            maxValue= max(maxValue, abs(leftValue))
+        }
+        if(curNode.right!=null){
+            val rightValue=( maxValueNodeCal(curNode.right,rootNodeValue))
+            maxValue= max(maxValue, abs(rightValue))
+        }
+        maxValue= max(maxValue, abs(rootNodeValue-curNode.`val`))
+        return maxValue
+    }
+}

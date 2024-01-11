@@ -1,59 +1,15 @@
-사이즈만큼 밸류로 채운 리스트 반환하려면,
-	val cList= MutableList(size){value}
-선언을 mutableList로하거나 List로 하는식으로 변형여부바꾸면됨
-
-이때 이중리스트인경우엔
-이경우엔
-	val busRouteList = MutableList(maxStation+1){ mutableSetOf<Int>() }
-	val smmothImgList = MutableList(img.size){ MutableList(img[0].size){0} }
-이렇게해도 얕은복사안남
-Collections.nCopies(size, value) 이건 사용금지,이상하게나옴
-
-Array<IntArray>를 리스트로 변환하는방법
-	어레이.map{it.toList()}.toList()
-리스트를 Array<IntArray>로 변환하는방법
-	리스트.map { it.toIntArray() }.toTypedArray()
-이중리스트에서 최대값찾기
-	val maxStation:Int=routeList.flatten().max()
-
-리스트 역순으로 사용
-	numList.asReversed()[i]
-
-문자열에서 특정위치의 문자들 바꾸기
-	val sb=StringBuilder(s)
-	for ((index,j) in indexList.withIndex()){
-		sb.also { it.setCharAt(j,sortVowelList[index]) }
-	}
-	return sb.toString()
-	
-코틀린 until은 해당숫자-1한거,rangeTo는 정직하게 해당범위까지 반복돌릴떄 사용,이두개로 ..을 대체할수있음
-
-스트링의 마지막 인덱스 찾기
-	sIndex=sliceString.indexOfLast {it==char}
-
-스트링 0갯수맞추기
-	String.format("""%0${0갯수}d""",toBinaryString.toInt())//형식,대상 순서로 넣으면됨
-
-스트링에서 특정 문자 수
-	value.count { it=='M' }
-
-배열을 스트링으로 변환
-	스트링어레이.joinToString("") //인자는 구분자를 받음,디폴트는 , ""를 넣으면 빈칸없이채움
-
-코틀린 해시맵(딕셔너리) 사용법
-	var t_hashMap = HashMap<String, Any>()		
-	t_hashMap.put("name","투케이")
-	for ((key, value) in t_hashMap) { 
-		println("전체 : ${key} : ${value}")
-	}
-엘비스연산
-	numHashMap[i]=numHashMap[i]?.plus(1)?:1
-해시맵에서 밸류로 max를 치고 거기서 키를 반환할땐
-	arrHashMap.maxBy { it.value }.key
-처음값에 콜렉션의 각 요소를 누적으로 더하거나 할때 사용	
-	콜렉션.scan(처음값){더해진값,더할값->더해진값+더할값}//{처음값,처음값더할값1,처음값더할값1더할값2,...}
-
-
+모든 트리노드에서 작업할때
+        while (queue.isNotEmpty()){
+            val tempNode=queue.poll()
+            if (tempNode.right!=null) {
+                queue.add(tempNode.right)
+            }
+            if (tempNode.left!=null) {
+                queue.add(tempNode.left)
+            }
+			//여기서 작업하면됨
+            //maxValue=max(maxValue,maxValueNodeCal(tempNode,tempNode.`val`))
+        }
 트리 전체순회후  리프만 리턴(왼쪽우선)
     fun leftFirstTreeLeafSearch(root1: TreeNode?):List<Int>{
         val tempList = mutableListOf<Int>()
@@ -68,6 +24,21 @@ Array<IntArray>를 리스트로 변환하는방법
         }
         if(root1.right!=null){
             tempList.addAll( leftFirstTreeLeafSearch(root1.right))
+        }
+        return tempList
+    }
+트리 전체순회후 모든 노드값 리턴(왼쪽우선)
+    fun leftFirstTreeAllNodeSearch(root1: TreeNode?):List<Int>{
+        val tempList = mutableListOf<Int>()
+        if (root1==null){
+            throw IllegalArgumentException()
+        }
+            tempList.add(root1.`val`)
+        if(root1.left!=null){
+            tempList.addAll( leftFirstTreeAllNodeSearch(root1.left))
+        }
+        if(root1.right!=null){
+            tempList.addAll( leftFirstTreeAllNodeSearch(root1.right))
         }
         return tempList
     }

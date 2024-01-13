@@ -1,0 +1,17 @@
+모음배열 만들어두고 스트링 2개로 나눈다음에 반복문돌려서 몇개들어있는지 체크
+
+
+정답
+class Solution {
+    fun halvesAreAlike(s: String): Boolean {
+        val vowelList= listOf('a','e','i','o','u','A','E','I','O','U')
+
+        val firstStringList=s.toList().subList(0,s.length/2)
+        val secondStringList=s.toList().subList(s.length/2,s.length)
+
+        val firstVowel=firstStringList.filter { vowelList.contains(it) }.size
+        val secondVowel = secondStringList.filter { vowelList.contains(it) }.size
+
+        return firstVowel==secondVowel
+    }
+}

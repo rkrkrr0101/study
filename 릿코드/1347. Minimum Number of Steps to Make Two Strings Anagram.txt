@@ -1,0 +1,24 @@
+문자열2개를 해시맵에 넣은다음,t에서 s를 빼고 남은수리턴
+
+정답
+
+class Solution {
+    fun minSteps(s: String, t: String): Int {
+        val sHashMap = hashMapOf<Char, Int>()
+        val tHashMap = hashMapOf<Char, Int>()
+        for (i in s){
+            sHashMap[i]=sHashMap[i]?.plus(1)?:1
+        }
+        for (i in t){
+            tHashMap[i]=tHashMap[i]?.plus(1)?:1
+        }
+        for ((key,value) in sHashMap){
+            if (tHashMap[key]==null){
+                continue
+            }
+            tHashMap[key]=tHashMap[key]!!- value
+        }
+
+        return tHashMap.filter { it.value>0 }.values.sum()
+    }
+}

@@ -1,0 +1,8 @@
+select * from BATCH_JOB_INSTANCE;
+	잡인스턴스id와 잡이름 잡키(잡파라미터의 해시)를 볼수있음
+select * from BATCH_JOB_EXECUTION;
+	잡익스큐션id와 잡인스턴스id,시작시간,종료시간,현재상태,종료상태,종료메시지(fail시 오류메시지),마지막업데이트시간 을 볼수있음
+select * from BATCH_JOB_EXECUTION_PARAMS;
+	잡익스큐션id와 파라메터명(키),파라메터타입,파라메터값(밸류),식별가능여부 를 볼수있음
+select * from BATCH_STEP_EXECUTION;
+	스탭익스큐션id와 잡익스큐션id,시작시간,종료시간,현재상태,종료상태,커밋횟수,읽기쓰기횟수,스킵횟수,롤백횟수,종료메시지,마지막업데이트시간 등을 볼수있음

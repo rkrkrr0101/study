@@ -1,0 +1,93 @@
+두 문자열을 같은문자열로 만들수있는지
+1번 연산으로 모든 문자열의 자리는 다 바꿀수있고(n<2),
+2번 연산으로 1자리 문자열을 다 통일시킬수있음
+
+한문자열을 다른문자열로 부을수있으니까
+일단 문자열크기가 안맞으면 false
+두 문자열을 해시맵에 넣고,
+같은숫자들을 뺴고
+남은것들을 비교해서 갯수맞출수있으면 true
+
+bbcc 2,2
+bbbc 3,1
+1 1 3
+2 3
+aabb
+abcd
+
+해시맵은 영어단문갯수내에서 놀기떄문에(32)2중루프써도됨
+
+서로 랭스가 다르면 false
+둘중 한쪽이라도 서로 글자를 포함하지않으면 false(특정문자를 자기배열내에있는 특정문자로 바꾸는거기떄문에 없으면 못바꿈)
+
+
+구현
+	전제조건 어긋나는거 다 false로 미리 처리하고
+	두개 문자열 해시맵에 넣은다음
+	두 해시맵으로 이중반복돌려서 서로 겹치는애들 제거(이제 겹치지않은애들만 남음)
+	이후 두 해시맵 모두 값으로 정렬쳐두고
+	이중반복돌려서 1번해시맵에서의 숫자와 2번해시맵의 루프합이 같아지면 패스하고,적으면 계속 더하고,커지면 false리턴
+	다성공했으면 true리턴
+
+
+정답
+class Solution {
+    fun closeStrings(word1: String, word2: String): Boolean {
+        if (word1.length!=word2.length) return false
+        val word1HashMap = hashMapOf<Char, Int>()
+        val word2HashMap = hashMapOf<Char, Int>()
+        for (i in word1){
+            word1HashMap[i]=word1HashMap[i]?.plus(1)?:1
+        }
+        for (i in word2){
+            word2HashMap[i]=word2HashMap[i]?.plus(1)?:1
+        }
+        
+        val word1Set = word1HashMap.keys.toSet()
+        val word2Set = word2HashMap.keys.toSet()
+        if (!(word1Set.containsAll(word2Set) || word2Set.containsAll(word1Set))){
+            return false
+        }
+
+
+        val word1List = word1HashMap.values.sorted().toMutableList()
+        val word2List = word2HashMap.values.sorted().toMutableList()
+
+        val tempList= mutableListOf<Int>()
+        val passList = mutableListOf<Int>()
+        for ((iIndex,iValue) in word1List.withIndex()){
+
+            for ((jIndex,jValue) in word2List.withIndex()){
+                if (passList.contains(jIndex)){
+                    continue
+                }
+                if (iValue==jValue){
+                    tempList.add(iValue)
+                    passList.add(jIndex)
+                    break;
+                }
+           }
+        }
+
+
+        for (i in tempList) {
+            word1List.remove(i)
+            word2List.remove(i)
+        }
+
+        for (i in word1List){
+            var addNum=0
+            for (j in word2List){
+                addNum+=j
+                if (i==addNum){
+                    break
+                }
+                if(addNum>i){
+                    println("false")
+                    return false
+                }
+            }
+        }
+        return true
+    }
+}

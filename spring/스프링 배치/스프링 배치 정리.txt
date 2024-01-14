@@ -452,6 +452,19 @@
 		build하는식
 	보통 이런식이고,특별한 요구사항이 없다면 보통은 있는거 가져다쓰는거로도 충분함
 	FlatFileItemReader는 csv나 고정길이파일등을 다루기 좋음
+	jdbc 아이템리더는
+		@Bean
+		public JdbcCursorItemReader<BillingData> billingDataTableReader(DataSource dataSource){
+			String sql="select * from BILLING_DATA";
+			return new JdbcCursorItemReaderBuilder<BillingData>()
+				.name("billingDataTableReader")
+				.dataSource(dataSource)
+				.sql(sql)
+				.rowMapper(new DataClassRowMapper<>(BillingData.class))
+				.build();
+		}
+	이렇게 비슷함
+	이때 rowMapper와 DataClassRowMapper를 사용해서 데이터베이스 레코드값을 도메인에 매핑할수있음(beanMapped와 하는일은 같음)
 	
 	쓰기는 ItemWriter을 사용함
 		@FunctionalInterface
@@ -496,18 +509,74 @@
 	이때 리더와 라이터는 등록되어있는걸 di받아서(오토와이어링)사용하게됨
 	
 	
+	입력과 출력은 이렇게하면되지만,보통은 입력을 받아서 데이터를 처리해서 출력으로 내보냄
+	이떄 사용되는게 ItemProcessor임
+	이건 리더가 반환한 항목을 처리한다음 다음작성자에게 넘겨주는,처리파이프라인의 중간단계라고 볼수있음
+	이 인터페이스는
+		@FunctionalInterface
+		public interface ItemProcessor<I, O> {
+		   @Nullable
+		   O process(@NonNull I item) throws Exception;
+		}
+	이렇게 생겼고,I를 받아서 O를 내보내는식임(물론 같아도됨)
+	이걸 사용할땐
+		public class BillingDataProcessor implements ItemProcessor<BillingData, ReportingData> {
+		   public ReportingData process(BillingData item) {
+			   return new ReportingData(item);
+		   }
+		}	
+	이런식으로 사용함
+	데이터의 형식을 변환한다던지,형식은 같지만 엔티티안의 비워진값들을 채운다던지(보강),그냥 검증용도로도  사용할수있음
+	여기서는 예외를 던질수있으니,데이터를 여기서 검증하고,문제없으면 그냥 그대로 데이터를 던지고,문제가 있으면 예외를 던지는식
+	   public Person process(Person person) {
+		  if (!this.emailService.isValid(person.getEmail()) {
+			 throw new InvalidEmailException("Invalid email for " + person);
+		  }
+		  return person;
+	   }	
+	이렇게 검사를 하고,문제있으면 예외,없으면 받은값을 그대로 아래로 흘리면됨
+	이거의 응용으로,필터링도 할수있음
+	process메서드에서 null을 리턴하면,배치는 현재 항목을 필터링함(건너뜀)
+	   public BillingData process(BillingData item) }
+		  if (item.getMonthlySpending() < 150) {
+			 return null; 
+		  }
+		  return item;
+	   }	
+	즉 null을 리턴하면 여기서 파이프라인이 끝나고,다음으로 가지않음(시퀸스의 필터생각하면됨)
 	
 	
+	스프링에선
+		@Value("${spring.cellular.spending.threshold:150}")
+		private float spendingThreshold;
+	이렇게 기본값을 설정할수있음
 	
+	아이템리더나 이런 스탭하위에서 잡파라메터를 받을수있음
+	이떈 SpEL(스프링확장언어)를 사용해야함
+	이건 @StepScope를 붙이고
+		@Bean
+		@StepScope
+		public FlatFileItemReader<BillingData> reader(@Value("#{jobParameters['input.file']}") String inputFile) {
+		   return new FlatFileItemReaderBuilder<BillingData>()
+		   .resource(new FileSystemResource(inputFile))
+			   // other properties
+			   .build();
+		}	
+	이런식으로 메서드 파라메터에
+		@Value("#{jobParameters['input.file']}")String inputFile
+	이렇게 값어노테이션을 붙이면 저기에 자동으로 넣어줌(배치 실행시킬때 받은 잡파라미터)
+	이떄 잡파라메터에 해당값이 없을경우,예외를 던짐
+	그래서 항상 잡파라메터가 의도한데로 가는지 확인하고,JobParametersValidator를 사용해서 값을검증하는게 좋음
 	
-	
-	
-	
-	
-	
-	
-	
-	
+	테스트에선
+	JobParameters jobParameters = new JobParametersBuilder()
+        .addString("input.file", "input/billing-2023-01.csv")
+        .addString("output.file", "staging/billing-report-2023-01.csv")
+        .addJobParameter("data.year", 2023, Integer.class)
+        .addJobParameter("data.month", 1, Integer.class)
+        .toJobParameters();
+	이렇게 추가하면됨
+		addString("키값", "밸류")
 	
 	
 	

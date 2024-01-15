@@ -1,0 +1,36 @@
+승자와 패자 각각 해시맵에 넣고,
+승자엔 있는데 패자엔 없으면 무패배열에,
+패자에서 1인것들은 1패배열에 넣어서 리턴
+
+
+전체배열에서 특정배열안에 있는걸 제거할땐 리스트를 쓰면 remove가 o(n)인데,hashSet이나 hash를 사용하면 o(1)임
+
+
+정답
+class Solution {
+    fun findWinners(matches: Array<IntArray>): List<List<Int>> {
+        val winnerHashMap = hashMapOf<Int, Int>()
+        val loserHashMap = hashMapOf<Int, Int>()
+        for (i in matches){
+            winnerHashMap[i[0]]= winnerHashMap[i[0]]?.plus(1)?:1
+            loserHashMap[i[1]]= loserHashMap[i[1]]?.plus(1)?:1
+        }
+        val perfectList= winnerHashMap.keys.toHashSet()
+        for (i in loserHashMap.keys){
+            perfectList.remove(i)
+        }
+        val oneLoseList= mutableListOf<Int>()
+        for ((key,value) in loserHashMap){
+            if (value==1){
+                oneLoseList.add(key)
+            }
+        }
+
+        println(winnerHashMap)
+        println(loserHashMap)
+        println(perfectList)
+
+
+        return listOf<List<Int>>(perfectList.sorted(),oneLoseList.sorted())
+    }
+}

@@ -600,14 +600,58 @@
 		오류가 일시적이지않은경우:데이터를 잘못입력했다던가 같이 처리를 해줘야할경우엔 문제를 해결하고 재시작할지,
 			스킵하고 나중에 분석,재처리를 할지 결정해야함
 	두가지로 나뉨
-
-
-
-
-
-
-
-
+	
+	BATCH_STEP_EXECUTION테이블을 확인하는거로 어느스탭에서 어느데이터쯤에서 문제가 발생하는지를 알기쉬움
+		select 
+			step_execution_id, job_execution_id, step_name, status, 
+			read_count, write_count, commit_count, rollback_count  
+		from BATCH_STEP_EXECUTION;
+	이거
+	
+	
+	영구적오류(csv의 한 레코드의 형식이 틀렸다던가)는,여러번 시도해도 항상 실패하고 매번고쳐줘야함
+	이런 오류를 매번 고칠수도있지만,체크만 해두고(특정테이블에 넣어두고) 스킵하고 다른거를 계속 진행할수도있음
+	전체중에 애매하게 0.5퍼정도만 잘못됐는데,매번고치기엔 파일이 너무클때 이럴때 유용함
+	이건 청크지향스탭에서만 사용할수있고,이기능은 청크지향처리모델에서의 적용된 모든 스탭,즉 항목을 읽거나 처리하거나 쓰는동안의 모든오류에서 적용됨
+	이 기능을 활성화하려면 fault-tolerant(내결함성)단계를 정의해야함
+	
+	이걸 사용할떈 스탭빌더에서 faultToLerant()메서드를 호출하면됨
+		return new StepBuilder("myStep", jobRepository)
+			.<String, String>chunk(100, transactionManager)
+			.reader(itemReader)
+			.writer(itemWriter)
+			.faultTolerant()
+			.skip(FlatFileParseException.class)
+			.skipLimit(5)
+			.build();
+	여기서 faultToLerant()를 붙여서 내결함성을 재정의하겠다는걸 표현하고,skip(예외명)으로 해당예외가 뜨면 스킵하겠다는걸 표시함
+	그리고 스킵의 최대 갯수(skipLimit)도 넣어서 해당갯수만큼 스킵하면 실패하게할수도있음
+	이건 넣어서 너무많이 실패하면 그냥 스탭을 실패하게 만드는게좋음
+	
+	이때 해당 레코드가 스킵되면,해당레코드는 단순히 청크에서 제외됨(null던지는거랑 같은취급)
+	이때 스킵한 항목은 SkipListener를 사용하여 체크할수있음
+	이건 건너뛴항목을 로깅하거나 어디 저장하는등을 처리할수있게하는 스프링배치가 제공하는 확장지점임
+		public interface SkipListener<T, S> extends StepListener {
+		   default void onSkipInRead(Throwable t) { }
+		   default void onSkipInWrite(S item, Throwable t) { }
+		   default void onSkipInProcess(T item, Throwable t) { }
+		}
+	이렇게 각각 메서드가 있고,이걸 구현해서 스탭을 만들때
+		FaultTolerantStepBuilder.listener(SkipListener)
+	를 사용해서 스탭에 등록할수있음
+	구현체 빈으로 만들고 빈으로 넣어서 di받는식
+	
+	위의 스킵은 예외를 기반으로 하는 스킵인데,만약 예외를 기반으로 하지않는 스킵결정이 필요한경우엔 SkipPolicy를 사용할수있음
+		@FunctionalInterface
+		public interface SkipPolicy {
+			boolean shouldSkip(Throwable t, long skipCount) throws SkipLimitExceededException;
+		}
+	이 메서드는 현재항목을 건너뛸지를 리턴하게 설계된 shouldSkip를 가지고있고,
+	현재항목과 발생한 모든예외를 가져올수있는 Throwable을 받음
+	이걸 구현하고나서
+		FaultTolerantStepBuilder.skipPolicy(구현체)
+	를 등록해서 스탭에 등록할수있음
+	구현체 빈으로 만들고 빈으로 넣어서 di받는식
 
 
 

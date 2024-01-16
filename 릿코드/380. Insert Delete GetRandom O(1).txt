@@ -1,0 +1,31 @@
+그냥 o(1)으로 동작하는 셋을 구현하라는문제
+해시셋쓰면될듯
+
+정답
+class RandomizedSet() {
+    val randomHashSet = hashSetOf<Int>()
+
+
+    fun insert(`val`: Int): Boolean {
+        if (randomHashSet.contains(`val`)){
+            return false
+        }else{
+            randomHashSet.add(`val`)
+            return true
+        }
+    }
+
+    fun remove(`val`: Int): Boolean {
+        if (randomHashSet.contains(`val`)){
+            randomHashSet.remove(`val`)
+            return true
+        }else{
+            return false
+        }
+    }
+
+    fun getRandom(): Int {
+        return randomHashSet.random()
+    }
+
+}

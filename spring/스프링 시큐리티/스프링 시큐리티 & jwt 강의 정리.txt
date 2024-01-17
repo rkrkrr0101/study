@@ -1,0 +1,64 @@
+0.시큐리티기본
+	시큐리티의존성을 추가하면
+		뷰:모든 페이지를 접근하려면 로그인페이지가 뜸
+		restapi:쿼리에 아이디패스워드추가하지않으면 401
+		토큰:토큰추가하지않으면 401
+	가 자동으로 됨
+	이떄 아이디기본값은 user고 패스워드는 실행터미널창에 표시됨
+	
+	스프링 시큐리티 필터를 스프링필터체인에 등록할땐
+		@Configuration
+		@EnableWebSecurity
+		class SecurityConfig {
+			@Bean
+			fun filterChain(http:HttpSecurity):SecurityFilterChain{
+				http.csrf(CsrfConfigurer<HttpSecurity>::disable)
+				http.authorizeHttpRequests{
+					it.requestMatchers("/user/**").authenticated()
+					it.requestMatchers("/manager/**").hasAnyRole("MANAGER","ADMIN")
+					it.requestMatchers("/admin/**").hasRole("ADMIN")
+					it.anyRequest().permitAll()
+				}
+				http.formLogin{
+					it.loginPage("/login")
+					it.permitAll()
+				}
+				return http.build()
+			}
+		}
+	등록,즉 시큐리티를 쓸거면 이걸 최소 하나는 만들어둬야 기본값에서 벗어날수있음
+	WebSecurityConfigurerAdapter는 삭제됐으니 관련꺼있으면 SecurityFilterChain을 리턴하는 빈을 등록하는식으로 사용해야함
+	메서드체이닝 직렬로하는거 보기싫다고 다 람다식쓰는형태로 변경됐고
+		authorizeRequests->authorizeHttpRequests
+		antMatcher->requestMatchers
+		and().formLogin()->http.formLogin{...}
+	으로 변경됨
+	
+	그리고 SecurityConfig파일을 생성하고나면(@EnableWebSecurity) 기본 로그인페이지가 작동하지않음(폼로그인시)
+	이건 스프링특유의 수동설정위주가 아닌,아예 해당페이지가 사라짐
+	
+	
+	
+	
+	
+	
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

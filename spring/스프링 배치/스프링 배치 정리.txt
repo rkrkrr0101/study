@@ -654,15 +654,38 @@
 	구현체 빈으로 만들고 빈으로 넣어서 di받는식
 
 
+	외부통신이나 db잠금같이 일부오류는 일시적이라서,재시도하면 성공할수있는 오류들도 많음
+	이걸 그냥 실패처리하고 수동으로 재시작하게하는거도 비효율적이라 자동 재시작을 할수있게도 할수있음
+	이거도 청크지향단계,즉 processor와 writer에서만 사용할수있고,reader에서는 사용할수없음
+	
+	이거도 똑같이 faultToLerant를 켜고 retry를 넣고 최대횟수넣으면됨
+		.faultTolerant()
+		.retry(TransientException.class)
+		.retryLimit(5)
+	이때 예외를 선택할수도있음
+	
+	그리고 감사를위해 재시도루트에 들어가면 로그를 남기던가 할수있게 여기도 리스너를 넣을수있음
+		public interface RetryListener {
+		   default <T, E extends Throwable> void onSuccess(
+				  RetryContext context,
+				  RetryCallback<T, E> callback,
+				  T result) {
+		   }
+		   default <T, E extends Throwable> void onError(
+				  RetryContext context,
+				  RetryCallback<T, E> callback,
+			   Throwable throwable) {
+		   }
+		}
+	이건 재시도루트에 들어갔을때 실패했을떄와 성공했을때를 나눠서 작업을 할수있음
 
-
-
-
-
-
-
-
-
+	재시도도 똑같이 예외가 아닌상황을 처리할때를 위한 정책인터페이스도 있음
+		public interface RetryPolicy extends Serializable {
+		   boolean canRetry(RetryContext context);
+		   void registerThrowable(RetryContext context, Throwable throwable);
+		}
+	이거도 이미 만들어진 구현체들도 꽤있음(MaxAttemptsRetryPolicy,CircuitBreakerRetryPolicy 등)
+	
 
 
 

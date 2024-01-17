@@ -1,0 +1,13 @@
+그냥 배열 해시맵에 넣고,해시맵의 value만 떼서 set으로 만들어서 사이즈비교
+
+
+정답
+class Solution {
+    fun uniqueOccurrences(arr: IntArray): Boolean {
+        val arrHashMap = hashMapOf<Int, Int>()
+        for (i in arr){
+            arrHashMap[i]=arrHashMap[i]?.plus(1)?:1
+        }
+        return arrHashMap.values.toSet().size==arrHashMap.size
+    }
+}

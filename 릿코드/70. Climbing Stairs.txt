@@ -1,0 +1,22 @@
+n에 도착하려면 n-1에서 1을 더하거나 n-2에서 2를 더해야함
+즉 x(n)은 (x(n-1)+x(n-2))
+dp테이블을 만들어두고 바텀업해서 테이블만들고 해당숫자 리턴
+
+정답
+class Solution {
+    fun climbStairs(n: Int): Int {
+        if (n==1){
+            return 1
+        }
+        if (n==2){
+            return 2
+        }
+        val dpMap = hashMapOf<Int, Int>()
+        dpMap[1]=1
+        dpMap[2]=2
+        for (i in 3 .. n){
+            dpMap[i]=dpMap[i-1]!!+dpMap[i-2]!!
+        }        
+        return dpMap[n]!!
+    }
+}

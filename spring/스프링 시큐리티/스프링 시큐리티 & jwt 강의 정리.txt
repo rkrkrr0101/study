@@ -6,6 +6,11 @@
 	가 자동으로 됨
 	이떄 아이디기본값은 user고 패스워드는 실행터미널창에 표시됨
 	
+	시큐리티를 추가해서 세팅해야할건
+		1.resources/application.yml or application.properties 에 설정추가(포트,서버설정,db,jpa)
+		2.@EnableWebSecurity와 @Configuration을 붙인 필터체인 생성(밑에있는거)
+	를 우선적으로 해야함
+	
 	스프링 시큐리티 필터를 스프링필터체인에 등록할땐
 		@Configuration
 		@EnableWebSecurity
@@ -20,8 +25,10 @@
 					it.anyRequest().permitAll()
 				}
 				http.formLogin{
-					it.loginPage("/login")
-					it.permitAll()
+					it.loginPage("/loginForm")  //해당폼에서 form으로 값입력받아서 loginProcessingUrl호출
+					it.loginProcessingUrl("/login")// post로 '/login'이 호출되면 시큐리티가 인터셉트해서 대신 로그인해줌
+					//it.permitAll()
+					it.defaultSuccessUrl("/")
 				}
 				return http.build()
 			}
@@ -37,24 +44,197 @@
 	그리고 SecurityConfig파일을 생성하고나면(@EnableWebSecurity) 기본 로그인페이지가 작동하지않음(폼로그인시)
 	이건 스프링특유의 수동설정위주가 아닌,아예 해당페이지가 사라짐
 	
+	회원가입을 할떈 비밀번호를 암호화해야함
+	
+	loginProcessingUrl("/login")를 사용해서 로그인성공하면 시큐리티가 가지고있는 세션에 넣음(시큐리티 컨텍스트홀더)
+	이때 Authentication객체여야만 저기 넣을수있음
+	이안에는 User의 정보가 있어야하는데,이건 또 UserDetails타입객체에 넣어야함
+	그래서 UserDetails타입객체에서 합성으로 내가 만든 엔티티를 넣어야하는데,
+	그걸 하기위한 클래스를 생성해야함(PrincipalDetails 이런걸 만들어서 UserDetails를 상속받고 생성자로 User엔티티를 받으면됨)
+		class PrincipalDetails(val user:User):UserDetails {...}
+	그리고나서 인터페이스 메서드를 재정의하면되는데,
+	getAuthorities():해당 User의 권한을 리턴
+		override fun getAuthorities(): MutableCollection<out GrantedAuthority> {
+			val collect = ArrayList<GrantedAuthority>()
+			collect.add(GrantedAuthority { return@GrantedAuthority user.role })
+			return collect
+		}
+	여기서 권한을 리턴이니까 user.role를 리턴해야하는데,이걸 GrantedAuthority로 싸줘야함
+	GrantedAuthority클래스 안에는 getAuthority()추상메서드 딱 하나가 있는데,
+	클래스에 추상메서드가 하나니까 sam인터페이스고,이경우엔 코틀린에서 람다를 쓰면 저거 구현에 해당 람다를 넣음(@Override안써도됨)
+	즉 저 람다는 getAuthority()를 구현한거
+	그렇게 넣어주고 리턴하면됨
+	나머지는	
+		getPassword():패스워드리턴
+			override fun getPassword(): String {
+				return user.password
+			}
+		getUsername():아이디리턴
+			override fun getUsername(): String {
+				return user.username
+			}	
+		isAccountNonExpired():계정 만료됐는지 확인,tf로 리턴하면됨,따로 뭐 없으면 true리턴
+		isAccountNonLocked():계정 락(밴)됐는지 확인,따로 뭐 없으면 true리턴
+		isCredentialsNonExpired():비밀번호가 지정시간이상 지났는지 확인,따로 뭐없으면 true리턴
+		isEnabled():휴면계정인지 확인,따로 뭐없으면 true리턴(이거구현하려면 마지막로그인시간을 User엔티티에 넣어두고 꺼내서확인하면됨)
+	이렇게 있고
+	
+	이걸 만들고 나면 UserDetailsService인터페이스를 상속받은 서비스를 만들어야함
+	이건 안에 메서드가 하나있음(loadUserByUsername(username: String?): UserDetails)
+	이건 시큐리티설정에서 loginProcessingUrl의 url을 호출하면 자동으로 이 서비스의 메서드를 실행해서,
+	해당값을 넣어서 UserDetails를 생성함
+	여기서 username은 html form에서 만든 필드명과 통일시켜야함
+		<input type="text" name="username" placeholder="Username"/><br/>
+	여기서 이름이 name="username2"이러면 안받아짐(시큐리티컨피그에서 it.usernameParameter("username2")이렇게 바꿀수있긴함)
+	이거 구현은
+		@Service
+		class PrincipalDetailsService(val userRepository: UserRepository):UserDetailsService {
+			override fun loadUserByUsername(username: String?): UserDetails {
+				if (username == null){
+					throw IllegalArgumentException("잘못된 username 입력")
+				}
+				val userEntity =
+					userRepository.findByUsername(username)?:throw UsernameNotFoundException("존재하지 않는 username 입니다.")
+				return PrincipalDetails(userEntity)
+			}
+		}
+	이렇게 하면됨
+	찾으면 해당 유저엔티티를 UserDetails를 구현한 PrincipalDetails(이름은 알아서붙이면됨)로 감싸서 던져주면되고,
+	못찾으면 UsernameNotFoundException를 던져주면됨
+	이렇게 UserDetailsService로 UserDetails를 던지면 이게 Authentication안에 들어가게됨(컴포지션)
+	이 Authentication는 시큐리티 세션안에 들어가게됨
 	
 	
+	이렇게 회원가입은 그냥 jpa레포지토리로 save하는걸 직접 구현하면되고(이때 bCryptPasswordEncoder를 사용해서 비번 암호화하는거만 신경쓰면됨)
+	로그인은 
+		1.it.loginProcessingUrl("/로그인url")로 시큐리티에 맡긴다고 선언하고,
+		2.UserDetails를 상속(구현)한 클래스를 하나 생성하고 매개변수로 엔티티를 받음(di가 아니라 직접받을거)
+			2-1.getAuthorities는 user엔티티의 권한필드를
+						val collect = ArrayList<GrantedAuthority>()
+						collect.add(GrantedAuthority { return@GrantedAuthority user.role })
+						return collect
+					이렇게 던지면되고
+			2-2.나머지 메서드들도 구현하고,is가 붙은 메서드들은 사용할거면 구현하고,사용안할거면 true리턴
+		3.UserDetailsService를 상속(구현)한 클래스를 하나 생성하고
+		4.loadUserByUsername를 구현하고
+			username를 받아서 jpa레포지토리로 검색해서 
+			있으면 PrincipalDetails(user) 리턴 //PrincipalDetails는 2번에서 UserDetails을 구현한 클래스
+			없으면 UsernameNotFoundException 던지기
+	이런 순서대로 진행됨
+	
+	이렇게 로그인을 한 상태로 권한이 없는 페이지에 접근하면 403이 뜸(로그인요청이 뜨지않음)
+	권한은 SecurityConfig에서
+		 it.requestMatchers("/manager/**").hasAnyRole("MANAGER","ADMIN")
+	이렇게 url단위로(와일드카드 사용가능)할수도있고(이때 "ROLE_MANAGER"이렇게 ROLE_를 붙이면 예외뜸,자동으로 붙여서 붙이지마라고 예외치는듯)
+	메서드단위로 할수도있음
+	이건 SecurityConfig에 @EnableMethodSecurity(securedEnabled = true)를 붙이고,메서드에
+		@GetMapping("/info")
+		@Secured("ROLE_ADMIN")
+		fun abc(){...}
+	이렇게 하면 메서드에 권한을 걸수있음,이때는 ROLE_를 붙여야하는거에 주의
+	
+	그리고 @EnableMethodSecurity(securedEnabled = true, prePostEnabled = true)이렇게하면,
+	@PreAuthorize와 @PostAuthorize를 사용할수있음
+		@PreAuthorize는 메서드가 실행되기전에 실행돼서 메서드 실행전에 빠꾸놓을수있고
+		@PostAuthorize는 메서드가 끝날때 실행돼서,메서드의 리턴값을 검사할수있음
+	@PreAuthorize는
+		@PreAuthorize("hasRole('ROLE_MANAGER') or hasRole('ROLE_ADMIN')")
+	이렇게 코드를 스트링에 넣는식으로 사용하는데,이건 권한을 여러개 요구할때 사용함(하나만쓸거면 Secured쓰면됨)
+	@PostAuthorize는
+		@PostAuthorize("returnObject.body.owner == authentication.name")
+	이렇게 response를 검사하는식으로 사용해서 값이 이상하면 리턴을 안하고 예외터트리는식으로 사용할수있음(잘안씀)
+	
+	메서드단위 권한요청은 섬세하게 하기좋고,url단위는 아직 안만든곳에도 와일드카드로 붙일수있기때문에 넓게쓰기좋음
+	메서드가 뭐 안건드려도돼서 간단하게 쓰긴좋음
 	
 	
+1.스프링 시큐리티 OAuth2.0
+	구글로그인추가는 
+		google api에서 프로젝트를 생성하고 
+		OAuth 동의를 하고(외부 체크)
+		앱이름넣고 이메일넣고 다음다음다음 클릭 //이떄 테스트사용자에서 현재 사용할 계정의 메일을 넣어두는게좋음
+		사용자인증정보가서 OAuth클라이언트 id만들기
+			앱유형 웹어플리케이션 선택
+			승인된 리다이렉션 url에 로그인url추가
+				ex)http://localhost:8080/login/oauth2/code/google //로컬테스트용
+		생성후 클라id와 클라비번 저장
+	승인된 리다이렉션url은,인증완료후에 코드를 돌려줄 url이름
+	이 코드를 받아서 액세스토큰을 구글에 요청하면됨
+	그리고 authclient라는 라이브러리를 사용하게되면 저 주소 그대로쓰면됨(직접구현할거면 바꿔도되는데 보통 라이브러리쓰니)바꿀수없음
+	즉
+		http://내주소:포트번호/login/oauth2/code/google
+	이런식으로 도메인을 제외한 패스는 라이브러리에서 고정으로 가져가서 사용함
+	그래서 컨트롤러에 해당 주소를 매핑할필요없이 라이브러리에서 알아서 만듬
 	
+	프로젝트에는 oauth2 client가 들어있어야함(start.spring.io에 있음)
+	그냥 디펜던시 추가는
+		implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+	추가하면됨
+	그리고
+		spring:
+		  security:
+			oauth2:
+			  client:
+				registration:
+				  google:
+					client-id: 클라id
+					client-secret: 클라패스워드
+					redirect-uri: http://localhost:8080/login/oauth2/code/google #구글 승인된 리다이렉션url에 넣은거
+					scope: //받아올 정보들
+					  - email
+					  - profile
+	이걸 application.yml에 추가하면됨
+	이때 https설정안됐으면 에러나니까 https설정하고,테스트라서 인증서없으면 http사용
+	
+	그리고 로그인폼에 a태그를 달고
+		<a href="/oauth2/authorization/google">구글로그인</a>
+	추가하면됨,저 주소도 고정임(oauth2-client가 사용)
+	그리고나서 시큐리티컨피그에서 oauth설정을 켜주면됨
+	    http.oauth2Login {
+            it.loginPage("/loginForm")
+			it.userInfoEndpoint{
+                it.userService(principalOauth2UserService) //밑에거 추가한뒤 di받으면됨
+            }
+        }
+	이러면 일단 로그인은 할수있음
+	여기서 기본적인 oauth2.0로직순서는
+		1.코드받기(인증완료)
+		2.엑세스토큰(권한)
+		3.토큰에있는 권한으로 프로필정보접근
+		4.정보를 토대로 회원가입 자동진행(이메일,전화번호,이름,아이디)
+	이라는 로직으로 진행해야하는데,회원가입은 직접시켜야함
+	저기에 있는 정보가 모자라면,해당정보를 입력하고 추가로 입력을 더받을수도있음(회원가입창)
+	
+	근데 구글은 액세스토큰+프로필정보를 한방에 바로 줌(oauth2-client가 처리함)
+	그리고나서
+		@Service
+		class PrincipalOauth2UserService: DefaultOAuth2UserService() {
+		    override fun loadUser(userRequest: OAuth2UserRequest?): OAuth2User {
 
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+				return super.loadUser(userRequest)
+			}
+		}
+	를 추가
+	여기서 loadUser메서드가,인증을 완료한 뒤에 토큰을 받고난뒤에 호출되는 메서드임
+	그래서 여기의 userRequest를 사용해서 회원가입을 여기서하면됨
+	여기서 정보는
+		super.loadUser(userRequest).attributes
+	안에 들어있음
+	각 항목은
+		sub:구글id의 프라이머리키
+		name:이름
+		picture:프로필사진
+		email:이메일
+		email_verified:이메일이 휴면인지 아닌지,정상이면 true
+		locale:국가
+	임
+	여기서 
+		sub를 아이디로 쓰고(앞에 google_sub명 이런식으로 플랫폼별 이름을 붙이면 중복안됨)
+		패스워드는 아무거나 사용(널만아니면됨,어짜피 패스워드쓸일이 없기때문)
+		이메일은 저이메일 그대로 사용
+		provider에 현재 oauth플랫폼을 넣고 //유저엔티티의 필드
+		providerId에 sub를 그대로 넣음 //변형없이,앞에 google_안붙임
+	이렇게 회원가입을 진행시키면됨(권한은 기본으로 넣으면됨)
 	
 	
 	

@@ -1,12 +1,21 @@
 package com.cos.Security1.controller
 
+import com.cos.Security1.controller.model.User
+import com.cos.Security1.repository.UserRepository
+import org.springframework.security.access.annotation.Secured
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.RestController
 
 @Controller
-class IndexController {
+class IndexController(
+    val userRepository: UserRepository,
+    val bCryptPasswordEncoder: BCryptPasswordEncoder) {
+
     @GetMapping(path=["","/"])
     fun index():String{
         return "index"
@@ -26,19 +35,35 @@ class IndexController {
     fun manager():String{
         return "manager"
     }
-    @GetMapping("/login")
-    @ResponseBody
-    fun login():String{
-        return "login"
+    @GetMapping("/loginForm")
+    fun loginForm():String{
+        return "loginForm"
     }
-    @GetMapping("/join")
-    @ResponseBody
-    fun join():String{
-        return "join"
+    @GetMapping("/joinForm")
+    fun joinForm():String{
+        return "joinForm"
     }
-    @GetMapping("/joinProc")
-    @ResponseBody
-    fun joinProc(): String{
-        return "회원가입완료됨"
+    @PostMapping("/join")
+    fun join(user: User):String{
+        println("user = ${user}")
+        user.role="ROLE_USER"
+        val rawPassword = user.password
+        val encPassword = bCryptPasswordEncoder.encode(rawPassword)
+        user.password=encPassword
+        userRepository.save(user)
+        return "redirect:/loginForm"
     }
+    @GetMapping("/info")
+    @ResponseBody
+    @Secured("ROLE_ADMIN")
+    fun info():String{
+        return "methodManager"
+    }
+    @GetMapping("/data")
+    @ResponseBody
+    @PreAuthorize("hasRole('ROLE_MANAGER') or hasRole('ROLE_ADMIN')")
+    fun data():String{
+        return "data"
+    }
+
 }

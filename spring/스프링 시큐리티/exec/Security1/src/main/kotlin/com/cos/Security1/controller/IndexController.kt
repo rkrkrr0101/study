@@ -1,20 +1,44 @@
 package com.cos.Security1.controller
 
+import com.cos.Security1.config.auth.PrincipalDetails
 import com.cos.Security1.controller.model.User
 import com.cos.Security1.repository.UserRepository
 import org.springframework.security.access.annotation.Secured
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.Authentication
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.ResponseBody
-import org.springframework.web.bind.annotation.RestController
 
 @Controller
 class IndexController(
     val userRepository: UserRepository,
     val bCryptPasswordEncoder: BCryptPasswordEncoder) {
+    @GetMapping("/test/login")
+    @ResponseBody
+    fun loginTest(authentication:Authentication,
+                  @AuthenticationPrincipal userDetails: PrincipalDetails ):String{
+        println("/test/login ===============")
+        val principalDetails:PrincipalDetails=authentication.principal as PrincipalDetails
+        println("authentication = ${principalDetails.user}")
+        println("userDetails = ${userDetails.user}")
+        return "세션정보확인"
+
+    }
+    @GetMapping("/test/oauth/login")
+    @ResponseBody
+    fun loginOauthTest(authentication:Authentication,
+                       @AuthenticationPrincipal oAuth: OAuth2User):String{
+        println("/test/oauth/login ===============")
+        val oAuth2User:OAuth2User=authentication.principal as OAuth2User
+        println("authentication = ${oAuth2User.attributes}")
+        println("authentication = ${oAuth.attributes}")
+        return "oauth세션정보확인"
+    }
 
     @GetMapping(path=["","/"])
     fun index():String{
@@ -22,7 +46,8 @@ class IndexController(
     }
     @GetMapping("/user")
     @ResponseBody
-    fun user():String{
+    fun user(@AuthenticationPrincipal principalDetails: PrincipalDetails):String{
+        println("principalDetails = ${principalDetails.user}")
         return "user"
     }
     @GetMapping("/admin")

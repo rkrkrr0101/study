@@ -1,0 +1,42 @@
+모든 연속된 부분배열에서의 min값을 더하라
+스택만들고
+배열총합 res에 더하고
+반복문돌려서 현재 스택최상위보다 작으면 스택에 추가후 스택peek해서 res에 추가
+
+
+
+3 1 2 4
+1 2 4
+2 4
+
+
+class Solution {
+    fun sumSubarrayMins(arr: IntArray): Int {
+        var minValue: Long = 0
+
+        val stack = Stack<Int>()
+        stack.push(-1)
+
+        val module = 1e9.toLong() + 7
+
+        for (i in 0 .. arr.size) {
+            val currVal = if (i in arr.indices) arr[i] else 0
+
+            while (stack.peek() != -1 && currVal < arr[stack.peek()]) {
+                val index = stack.pop()
+
+                val left = index - stack.peek()
+                val right = i - index
+
+                val add = (left * right * arr[index].toLong()) % module
+
+                minValue += add
+                minValue %= module
+            }
+
+            stack.push(i)
+        }
+
+        return minValue.toInt()
+    }
+}

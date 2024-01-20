@@ -205,7 +205,9 @@
 	이라는 로직으로 진행해야하는데,회원가입은 직접시켜야함
 	저기에 있는 정보가 모자라면,해당정보를 입력하고 추가로 입력을 더받을수도있음(회원가입창)
 	
-	근데 구글은 액세스토큰+프로필정보를 한방에 바로 줌(oauth2-client가 처리함)
+	근데 oauth2-client가 코드를 받아서 토큰을 요청해서 토큰을 받아서 가져오는거까지 자동으로해줌(userRequest)
+	그리고 프로필정보접근 로직은 이미 만들어져있고(super.loadUser(userRequest)) 이거사용하면됨
+	그래서 회원가입코드만 짜면되는거임
 	그리고나서
 		@Service
 		class PrincipalOauth2UserService: DefaultOAuth2UserService() {
@@ -216,7 +218,7 @@
 		}
 	를 추가
 	여기서 loadUser메서드가,인증을 완료한 뒤에 토큰을 받고난뒤에 호출되는 메서드임
-	그래서 여기의 userRequest를 사용해서 회원가입을 여기서하면됨
+	그래서 여기의 userRequest를 사용해서 회원가입을 여기서하면됨(이게 )
 	여기서 정보는
 		super.loadUser(userRequest).attributes
 	안에 들어있음
@@ -235,7 +237,277 @@
 		provider에 현재 oauth플랫폼을 넣고 //유저엔티티의 필드
 		providerId에 sub를 그대로 넣음 //변형없이,앞에 google_안붙임
 	이렇게 회원가입을 진행시키면됨(권한은 기본으로 넣으면됨)
+	이거 말고 받을수있는 정보들은
+		userRequest?.clientRegistration:registrationId로 어떤 oauth로 로그인했는지 확인가능
+		userRequest?.accessToken?.tokenValue:토큰을 받아볼수있음
+	들이 있음
 	
+	그리고 이렇게 인증이 된 상태에서는,컨트롤러에서 Authentication를 받으면 자동으로 그안에 현재 인증된유저의 정보가 들어가게됨(di해줌)
+	그걸 UserDetails를 상속받는 클래스로 형변환해주면 현재 유저정보를 받아볼수있음(오브젝트라서 다운캐스팅하는거)
+		@GetMapping("/test/login")
+		fun loginTest(authentication:Authentication):String{
+			val principalDetails:PrincipalDetails=authentication.principal as PrincipalDetails
+			println("authentication = ${principalDetails.user}")
+			return "세션정보확인"
+		}	
+	귀찮으면
+	    fun loginTest(@AuthenticationPrincipal principalDetails: PrincipalDetails ):String{
+			println("userDetails = ${userDetails.user}")
+		}
+	이렇게 어노테이션으로 받아다쓸수도있음
+	
+	근데 oauth로그인을 하면 값을 받을수가 없는데,이건 authentication의 UserDetails로의 캐스팅이 실패했기때문
+	OAuth는
+		@GetMapping("/test/oauth/login")
+		@ResponseBody
+		fun loginOauthTest(authentication:Authentication):String{			
+			val oAuth2User:OAuth2User=authentication.principal as OAuth2User
+			println("authentication = ${oAuth2User.attributes}")
+			return "oauth세션정보확인"
+		}
+	이렇게 OAuth2User를 사용해야함
+	이거도 어노테이션쓸수있는데
+		@GetMapping("/test/oauth/login")
+		@ResponseBody
+		fun loginOauthTest(@AuthenticationPrincipal oAuth: OAuth2User):String{
+			println("authentication = ${oAuth.attributes}")
+			return "oauth세션정보확인"
+		}
+	이렇게 어노테이션은 @AuthenticationPrincipal로 같은데 클래스가 다름(OAuth2User)
+	
+	즉 Authentication는 UserDetails형태일수도(일반로그인),oAuth2User형태일수도(oauth2로그인)있음
+	이건 UserDetails는 userDetailsService.loadUserByUsername()를 거쳐서 들어오고,
+	oAuth2User는 DefaultOAuth2UserService.loadUser()를 거쳐서 들어와서 이렇게되는거임
+	
+	이건 왜이러냐면,세션안에는 스프링시큐리티가 관리하는 시큐리티세션영역이 있는데,
+	이안에는 Authentication타입만 들어갈수있음(이걸 컨트롤러나 서비스에서 di받아서 쓸수있는거 위에서처럼)
+	
+	이렇게 두개로 나뉘니까 엄청 귀찮아짐,그래서 두개를 둘다 상속(구현)받은 클래스를 사용하면되는데(어짜피 둘다 인터페이스니까),
+	그냥 PrincipalDetails에 OAuth2User를 추가로 상속받아서 구현하면됨
+	이러면 두개를 뭉쳐서 유저엔티티를 가져와서 사용할수있음
+	
+	이러면 OAuth2User 메서드도 구현을 해줘야하는데 getAttributes는 OAuth2에서 받은 프로필정보를 리턴해주는 메서드임	
+		class PrincipalDetails(val user:User):UserDetails,OAuth2User {
+			private var attributes=mutableMapOf<String,Any>()
+			constructor(user:User,attributes:MutableMap<String,Any>) : this(user) {
+				this.attributes=attributes
+			}
+			override fun getName(): String {
+				return "" //이건 어짜피 안쓰는메서드라 공백이나 아무거나보내면됨
+			}
+
+			override fun getAttributes(): MutableMap<String, Any> {
+				return attributes
+			}
+			...
+	이런식으로 생성자를 하나 더만들어서,하나만 들어오는거는 주생성자(UserDetails),두개가 들어오는거는 부생성자(oAuth2User)로 만드는거임
+	그리고 받아온거를 getAttributes로 던져버리면됨
+	그리고나서 DefaultOAuth2UserService를 구현한데 가서(PrincipalOauth2UserService)
+	loadUser에서 user과 attributes를 PrincipalDetails에 넣어서 리턴하면되는거임
+	즉
+		id와 기타 정보들을 받아와서
+		해당 id로 회원가입이 됐는지를 확인하고,
+		없으면 회원가입하고 해당개체 리턴
+		있으면 해당개체 리턴
+	이런순서임
+		@Service
+		class PrincipalOauth2UserService(val bCryptPasswordEncoder: BCryptPasswordEncoder,
+			val userRepository: UserRepository): DefaultOAuth2UserService() {
+			override fun loadUser(userRequest: OAuth2UserRequest?): OAuth2User {
+				val oAuth2User = super.loadUser(userRequest)//유저리퀘스트를 프로필정보객체(OAuth2User)로 변환
+				val provider = userRequest?.clientRegistration?.registrationId?: //여기부터
+					throw IllegalArgumentException("프로바이더 널 오류")
+				val providerId = oAuth2User.getAttribute<String>("sub")?:
+					throw IllegalArgumentException("프로바이더ID 널 오류")
+				val username="""${provider}_google"""
+				val password=bCryptPasswordEncoder.encode("qwer")
+				val email = oAuth2User.getAttribute<String>("email")?:
+					throw IllegalArgumentException("이메일 널 오류")//이건 기본값넣어도될듯
+				val role = "ROLE_USER"									//여기까지 프로필데이터 파싱
+				var userEntity = userRepository.findByUsername(username)//회원인지 아닌지 확인
+				if (userEntity==null){									//회원이아니면 회원가입
+					userEntity=User(username,password,email,role,provider,providerId)
+					userRepository.save(userEntity)
+				}
+
+				return PrincipalDetails(userEntity,oAuth2User.attributes)//유저엔티티와 프로필정보 리턴
+			}
+		}
+	이러면 일반로그인이든 소셜로그인이든 둘다 같은 클래스객체에 같은 엔티티객체를 가지게되니까,이 엔티티객체만 사용하면되는거임
+	
+	참고로 이때 순환참조오류뜨면 bCryptPasswordEncoder빈등록이 시큐리티컨피그에 있어서그런거니까 외부로빼주면됨
+	
+	이때 컨트롤러에서 어노테이션이나 직접 di받는거가 동작을 하는 이유는
+		서블릿 필터단에서 시큐리티 시작
+		현재 url이 post로 loginProcessingUrl에 표시된 url이거나(일반로그인),
+			get으로/oauth2/authorization/google일경우(소셜로그인)//이건 url 각 플랫폼별로 고정임
+		UserDetailsService or DefaultOAuth2UserService발동
+		두 서비스 모두 자기가 작동하고나면 post로 @AuthenticationPrincipal에 값을 집어넣어둠(시큐리티세션에 값 저장)
+		기타시큐리티동작
+		시큐리티끝
+		디스패쳐서블릿 작동
+		컨트롤러작동
+		컨트롤러메서드에서 @AuthenticationPrincipal의 값을 가져와서 매개변수에 넣음
+		컨트롤러메서드 동작 후 종료
+	이런순서임,즉 스프링이전에 동작해서,정해진장소(시큐리티세션)에 이미 던져놨고 스프링은 그냥 그거가져다쓰는거임
+	우리가 굳이 DefaultOAuth2UserService나 UserDetailsService를 만들지않아도 기본적으로 빈이 만들어져있음(각자 자기타입을 리턴하는)
+	이걸 대체해서 우리가 만든빈을 끼워넣는거
+	대체하는이유는,그냥 소셜로그인과 일반로그인을 통합해서,
+	즉 UserDetails와 OAuth2User를 둘다 구현한 PrincipalDetails로 리턴타입을 맞추기위해서 직접 구현하는거임
+	이래야 쓰기편해지니까(추가로 자동회원가입이나 로깅같은 로직넣으려고 하는거도있음)
+	
+	
+	페이스북 로그인 추가는 그냥 강의만보자
+	회원가입을 안시켜주는데 어떻게해
+	
+	application.yml에 registration: 밑에(구글이랑 같은라인에)
+	        
+	  facebook:
+		client-id: id값
+		client-secret: 패스워드
+		redirect-uri: http://localhost:8080/login/oauth2/code/facebook
+		scope:
+		  - email
+		  - public_profile
+	추가하고,DefaultOAuth2UserService를 상속한 클래스에서 각 플랫폼에 맞게 getAttribute를 하는걸 수정해야함
+	구글에선 id가 sub였는데,페이스북은 id(getAttribute("id"))임
+	이렇게 다 달라서 불편하니까,인터페이스를 만들고,
+		interface OAuth2UserInfo {
+			fun getProviderId()
+			fun getProvider()
+			fun getEmail()
+			fun getName()
+		}
+	각 플랫폼별로 구현체를 만들어서,의존성역전을 시키면됨
+	구글
+		class GoogleUserInfo(val attributes: Map<String,Any>):OAuth2UserInfo {
+			override fun getProviderId():String {
+				return attributes["sub"] as String
+			}
+			override fun getProvider():String {
+				return "google"
+			}
+			override fun getEmail():String {
+				return attributes["email"] as String
+			}
+			override fun getName():String {
+				return attributes["name"] as String
+			}
+		}
+	페북
+		class FacebookUserInfo(val attributes: Map<String,Any>):OAuth2UserInfo {
+			override fun getProviderId():String {
+				return attributes["id"] as String
+			}
+
+			override fun getProvider():String {
+				return "facebook"
+			}
+
+			override fun getEmail():String {
+				return attributes["email"] as String
+			}
+
+			override fun getName():String {
+				return attributes["name"] as String
+			}
+		}
+	이런식임
+	그리고 DefaultOAuth2UserService를 상속받은곳의 loadUser메서드에서
+	    override fun loadUser(userRequest: OAuth2UserRequest?): OAuth2User {
+			if (userRequest==null){
+				throw IllegalArgumentException()
+			}
+			val oAuth2User = super.loadUser(userRequest)
+			var oAuth2UserInfo:OAuth2UserInfo
+			if (userRequest.clientRegistration.registrationId=="google"){ //각 프로바이더별로 분기타서 구현체생성
+				println("구글요청")
+				oAuth2UserInfo=GoogleUserInfo(oAuth2User.attributes)
+			}else if(userRequest.clientRegistration.registrationId=="facebook"){
+				println("페북요청")
+				oAuth2UserInfo=FacebookUserInfo(oAuth2User.attributes)
+			}else{
+				throw IllegalArgumentException()
+			}
+
+
+			val provider = oAuth2UserInfo.getProvider()
+			val providerId = oAuth2UserInfo.getProviderId()
+			val username="""${provider}_${providerId}"""
+			val password=bCryptPasswordEncoder.encode("qwer")
+			val email = oAuth2UserInfo.getEmail()
+			val role = "ROLE_USER"
+			var userEntity = userRepository.findByUsername(username)
+			if (userEntity==null){
+				userEntity=User(username,password,email,role,provider,providerId)
+				userRepository.save(userEntity)
+			}
+
+			return PrincipalDetails(userEntity,oAuth2User.attributes)
+		}
+	이런식으로 인터페이스를 믿고 생성하면됨
+	
+	네이버 로그인은,OAuth2Client가 기본적으로는 제공하지않기때문에(구글,페북,트위터등만 기본제공자임)
+	직접 추가해서써야함
+	이거도 똑같이
+		naver:
+		  client-id:
+		  client-secret:
+		  client-name: Naver
+          authorization-grant-type: authorization_code
+		  redirect-uri: http://localhost:8080/login/oauth2/code/naver
+		  scope:
+			- name
+			- email
+	추가해주고,여기서 authorization-grant-type는,방식이 코드방식인지 토큰방식인지 등을 선택하는식임
+	authorization_code는 코드를 받아서 액세스토큰으로 교환하는방식
+	redirect-uri는 끝나고 콜백을 받는주소임(그냥 고정으로 저거쓰면됨,마지막만 교체해가면서 쓰면됨 naver,kakao)
+	
+	그리고 프로바이더정보가 없기때문에 이거도 등록해줘야함
+	  security:
+		oauth2:
+		  client:
+	밑에,즉 registration:과 같은라인에
+        provider:
+          naver:
+            authorization-uri: https://nid.naver.com/oauth2.0/authorize  #요청주소,로그인창이 뜨는곳
+            token-uri: https://nid.naver.com/oauth2.0/token    #코드를 주고 토큰을 받는곳
+            user-info-uri: https://openapi.naver.com/v1/nid/me #토큰을 사용해서 유저정보를 받는곳
+            user-name-attribute: response                 #json안에 데이터들을 담아둔 키이름
+	이걸 추가,보통 이런건 도큐먼트에서 소셜로그인보면있음
+	
+	네이버 개발자센터가서 앱등록하고 
+		서비스url에 http://localhost:8080 //도메인
+		콜백url에 http://localhost:8080/login/oauth2/code/naver		
+	코드받고 클라id패스워드 application.yml에 적고 프로바이더도 다 채워줬으면,
+	로그인폼에서
+		<a href="/oauth2/authorization/naver">네이버 로그인</a>
+	이렇게 /oauth2/authorization/프로바이더명 을 호출하면,즉
+		1./oauth2/authorization/프로바이더명 을 호출
+		2.시큐리티가 프로바이더의 해당 프로바이더명의 authorization-uri를 호출
+		3.그리고 그안에서 로그인이 끝나면,
+		4.자동으로 코드를 받아서 토큰uri로 코드를 보내서 토큰을 받고,
+		5.토큰으로 user-info-uri로 보내서 유저프로필정보를 받아서
+		6.oauth2User.attributes안에 받은 프로필정보json의 user-name-attribute에 있는 키값을 찾아서 때려박음
+	즉 로그인이 끝난뒤로는 다 시큐리티가 자동진행하는거임
+	
+	이제 DefaultOAuth2UserService를 구현한 구현체의 loadUser에서
+	        }else if(userRequest.clientRegistration.registrationId=="naver"){
+				oAuth2UserInfo=NaverUserInfo(oAuth2User.attributes.get("response") as Map<String, Any>)
+			}
+	를 추가해주면됨,네이버는 response안에 데이터들이 다 들어있기때문에(2중구조),한번 더 벗겨서줘야함
+		response={
+			resultcode=00,
+			message=success,
+			response={id=172314,email:이메일값,name=이름}
+		}
+	즉 user-name-attribute는 첫번째의 response를 찾아주지만,내부에 뭐가들어있는진 알아서 해야하는데,
+	네이버는 그안에서 데이터부분을 이중래핑해둬서 한번더벗겨야하는거임
+	벗겨서줄거니까 NaverUserInfo는 그대로만들면되고
+	
+	이때 attributes.get("response")의 리턴타입이 any라서,
+	Unchecked cast경고가 뜰텐데(any를 map으로 캐스트하는데 캐스트될지 보장할수없다) 
+	@Suppress("UNCHECKED_CAST")위에붙여서 없앨수있음(이건 어짜피 api쪽에서 주는게 확정되었기떄문에 없애도됨)
 	
 	
 	

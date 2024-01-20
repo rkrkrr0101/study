@@ -16,10 +16,7 @@ import org.springframework.security.web.SecurityFilterChain
 @EnableWebSecurity
 @EnableMethodSecurity(securedEnabled = true, prePostEnabled = true)
 class SecurityConfig(val principalOauth2UserService: PrincipalOauth2UserService) {
-    @Bean
-    fun encodePwd():BCryptPasswordEncoder{
-        return BCryptPasswordEncoder()
-    }
+
 
     @Bean
     fun filterChain(http:HttpSecurity):SecurityFilterChain{

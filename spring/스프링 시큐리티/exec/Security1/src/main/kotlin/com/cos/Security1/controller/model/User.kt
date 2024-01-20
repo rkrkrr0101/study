@@ -14,8 +14,8 @@ class User(
     var password:String,
     var email:String,
     var role:String="ROLE_USER",
-    var provider:String,
-    var providerId:String,
+    var provider:String="",
+    var providerId:String="",
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id:Int=0,

@@ -3,10 +3,22 @@ package com.cos.Security1.config.auth
 import com.cos.Security1.controller.model.User
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.oauth2.core.user.OAuth2User
 import java.util.Arrays
 
-class PrincipalDetails(val user:User):UserDetails {
+class PrincipalDetails(val user:User):UserDetails,OAuth2User {
+    private var attributes=mutableMapOf<String,Any>()
+    constructor(user:User,attributes:MutableMap<String,Any>) : this(user) {
+        this.attributes=attributes
+    }
 
+    override fun getName(): String {
+        return ""
+    }
+
+    override fun getAttributes(): MutableMap<String, Any> {
+        return attributes
+    }
 
 
     override fun getAuthorities(): MutableCollection<out GrantedAuthority> {

@@ -1,0 +1,31 @@
+그 dp의 전형적인 최대이득구하기문제 
+한개선택하면 양옆에 못고르니 한집건너 픽해야함
+즉 현재위치에서 선택할수있는건,x[n]+dp[n-2]와 dp[n-1], dp[n-3]+x[n] 셋중 하나임
+0,1,2 미리 리스트에 넣어두고 max쳐가면서 바텀업하면됨
+
+정답
+import kotlin.math.max
+
+class Solution {
+    fun rob(nums: IntArray): Int {
+        if (nums.size<4){
+            if (nums.size==3) {
+                return max(nums[1], nums[0] + nums[2])
+            }else{
+                return nums.max()
+            }
+        }
+        val dpList = MutableList(nums.size) { 0 }
+        dpList[0]=nums[0]
+        dpList[1]=nums[1]
+        dpList[2]=nums[2]+dpList[0]
+
+        for (i in 3 until nums.size){
+            dpList[i]=listOf( dpList[i-2]+nums[i],dpList[i-1],dpList[i-3]+nums[i]).max()
+        }
+
+
+        
+        return max(dpList[dpList.size-1],dpList[dpList.size-2])
+    }
+}

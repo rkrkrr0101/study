@@ -1,0 +1,33 @@
+배열에서 없는숫자랑 2번나오는 숫자 리턴
+해시맵에 넣고 포인터만들어서 돌려가면서 없는숫자찾고(끝까지같으면 마지막)
+밸류가 2이면 중복숫자
+
+
+정답
+class Solution {
+    fun findErrorNums(nums: IntArray): IntArray {
+        val numHashMap = hashMapOf<Int, Int>()
+        for (i in nums){
+            numHashMap[i]=numHashMap[i]?.plus(1)?:1
+        }
+        var curPoint=1
+        var missNum=nums.size
+        var dupNum=-1
+
+        for ((key,value )in numHashMap){
+            
+            if (key!=curPoint){
+                missNum=curPoint
+                curPoint+=1
+            }
+            if (value==2){
+                dupNum=key
+            }
+
+            curPoint+=1
+        }
+
+        
+        return intArrayOf(dupNum,missNum)
+    }
+}

@@ -1,0 +1,29 @@
+크기가 작아서 o(n^3)까지도 될듯
+재귀로 모든 조합을 더해가면서(dfs),현재 조건을 만족하지못하면 끝내고,조건을 만족하면 계속 들어가는식으로 길이max리턴
+
+정답
+import kotlin.math.max
+
+class Solution {
+    fun maxLength(arr: List<String>): Int {
+        var maxValue=0
+        for ((index,value) in arr.withIndex()){
+            maxValue=max(maxValue,maxLengthFind(value,arr.subList(index+1,arr.size)))
+            //println("""${"aaa".length},${"aaa".toSet()}""")
+        }
+        println(maxValue)
+        return maxValue
+    }
+    fun maxLengthFind(curStr:String,arr: List<String>):Int{
+        var maxValue=curStr.length
+        val curSet = curStr.toSet()
+        if (curStr.length!=curSet.size){
+            return -1
+        }
+        for ((index,value) in arr.withIndex()) {
+            maxValue = max(maxValue, maxLengthFind(curStr+value,arr.subList(index+1,arr.size)))
+        }
+        return maxValue
+    }
+
+}

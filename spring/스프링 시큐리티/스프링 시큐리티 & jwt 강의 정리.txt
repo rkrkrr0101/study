@@ -621,11 +621,337 @@
 		implementation 'com.auth0:java-jwt'
 	하면됨
 	
+	
+	스프링 시큐리티에서 jwt서버를 사용하려면 세션을 꺼야함
+	이건 시큐리티컨피그에서
+        http.sessionManagement {
+            it.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        }	
+	를 추가하면됨
+	
+	rest컨트롤러로가면 cors설정도 해줘야함
+		@Configuration
+		class CorsConfig {
+			@Bean
+			fun corsFilter():CorsFilter{
+				val source = UrlBasedCorsConfigurationSource()
+				val config = CorsConfiguration()
+				config.allowCredentials=true //내서버가 응답할떄 json을 js에서 처리할수있게 허용
+				config.addAllowedOrigin("*") //모든 ip에 응답을 허용
+				config.addAllowedHeader("*")//모든 header에 응답을 허용
+				config.addAllowedMethod("*") //모든 post,get,put등에 요청을 허용
+				source.registerCorsConfiguration("/api/**",config)
+				return CorsFilter(source)
+			}
+		}
+	클래스만들고 시큐리티컨피그에 등록(이거말고 컨트롤러에 @CrossOrigin걸수있는데,이러면 시큐리티인증이 필요하면 다 거부되버림)
+	allowCredentials는 httpOnly때문에 js에서 쿠키같은걸 처리못하게하는걸 풀어주는정책임
+	이건 풀어주면 편하긴한데 서버쪽에 장난질을 칠수있어짐
+	만약 설정해도 cors뜨면 addAllowedOrigin대신 setAllowedOriginPatterns()으로 와카말고 해당프론트도메인 등록
+	allowCredentials=true일때는 와일드카드를 사용할수없음
+	
+	즉 jwt서버의 기본설정은
+		@Configuration
+		@EnableWebSecurity
+		@EnableMethodSecurity(securedEnabled = true, prePostEnabled = true)
+		class SecurityConfig(val corsFilter: CorsFilter) {
+			@Bean
+			fun filterChain(http:HttpSecurity):SecurityFilterChain{
+				http.csrf(CsrfConfigurer<HttpSecurity>::disable)
+				http.sessionManagement {
+					it.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+				}
+				http.addFilter(corsFilter) //위에서 설정한 필터 등록
+				http.authorizeHttpRequests {
+					it.requestMatchers("/api/v1/user/**")
+						.hasAnyRole("MANAGER","ADMIN","USER")
+					it.requestMatchers("/api/v1/manager/**")
+						.hasAnyRole("MANAGER","ADMIN")
+					it.requestMatchers("/api/v1/admin/**")
+						.hasAnyRole("ADMIN")
+					it.anyRequest().permitAll()
+				}
+				http.formLogin {
+					it.disable()
+				}
+				http.httpBasic {
+					it.disable()
+				}
+				return http.build()
+			}
+		}
+	이거임
+	cors꺼버리고 폼로그인 꺼버리고 httpBasic꺼버리고 세션꺼버리고 특정 url쪽은 권한요구하고 나머지는 풀어버리는식임
+	이러면 세션을 안쓰기때문에 authorizeHttpRequests로 권한제한을 하지않은곳은 전부 접근이 가능하게됨(/home같은)
+	
+	httpBasic은 헤더에 id와 패스워드를 담아서 요청하는방식인데
+	httpBasic은 확장성은 좋은데,http는 암호화가 안됨 그래서 잘 사용하지않음
+	
+	그래서 httpBasic이 아닌 Bearer라는 토큰을 사용해서 인증하는방식을 사용함
+	이거도 httpBasic이랑 거의비슷한데,id패스워드 대신 토큰을 사용하니 노출이 된다고해도 토큰폐기하고 새로파면되니 위험부담이 적음
+	그냥 리프레시토큰이 아닌 액세스토큰을 하루마다 폐기하고 새로받는식으로 처리하면 하루밖에못쓰니까
+	이 Bearer를 사용하려면 세션과 httpBasic과 폼로그인을 다 꺼줘야함
+	
+	
+	시큐리티에서 토큰 처리를 할땐 서블릿 필터를 쓰는게 가장 일반적임(jakarta.servlet.Filter)
+		@Component
+		class MyFilter1:Filter {
+			override fun doFilter(request: ServletRequest?, response: ServletResponse?, chain: FilterChain?) {
+				println("필터1작업")
+				chain?.doFilter(request, response)
+			}
+		}
+	이런식으로 필터를 만들고
+	필터컨피그파일을 만들어서 빈등록을 하면		
+		class FilterConfig {
+			@Bean
+			fun filter1():FilterRegistrationBean<MyFilter1>{
+				val bean:FilterRegistrationBean<MyFilter1> =FilterRegistrationBean(MyFilter1())
+				bean.addUrlPatterns("/**")
+				bean.order=0 //낮은게 우선실행
+				return bean;
 
+			}
+		}	
+	자동으로 해당 필터가 실행이됨(order의 우선순위순서로 실행이됨)
+	즉 필터를 빈등록하면 자동으로 해당 필터가 필터체인에 걸림(이때 시큐리티체인이 끝난다음에 걸림,즉 시큐리티체인 끝나고 실행)
+	만약 시큐리티보다 먼저 필터가 실행되게하고싶으면 시큐리티필터체인에
+			http.addFilterBefore(
+			내필터(),SecurityContextHolderFilter::class.java)
+				//SecurityContextHolderFilter 동작 이전인 시큐리티 시작전에 발동
+	로 시큐리티필터체인 제일위에 추가하면됨
+	
+	필터가 중복실행되면,필터컨피그에서 @Configuration안붙어있나 확인
+	저거도 붙이고 @Bean도 붙이면 둘다 등록돼서 이중으로 등록됨
+	추가로 시큐리티컨피그에 등록하고 컴포넌트등록이 되어있거나(@Configuration,@Bean)하면 이것또한 이중등록임
+	이거해도 안되면 (OncePerRequestFilter) 검색
+	
+	
+	필터에서 토큰을 받아볼땐
+		override fun doFilter(request: ServletRequest?, response: ServletResponse?, chain: FilterChain?) {
+			val req: HttpServletRequest =request as HttpServletRequest
+			val res: HttpServletResponse =response as HttpServletResponse
 
+			val headerAuth = req.getHeader("Authorization")
+			println("headerAuth = ${headerAuth}")
 
+			println("필터1작업")
+			chain?.doFilter(request, response)
+		}	
+	이렇게 req의 헤더를 까서 받으면됨
+	토큰 검사를 할땐
+		if (req.method=="POST"){
+			val headerAuth = req.getHeader("Authorization")
+			println("headerAuth = ${headerAuth}")
+			if (headerAuth=="cos"){
+				chain?.doFilter(request, response)
+			}else{
+				val writer = res.writer
+				writer.println("인증안됨")//요청자에 이게출력됨
+			}
+		}
+	이런식으로 doFilter로 다음으로 넘어갈지 말지를 선택하면되는거
+	이 토큰검증은 시큐리티가 동작하기 전에 동작을 해야함,그래서
+		http.addFilterBefore(MyFilter1(),SecurityContextHolderFilter::class.java)
+	를 시큐리티컨피그에 추가해야함
+	
+	토큰을 검증할땐,토큰이 넘어오면 이 토큰이 내가만든 토큰이 맞는지 검증만 하면됨(Authentication헤더에 들어있는값을 공개키로 해독성공시)
+	즉 id패스워드가 정상적으로 들어오면 비밀키로 잠근 권한목록을 토큰으로 만들어서 던져주고,그걸 받아다 검증해서 권한확인하는식
+	
+	
+	토큰으로 로그인하려면 PrincipalDetails를 만들고(UserDetails+oAuth2User구현)
+	권한이 여러개면
+		override fun getAuthorities(): MutableCollection<out GrantedAuthority> {
+			val collect = ArrayList<GrantedAuthority>()
+			user.roleList.forEach {
+				collect.add(GrantedAuthority { return@GrantedAuthority it })
+			}
 
+			return collect
+		}
+	이런식으로 더해서 권한리턴해줌
+	그리고 UserDetailsService구현체 만들고(PrincipalDetailsService)
+		override fun loadUserByUsername(username: String?): UserDetails {
+			if (username==null){
+				throw IllegalArgumentException()
+			}
+			val user = userRepository.findByUsername(username)?:throw IllegalArgumentException()
+			return PrincipalDetails(user)
+		}	
+	만들어두면,로그인요청이 올떄 PrincipalDetails가 동작을 함
+	근데 폼로그인을 안쓰고 restapi서버니까 로그인을 할수없는데,이쪽에서 로그인은,
+		class JwtAuthFilter:UsernamePasswordAuthenticationFilter() {
+		}	
+	이 필터를 만들어서 등록해두면됨
+	이건 폼로그인에서 /login을 할떄 발동되는 필터인데,이걸 수동으로 등록하는거(폼로그인꺼버렸으니까)
+	이걸 시큐리티컨피그에서
+	AuthenticationConfiguration di받고
+		class SecurityConfig(val corsFilter: CorsFilter,
+		val authenticationConfiguration: AuthenticationConfiguration) 
+	필터등록해주면됨
+		http.addFilter(JwtAuthFilter(authenticationManager(authenticationConfiguration)))
+	이렇게 등록해주면됨(문제시 https://substantial-park-a17.notion.site/7-1d5e937c11564aeeafc55f24dae15b65 참고)
+	이떄 필터에서는 private로 받아야함
+		class JwtAuthFilter(private val authenticationManager:AuthenticationManager)
+	아니면 빈 겹쳐서 에러남
+	
+	즉 로그인시도를 하면 
+		1.UsernamePasswordAuthenticationFilter가 동작
+		2.받은값이 정상인지 확인
+			2-1.authenticationManager로 로그인시도하면
+			2-2.PrincipalDetailsService.loadUserByUsername()실행
+			2-3.이떄 정상적으로 PrincipalDetails가 리턴되면 성공,예외나 다른동작하면 실패		
+		3.성공이면 성공로직 실행
+			3-1.성공이면 PrincipalDetails를 세션에담고 //세션에 안담으면 권한처리가 안됨,즉 던지는게 목적이 아닌 서버내에서 쓰기위한목적
+			3-2.jwt토큰을 생성해서
+			3-3.응답
+		 실패면 실패로직 실행	
+	순서임
+	
+	일반적으로 restapi면 json으로 요청받게됨
+	이걸 파싱은
+	    val om = ObjectMapper()
+        val user = om.readValue(request.inputStream, User::class.java) //파싱
+	이렇게 파싱해버리면됨
+	그리고 토큰을 만들고 인증확인을 해줘야함
+	    val authToken = UsernamePasswordAuthenticationToken(user.username, user.password)
+			//토큰생성,앞은 유저네임 뒤는 패스워드
+        val authentication = authenticationManager.authenticate(authToken)
+			//userDetailsService의 loadUserByUsername를 토큰의 앞에거로 실행(user.username),성공시 UserDetails리턴
+	이때
+		There is no PasswordEncoder mapped for the id "null"
+	뜨면 
+	    @Bean
+		fun passwordEncoder():BCryptPasswordEncoder{
+			return BCryptPasswordEncoder()
+		}
+	빈등록
+	이떄 500이 아닌 404같은게 뜨면 로그인이 됐다는거임
+	즉 필터를
+		class JwtAuthFilter(private val authenticationManager:AuthenticationManager):UsernamePasswordAuthenticationFilter() {
+			override fun attemptAuthentication(request: HttpServletRequest?, response: HttpServletResponse?): Authentication {
+				request?:throw IllegalArgumentException()
+				val om = ObjectMapper()
+				val user = om.readValue(request.inputStream, User::class.java) //파싱
 
+				val authToken = UsernamePasswordAuthenticationToken(user.username, user.password)//토큰생성,앞은 유저네임 뒤는 패스워드
+				val authentication = authenticationManager.authenticate(authToken)//userDetailsService의 loadUserByUsername실행
 
+				return authentication
+			}
 
+		}
+	이렇게 만들어야함
+	여기서 return authentication이 되면,해당 auth객체(userDetails나 oAuth2User)는 시큐리티세션에 등록이됨
+	이게 토큰을 통해서 생성되니까,정상적으로 만들어졌다면 토큰도 보장이되는것(db유저네임과 패스워드가 일치한다는것)
+	그리고 해당필터가 리턴되면 시큐리티세션에 등록되는거(시큐리티가 알아서해줌)
+	세션은 단지 권한관리를 위해서만 사용함
+	
+	attemptAuthentication메서드가 종료되면,successfulAuthentication이 실행됨(성공시)
+	여기서 토큰을 응답해주면됨
+	만약 실패했으면 저 메서드가 실행안됨
+	
+	저 메서드에서 authentication에서 값을 꺼내서 토큰으로 만들어서 response헤더에 토큰을 담아주면됨
+		override fun successfulAuthentication(
+			request: HttpServletRequest?,
+			response: HttpServletResponse?,
+			chain: FilterChain?,
+			authResult: Authentication?
+		) {
+			if (response==null || authResult==null){
+				throw IllegalArgumentException("잘못된입력")
+			}
+			val principalDetails = authResult.principal as PrincipalDetails
+
+			val jwtToken=JWT.create()
+				.withSubject("abc토큰")//토큰명,큰의미없음
+				.withExpiresAt(Date(System.currentTimeMillis()+(60000*30)))//만료시간,좀 짧게잡는게좋음,여기선 30분
+				.withClaim("id",principalDetails.user.id)//내가넣을권한이나 정보
+				.withClaim("username",principalDetails.user.username)
+				.sign(Algorithm.HMAC512("abc"))//hash암호방식,rsa아니라서 키값들어가는거,키값적으면됨
+
+			response.addHeader("Authorization", "Bearer $jwtToken")
+		}
+	여기서 JWT는 com.auth0.jwt.JWT라이브러리임,저번에 추가했던 서드파티
+	그리고 토큰을 만들때 시간은 좀 짧게(10분 or 30분)잡는게 좋고,이걸 헤더에 담아두면 알아서 스프링이 요청끝부분에 던짐
+	
+	그리고 토큰을 받은 클라는,모든 요청에 이 토큰을 추가해서 던지면 처리가 됨
+	이때 백엔드쪽에서도 토큰을 받아서 처리하는 필터가 필요함(토큰검증+토큰권한파싱)
+	세션이야 자동으로 시큐리티가 처리하지만 토큰은 직접만들어야함
+	
+	즉,첫로그인시엔(토큰이 없을때)
+		UsernamePasswordAuthenticationFilter구현체로 
+		/login같은 로그인url로(미리지정) 아이디패스워드를 담아 시큐리티필터체인을 타고 요청이 들어옴
+			해당 리퀘스트 정보로 attemptAuthentication메서드를 실행
+				UsernamePasswordAuthenticationToken으로 아이디패스워드로 토큰생성
+				위에서만든 토큰으로 authenticationManager.authenticate(authToken)를 실행
+					authenticate메서드는 userDetailsService의 loadUserByUsername를 실행해서(해당정보가 db에있는지확인),
+						성공시 userDetails 리턴,실패시 예외
+					성공했으면 해당 userDetails를 authentication에 담아서 리턴
+			attemptAuthentication메서드가 성공하면 successfulAuthentication메서드실행
+				받은 userDetails(authentication에 들어있음)를 파싱해서 user객체로 변형
+				토큰생성(토큰명,만료시간,권한(클레임),서명)
+				토큰을 response헤더에 추가(response.addHeader("Authorization", "Bearer $jwtToken"))
+	이런로직을 거침
+	토큰이 있으면 토큰을 생성하는 이런 로직이 필요없고,토큰을 검증하고 권한을 파싱하는일만 하면됨
+					
+	이건 BasicAuthenticationFilter를 상속해서 만드는데,
+	이 필터는 일단 모든 요청에서 다 동작하는데,여기로직에서 토큰이 있는지 없는지,유저가 있는지 없는지를 걸러줘야함
+	즉 
+		val jwtHeader = request.getHeader("Authorization")
+	를 받아서
+	있는지 없는지 일단 검증하고,없으면 그냥 다음으로 넘김(인증만 안해주고 그냥 알아서하게넘김)
+        if (jwtHeader==null || !jwtHeader.startsWith("Bearer")){
+            chain.doFilter(request, response)
+            return
+        }
+	그리고 bearer을 지우고 토큰을 해독해봄
+        val jwtToken = request.getHeader("Authorization").replace("Bearer ","")
+        val username = JWT.require(Algorithm.HMAC512("abc"))//토큰만들때 넣은 시크릿값
+            .build().verify(jwtToken).getClaim("username")
+            .asString()
+	해당값이 정상적이면 이거로 db에서 해당값이 있는지 확인후 강제로그인
+        if (username!=null){ //서명확인
+            val userEntity = userRepository.findByUsername(username)
+                ?:throw IllegalArgumentException("유저아님")
+            val principalDetails = PrincipalDetails(userEntity)
+            val authentication:Authentication = UsernamePasswordAuthenticationToken( //강제로그인,해당유저존재확인했으니 가능
+                principalDetails,
+                null,   //null은 패스워드인데 필요없음
+                principalDetails.authorities)//권한
+			
+			SecurityContextHolder.getContext().authentication=authentication//강제로 시큐리티세션에 값을 박아넣음
+			
+			chain.doFilter(request, response)
+        }	
+	강제로그인은,서명확인했고 해당값이 존재한다는거도 확인했으니 로그인했다치고 강제로 내 세션에 박아서 인증완료처리하는거임
+	그리고 로그인 끝났으니 doFilter로 다음으로 넘김
+	즉 인증실패하면 그냥 doFilter로 다음으로 넘기고,인증성공하면 시큐리티세션에 강제로 값 박고 doFilter로 다음으로 넘기면됨
+	
+	즉 얘는 토큰정상유무와 유저존재유무를 확인하고,유저정보와 권한을 시큐리티세션에 담는 역할만 하는거임
+	그와중에 권한파싱은 PrincipalDetails.getAuthorities()에서 하는거고
+	그리고나서 권한을 확인해서 접근을 허락할지말지는 다음필터들이 알아서함(시큐리티컨피그에 hasAnyRole(...)에 동작시키는필터)
+	
+	저기서 Authentication에 값을 넣었으니,컨트롤러에선 받아다쓸수있음
+		@GetMapping("/api/v1/user")
+		fun user(authentication: Authentication):String{
+			val principal = authentication.principal as PrincipalDetails
+			println("principal = ${principal.username}")
+			return "user"
+		}	
+	이렇게
+	
+
+끝	
+	추가적으로,
+		리프레시토큰,
+		oauth2로그인(두개 합쳐서 응용하면될듯),
+		JwtProperties(시크릿이랑 만료시간,Bearer 이랑 그런거 넣어두는곳,하드코딩방지용 상수클래스,중복제거+실수방지)
+	이것들 해보자
+	
+	
+	
+	
+	
+	
 	

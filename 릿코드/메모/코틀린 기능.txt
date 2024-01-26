@@ -54,3 +54,42 @@ Array<IntArray>를 리스트로 변환하는방법
 	콜렉션.scan(처음값){더해진값,더할값->더해진값+더할값}//{처음값,처음값더할값1,처음값더할값1더할값2,...}
 
 전체배열에서 특정배열안에 있는걸 제거할땐 뮤테이블리스트를 쓰면 remove가 o(n)인데,hashSet이나 hash를 사용하면 o(1)임
+
+코틀린 queue
+	val queue:Queue<Int> =LinkedList()
+	val queue:Queue<List<Int>> =LinkedList()
+큐에서 값뽑기
+	queue.poll()
+큐뽑을값 훔쳐보기
+	queue.peek()
+
+
+
+
+
+
+코테랑 관련없는거
+
+기본생성자안에는 getter를 못넣고 외부로 뺴야함
+	class Car(speed: Int) {
+	var speed = speed
+		get() = field 
+		set(value) {
+			field = value
+		}
+	}
+해당타입과 다른타입을 리턴하고싶으면,새로운 필드를 하나 추가해서 해야함
+	class User(var roles:String,) {
+		val roleList:List<String>
+			get() {
+				if(this.roles.isNotEmpty()){
+					println("토토로")
+					return this.roles.split(",")
+				}
+				return listOf()
+			}
+	}
+
+
+
+

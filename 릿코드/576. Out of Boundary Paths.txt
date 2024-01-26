@@ -1,0 +1,83 @@
+처음위치 큐에넣고 
+	큐에서 위치뺴고
+	+1-1 4방향으로 이동하고,해당위치 이동가능하면 큐에 추가,불가능하면 res+=1
+	
+	
+타임아웃
+import java.util.LinkedList
+import java.util.Queue
+
+class Solution {
+    fun findPaths(m: Int, n: Int, maxMove: Int, startRow: Int, startColumn: Int): Int {
+        val queue:Queue<Triple<Int,Int,Int>> =LinkedList()
+        queue.add( Triple(startRow,startColumn,0))
+        var res=0
+
+        while (queue.isNotEmpty()){
+            val curPair = queue.poll()
+            val curMove = curPair.third
+            if (curMove==maxMove){
+                continue
+            }
+            if (curPair.first+1>=m){
+                res=(res+1).mod(1000000007)
+            }else{
+                queue.add(Triple(curPair.first+1,curPair.second,curMove+1))
+            }
+            if (curPair.first-1<0){
+                res=(res+1).mod(1000000007)
+            }else{
+                queue.add(Triple(curPair.first-1,curPair.second,curMove+1))
+            }
+            if (curPair.second+1>=n){
+                res=(res+1).mod(1000000007)
+            }else{
+                queue.add(Triple(curPair.first,curPair.second+1,curMove+1))
+            }
+            if (curPair.second-1<0){
+                res=(res+1).mod(1000000007)
+            }else{
+                queue.add(Triple(curPair.first,curPair.second-1,curMove+1))
+            }
+        }
+
+        return res
+
+    }
+}
+
+정답
+private const val MOD = 1000000007
+
+class Solution {
+
+    fun findPaths(m: Int, n: Int, maxMove: Int, startRow: Int, startCol: Int): Int {
+
+        val dp = Array(m) { Array(n) { arrayOfNulls<Long>(maxMove + 1) } }
+        val directions = arrayOf(intArrayOf(-1,0),intArrayOf(1,0),intArrayOf(0,-1),intArrayOf(0,1))
+
+        fun dfs(maxMove: Int, startRow: Int, startCol: Int): Long {
+            if (startRow < 0 || startCol < 0 || startRow >= m || startCol >= n) return 1
+            if (maxMove < 1) return 0
+      
+            if (dp[startRow][startCol][maxMove] != null) {
+                return dp[startRow][startCol][maxMove]!!
+            }
+            
+            var count = 0.toLong()
+            for(dir in directions){
+               count += dfs(maxMove - 1, startRow + dir[0], startCol + dir[1]) 
+            }
+            
+            dp[startRow][startCol][maxMove] = count % MOD
+
+            return dp[startRow][startCol][maxMove]!!
+        }
+
+        return dfs(maxMove, startRow, startCol).toInt()
+    }
+
+}
+
+m,n 50이라서 걍 완탐갈겼는데 여기서도 타임아웃이 뜨네
+

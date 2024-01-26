@@ -1,3 +1,9 @@
+릿코드 트리노드
+class TreeNode(var `val`: Int) {
+    var left: TreeNode? = null
+    var right: TreeNode? = null
+}
+
 모든 트리노드에서 작업할때
         while (queue.isNotEmpty()){
             val tempNode=queue.poll()

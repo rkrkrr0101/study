@@ -1,0 +1,84 @@
+노드의 루트-리프가
+	전부 2배수
+	1개만 1개고 나머지 다 2배수(루트노드 하나만있는거도 여기포함)
+를 만족하면	회문가능임
+
+재귀함수 하나 짜서 현재 쌓인 노드 쭉들고가다가,
+내가 리프면 회문판단해서 맞으면 1리턴 아니면 0리턴하고,
+이것들을 모아서 리턴하면될듯
+
+
+메모리 아웃
+class Solution {
+    fun pseudoPalindromicPaths (root: TreeNode?): Int {
+        var res=0
+
+        res=sumPalCount(root!!, mutableListOf<Int>())
+        println(res)
+        return (res)
+
+    }
+    private fun sumPalCount(node:TreeNode, curPath:List<Int>):Int{
+        val path= curPath.toMutableList()
+        path.add(node.`val`)
+        if (node.left==null && node.right==null){
+
+            val pathHashMap = hashMapOf<Int, Int>()
+            for (i in path){
+                pathHashMap[i]=pathHashMap[i]?.plus(1)?:1
+            }
+            var oneLimit=0
+            for ((key,value)in pathHashMap){
+                if (value%2==1){
+                    oneLimit+=1
+                }
+                if (oneLimit>=2){
+                    return 0
+                }
+            }
+
+            return 1
+        }
+        var sumPal=0
+        if (node.left!=null) {
+            sumPal += sumPalCount(node.left!!, path)
+        }
+        if (node.right!=null) {
+            sumPal += sumPalCount(node.right!!, path)
+        }
+        return sumPal
+
+    }
+
+}
+class TreeNode(var `val`: Int) {
+    var left: TreeNode? = null
+    var right: TreeNode? = null
+}
+정답
+class Solution {
+    val map = hashMapOf<Int,Int>()
+    var res = 0
+    fun pseudoPalindromicPaths (root: TreeNode?): Int {
+        rec(root)
+        return res
+    }
+
+    fun rec(node:TreeNode?){
+        if(node==null) return
+        if(node?.left==null&&node?.right==null){
+            map[node!!.`val`] = map.getOrDefault(node.`val`,0)+1
+            var c =0
+            map.values.forEach{
+                if(it%2!=0) c++
+            }
+            if(c<=1) res++
+            map[node!!.`val`] = map.getOrDefault(node.`val`,1)-1
+            return
+        }
+        map[node.`val`] = map.getOrDefault(node.`val`,0)+1
+        rec(node.left)
+        rec(node.right)
+        map[node.`val`] = map.getOrDefault(node.`val`,1)-1
+    }
+}

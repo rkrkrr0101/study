@@ -1,0 +1,27 @@
+둘중 긴거로 for돌려서 
+	짧은거로 for돌려서
+		짧은거에 일치하는거있으면 tempres+1,짧은거 해당문자 제거
+	res랑 tempres맥스치기
+res리턴?
+
+
+dp사용하자
+
+정답
+class Solution {
+    fun longestCommonSubsequence(text1: String, text2: String): Int {
+        var prev = IntArray(text1.length + 1){0}
+        var curr = prev.clone()
+        for(i in 0..text2.lastIndex){
+            for(j in 1..text1.length){
+                if(text1[j-1] == text2[i]){
+                    curr[j] = 1 + prev[j-1]
+                }else{
+                    curr[j] = Math.max(curr[j-1], prev[j])
+                }
+            }
+            prev = curr.clone()
+        }
+        return prev[text1.length]
+    }
+}

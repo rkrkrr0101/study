@@ -1,0 +1,45 @@
+스택2개를 큐처럼쓰려면,한쪽으로는 데이터 push,한쪽으로는 데이터 추출만 하면됨
+이건 스택1에서 스택2로 전부 넣고 뽑으면 처음 스택1을 넣은순서대로 나온다는걸 기반으로 함
+즉 팝이나 픽을 할땐,스택1에서 스택2로 다몰아넣고,하나뽑고 다시 스택1로 다시 다몰아넣으면됨
+
+
+
+정답
+import java.util.Stack
+
+class MyQueue() {
+    val stack1=Stack<Int>()
+    val stack2=Stack<Int>()
+
+
+    fun push(x: Int) {
+        stack1.push(x)
+    }
+
+    fun pop(): Int {
+        while (!stack1.empty()){
+            stack2.push(stack1.pop())
+        }
+        val res=stack2.pop()
+        while (!stack2.empty()){
+            stack1.push(stack2.pop())
+        }
+        return res
+    }
+
+    fun peek(): Int {
+        while (!stack1.empty()){
+            stack2.push(stack1.pop())
+        }
+        val res=stack2.peek()
+        while (!stack2.empty()){
+            stack1.push(stack2.pop())
+        }
+        return res
+    }
+
+    fun empty(): Boolean {
+        return stack1.empty()
+    }
+
+}

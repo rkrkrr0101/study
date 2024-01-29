@@ -34,8 +34,10 @@ class SecurityConfig(val principalOauth2UserService: PrincipalOauth2UserService)
             it.defaultSuccessUrl("/")
 
         }
+
         http.oauth2Login {
             it.loginPage("/loginForm")
+
             it.userInfoEndpoint{
                 it.userService(principalOauth2UserService)
             }

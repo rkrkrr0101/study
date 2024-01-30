@@ -941,6 +941,23 @@
 		}	
 	이렇게
 	
+	서블릿필터에선 바로 예외를 던지면 무조건 500에러임
+	여기서는
+        try {
+            username=JwtUtil().getTokenUsername(jwtHeader)
+        } catch (e:Exception){
+            response.status=HttpStatus.UNAUTHORIZED.value()
+            response.contentType=MediaType.APPLICATION_JSON_VALUE
+            response.characterEncoding="UTF-8"
+            val statusException = ResponseStatusException(HttpStatus.UNAUTHORIZED, "토큰이 이상함")
+            ObjectMapper().writeValue(response.writer,statusException)
+            chain.doFilter(request, response)
+            return
+        }	
+	이런식으로 response안에 예외를 넣고 다음으로 넘기는식으로 처리해야함
+	
+	
+	
 
 끝	
 	추가적으로,

@@ -1,0 +1,30 @@
+뭐 이상한 계산법을 써서 계산하라는문제
+숫자를 만나면 숫자를 스택에 넣고,연산기호를 만나면 스택에서 2개뺴서 연산을 한다음 스택에 다시 넣음
+
+
+정답
+import java.util.Stack
+
+class Solution {
+    fun evalRPN(tokens: Array<String>): Int {
+        val stack = Stack<Int>()
+
+        for (i in tokens){
+            if (i.toIntOrNull()!=null){
+                stack.push(i.toInt())
+            }else{
+                val first=stack.pop()
+                val second=stack.pop()
+                when(i){
+                    "+"->{stack.push(second+first)}
+                    "-"->{stack.push(second-first)}
+                    "*"->{stack.push(second*first)}
+                    "/"->{stack.push(second/first)}
+                }
+            }
+        }
+
+        println(stack.peek())
+        return stack.pop()
+    }
+}

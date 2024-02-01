@@ -1,0 +1,15 @@
+@RestControllerAdvice붙은 예외핸들러 생성(ExceptionResponseHandler)
+AuthenticationEntryPoint를 상속받은 엔트리포인트생성(JwtAuthenticationEntryPoint)
+	여기서    
+		@Qualifier("handlerExceptionResolver")
+		private val resolver: HandlerExceptionResolver
+	로 예외핸들러 등록후
+	commence구현에서
+	        resolver.resolveException(request!!, response!!, null,
+            request.getAttribute("exception") as Exception)
+	이렇게 하고
+필터체인에 등록 http.exceptionHandling {it.authenticationEntryPoint(entryPoint)  }
+
+
+이러면 필터가 동작하다 예외를 만나면,익셉션핸들링에 있는 해당엔트리포인트에 예외가 정의되어있으면 거기에 맞게 처리함
+

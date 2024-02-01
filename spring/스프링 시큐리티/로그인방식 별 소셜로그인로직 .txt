@@ -19,3 +19,6 @@ restapi로그인
 	oauth2/code/프로바이더명 으로 리다이렉트시켜줌
 	해당페이지는 자동으로 auth코드를 토큰으로 변경(token-uri에 기재된url)
 	토큰 리턴
+	
+	
+	https://deeplify.dev/back-end/spring/oauth2-social-login#%EC%A0%84%EC%B2%B4-%EC%8B%9C%ED%80%80%EC%8A%A4-%EB%8B%A4%EC%9D%B4%EC%96%B4%EA%B7%B8%EB%9E%A8

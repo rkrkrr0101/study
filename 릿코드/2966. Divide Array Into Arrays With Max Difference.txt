@@ -1,0 +1,50 @@
+주어진 배열을 3개단위로 잘라서 해당 배열이 전부 k만큼의 차이 안으로 들어오는지를 확인해서 배열<서브배열>리턴
+배열 정렬치고,내부갯수와 가장작은수 포인터 만들어두고,
+배열 for문돌리면서
+	i-small>k면
+		return 빈배열
+		
+	curArray에 i값추가
+	curCount+=1
+	
+	curCount가 3개면
+		resArray에 curArray추가
+		다 초기화
+이후 resArray리턴
+
+정답
+class Solution {
+    fun divideArray(nums: IntArray, k: Int): Array<IntArray> {
+        val numList = nums.sorted().toList()
+        var small=999
+        var curcount=0
+        var tempArray= intArrayOf()
+        var resArray = arrayOf<IntArray>()
+
+        for (i in numList){
+            if (curcount==0){
+                small=i
+            }
+            if (i-small>k){
+                println(i)
+                println(small)
+                return arrayOf()
+            }
+
+            tempArray=tempArray.plus(i)
+            curcount+=1
+
+            if (curcount==3){
+                small=999
+                curcount=0
+                println(tempArray.toList())
+                resArray=resArray.plus(tempArray)
+                tempArray=intArrayOf()
+            }
+
+        }
+        println(resArray.toList())
+        return resArray
+
+    }
+}

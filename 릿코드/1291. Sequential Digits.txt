@@ -1,0 +1,45 @@
+low와 high사이에 있는 123,234같은 연속된수들을 모두 배열에담아 리턴
+일단 123을 만들수있는 1~9까지 루프(i),
+갯수를 맞추기위한 low의 length와 highLength사이의 루프(j)
+0부터 j까지의 루프(k)
+3가지가 필요함
+어짜피  high가 10^9로 한정되어졌기때문에,유한범위내에서 돌아가서 for많이돌려도 됨
+1~9루프야 상수급이고 j루프와 k루프로 O(n^2)정도인데 크기도 10정도라 10^2니까
+
+
+정답
+
+class Solution {
+    fun sequentialDigits(low: Int, high: Int): List<Int> {
+        val lowLength = low.toString().length
+        val highLength = high.toString().length
+        val resList= mutableListOf<Int>()
+
+
+
+        for (i in 1..9){
+            for (j in lowLength .. highLength){
+                var tempString = ""
+                for (k in 0 until j) {
+                    if (k+i>9){
+                        tempString=""
+                        break
+                    }
+                    tempString=tempString.plus(k+i)
+                }
+
+                if (tempString!=""){
+                    val tempInt = tempString.toInt()
+                    if (tempInt>=low &&tempInt<=high) {
+                        //println(tempString)
+                        resList.add(tempString.toInt())
+                    }
+                }
+            }
+
+
+        }
+
+        return resList.sorted()
+    }
+}

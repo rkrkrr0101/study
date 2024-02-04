@@ -1,0 +1,49 @@
+포인터 2개만들고(앞뒤)
+전체로잡고 for돌리고
+	타겟의 모든문자가 포인터사이에 들어올때까지 진행,끝까지없으면 빈스트링 리턴
+	다들어와있으면 앞을 한칸씩 줄여가며 그안에 다들어있는지 확인하며 최소가 되게 만듬
+
+class Solution {
+    fun minWindow(s: String, t: String): String {
+        val targetMap = t.groupingBy { it }.eachCount()
+        val countMap = t.toSet().associateWith { 0 }.toMutableMap()
+
+        var minL = -1
+        var minR = s.length
+        var l = 0
+        var r = 0
+        while (r < s.length) {
+            if (countMap.containsKey(s[r])) {
+                countMap[s[r]] = countMap[s[r]]!! + 1
+            }
+
+            while (l < r && canReduce(targetMap, countMap, s[l])) {
+                if (countMap.containsKey(s[l])) {
+                    countMap[s[l]] = countMap[s[l]]!!.minus(1)
+                }
+                l++
+            }
+
+            if (r - l < minR - minL && isValid(targetMap, countMap)) {
+                minR = r
+                minL = l
+            }
+
+            r++
+        }
+
+        return if (minL == -1) "" else s.substring(minL, minR + 1)
+    }
+
+    private fun isValid(targetMap: Map<Char, Int>, countMap: Map<Char, Int>): Boolean {
+        for (c in targetMap.keys) {
+            if (targetMap[c]!! > countMap[c]!!) return false
+        }
+        return true
+    }
+
+    private fun canReduce(targetMap: Map<Char, Int>, countMap: Map<Char, Int>, c: Char): Boolean {
+        if (!targetMap.containsKey(c)) return true
+        return targetMap[c]!! < countMap[c]!!
+    }
+}

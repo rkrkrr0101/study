@@ -1,0 +1,35 @@
+해시맵에 갯수담고 해시맵에서 1인것들만 골라낸다음 다시 반복문돌려서 처음만나는 1인거 인덱스리턴
+만약 해시맵에 1이없으면 -1리턴
+
+정답
+
+import kotlin.math.min
+
+class Solution {
+    fun firstUniqChar(s: String): Int {
+        val stringHashMap = hashMapOf<Char, Int>()
+        var res=1000000000
+        for (i in s){
+            stringHashMap[i]=stringHashMap[i]?.plus(1)?:1
+        }
+        val nonRepeatList= mutableListOf<Char>()
+        for ((key,value) in stringHashMap){
+            if (value==1){
+                nonRepeatList.add(key)
+            }
+        }
+        if (nonRepeatList.size==0){
+            return -1
+        }
+        println(nonRepeatList)
+        for (target in nonRepeatList){
+            for ((index,value )in s.withIndex()){
+                if (value==target){
+                    res= min(res,index)
+                }
+            }
+        }
+        return res
+
+    }
+}

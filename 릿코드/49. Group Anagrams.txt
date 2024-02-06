@@ -1,0 +1,28 @@
+아나그램인지 확인해서 걔들끼리 그룹묶어서 리턴
+그냥 해시맵의 키에 정렬된리스트를(set은 중복제거때문에 사용불가하고,순서를 통일해야 해시맵에서 확인이되니 정렬사용) 쓰고,
+같은거끼리 인덱스묶어두고,그거 전부 묶어서 리턴하자
+
+
+정답
+class Solution {
+    fun groupAnagrams(strs: Array<String>): List<List<String>> {
+        val strHashMap = hashMapOf<List<Char>, List<Int>>()
+
+        for ((index,value) in strs.withIndex()){
+            val tempSet = value.toList().sorted()
+            strHashMap[tempSet]=strHashMap[tempSet]?.plus(index)?: listOf(index)
+        }
+        
+        val resList= mutableListOf<MutableList<String>>()
+        for ((index,value) in strHashMap){
+            val tempList= mutableListOf<String>()
+            for (i in value){
+                tempList.add(strs[i])
+            }
+            resList.add(tempList)
+        }
+
+
+        return resList
+    }
+}

@@ -1,0 +1,37 @@
+해시맵에 다떄려박고 해시맵을 value로 정렬해서 뽑아내서 리턴
+
+
+정답
+import java.util.LinkedList
+
+class Solution {
+    fun frequencySort(s: String): String {
+        val strHashMap = hashMapOf<Char, Int>()
+        for (i in s){
+            strHashMap[i]=strHashMap[i]?.plus(1)?:1
+        }
+        val sortMap = sortMapByKey(strHashMap)
+        println(sortMap)
+        var res=""
+        for ((key,value) in sortMap){
+            for (j in 0 until  value){
+                res+=key
+            }
+        }
+        println(res)
+        return res
+
+    }
+    fun sortMapByKey(map: Map<Char,Int>):LinkedHashMap<Char,Int>{
+        val entries = LinkedList(map.entries)
+       // entries.sortBy { it.value }
+        entries.sortByDescending { it.value }
+        val result = LinkedHashMap<Char, Int>()
+        for(entry in entries) {
+            result[entry.key] = entry.value
+        }
+
+        return result
+
+    }
+}

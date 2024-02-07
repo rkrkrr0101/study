@@ -55,6 +55,34 @@ Array<IntArray>를 리스트로 변환하는방법
 
 전체배열에서 특정배열안에 있는걸 제거할땐 뮤테이블리스트를 쓰면 remove가 o(n)인데,hashSet이나 hash를 사용하면 o(1)임
 
+해시맵에서 키순서대로 정렬하기
+fun sortMapByKey(map: Map<Char,Int>): LinkedHashMap<Char,Int> {
+    val entries = LinkedList(map.entries)
+
+    entries.sortBy { it.key }
+
+    val result = LinkedHashMap<Char,Int>()
+    for(entry in entries) {
+        result[entry.key] = entry.value
+    }
+
+    return result
+}
+
+해시맵에서 밸류순서대로 정렬하기
+    fun sortMapByValue(map: Map<Char,Int>):LinkedHashMap<Char,Int>{
+        val entries = LinkedList(map.entries)
+       // entries.sortBy { it.value }
+        entries.sortByDescending { it.value }
+        val result = LinkedHashMap<Char, Int>()
+        for(entry in entries) {
+            result[entry.key] = entry.value
+        }
+
+        return result
+    }
+
+
 코틀린 queue
 	val queue:Queue<Int> =LinkedList()
 	val queue:Queue<List<Int>> =LinkedList()

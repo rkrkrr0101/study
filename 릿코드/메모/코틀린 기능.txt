@@ -81,7 +81,9 @@ fun sortMapByKey(map: Map<Char,Int>): LinkedHashMap<Char,Int> {
 
         return result
     }
-
+해시맵에서 밸류나 키중 가장 큰값의 쌍 리턴
+	해시맵.maxBy { it.value }
+	해시맵.maxBy { it.key }
 
 코틀린 queue
 	val queue:Queue<Int> =LinkedList()

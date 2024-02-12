@@ -1,0 +1,11 @@
+그냥 해시맵에 때려넣고 가장큰밸류 키 리턴
+
+class Solution {
+    fun majorityElement(nums: IntArray): Int {
+        val numHashMap = hashMapOf<Int, Int>()
+        for (i in nums){
+            numHashMap[i]=numHashMap[i]?.plus(1)?:1
+        }
+        return numHashMap.maxBy { it.value }.key
+    }
+}

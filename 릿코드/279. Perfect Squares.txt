@@ -1,0 +1,36 @@
+1부터 n까지안에 포함되는 제곱배열을 만들고
+1부터 n까지 dp배열을 만든다음
+제곱배열을 for돌리고,
+	while(i*제곱배열<=n)
+	
+	
+	
+
+
+class Solution {
+
+    companion object {
+
+        private const val maxN = 10000
+        private const val sqrtMaxN = 100
+
+        private val squares = (1..sqrtMaxN).map { it * it }
+
+        val dp = IntArray(maxN + 1)
+
+        init {
+            squares.forEach { dp[it] = 1}
+            (2 until maxN).forEach { idx ->
+                if (dp[idx] == 0) {
+                    dp[idx] = 1 + squares.filter { it <= idx }
+                        .map { dp[idx - it] }
+                        .min()!!
+                }
+            }
+        }
+
+    }
+
+    fun numSquares(n: Int) = dp[n]
+
+}

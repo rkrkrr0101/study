@@ -121,5 +121,18 @@ fun sortMapByKey(map: Map<Char,Int>): LinkedHashMap<Char,Int> {
 	}
 
 
+O(n)팰린드롬 확인
+    fun isPalindrome(word:String):Boolean{
+        var leftPointer = 0
+        var rightPointer = word.length-1
 
+        while (leftPointer<rightPointer){
+            if (word[leftPointer]!=word[rightPointer]) {
+                return false
+            }
+            leftPointer+=1
+            rightPointer-=1
+        }
+        return true
+    }
 

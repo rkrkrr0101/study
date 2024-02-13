@@ -1,0 +1,28 @@
+그냥 팰린드롬인지 판단해서 맞으면 해당값 바로리턴
+
+정답
+class Solution {
+    fun firstPalindrome(words: Array<String>): String {
+        for (word in words){
+            if (isPalindrome(word)){
+                println(word)
+                return word
+            }
+        }
+
+        return ""
+    }
+    fun isPalindrome(word:String):Boolean{
+        var leftPointer = 0
+        var rightPointer = word.length-1
+
+        while (leftPointer<rightPointer){
+            if (word[leftPointer]!=word[rightPointer]) {
+                return false
+            }
+            leftPointer+=1
+            rightPointer-=1
+        }
+        return true
+    }
+}

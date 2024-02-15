@@ -1,0 +1,24 @@
+양수음수 따로 배열에 담아두고,양수음수 번갈아가며 조립
+
+정답
+class Solution {
+    fun rearrangeArray(nums: IntArray): IntArray {
+        val plusList = mutableListOf<Int>()
+        val minusList = mutableListOf<Int>()
+        for (i in nums){
+            if (i>=0){
+                plusList.add(i)
+            }else{
+                minusList.add(i)
+            }
+        }
+        val resList = mutableListOf<Int>()
+        for (i in 0 until plusList.size){
+            resList.add(plusList[i])
+            resList.add(minusList[i])
+
+        }
+
+        return resList.toIntArray()
+    }
+}

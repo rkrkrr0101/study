@@ -1,0 +1,44 @@
+정렬친다음에 앞에서부터 하나씩 더해가며 현재위치가 총합보다 작으면 추가,크면 패스
+만약 현재안되더라도 나중엔 될수있기때문에 tempsum을 사용해서 조건만족할때 갱신하는식으로 해야함
+
+
+
+정답
+class Solution {
+    fun largestPerimeter(nums: IntArray): Long {
+        val sortNumList = nums.asSequence().sorted().map { it.toLong() }.toList()
+        var res:Long=(sortNumList[0]+sortNumList[1])
+        var tempSumValue=(sortNumList[0]+sortNumList[1])
+        
+        for (i in sortNumList.subList(2,sortNumList.size)){
+
+
+            if (i<tempSumValue){
+                tempSumValue+=i
+                res=tempSumValue
+            }else{
+                tempSumValue+=i
+            }
+
+
+        }
+        
+        if (res==(sortNumList[0]+sortNumList[1])){
+            return -1
+        }
+        return res
+
+
+    }
+}
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,24 @@
+다 해시맵에 떄려박고 밸류만뽑은다음에 그거 정렬치고 정렬순서대로 낮은거 k만큼 빼가면서 남은갯수리턴
+
+정답
+class Solution {
+    fun findLeastNumOfUniqueInts(arr: IntArray, k: Int): Int {
+        val arrHashMap = hashMapOf<Int, Int>()
+        for (i in arr){
+            arrHashMap[i]=arrHashMap[i]?.plus(1)?:1
+        }
+        val valueList=arrHashMap.values.toMutableList().sorted()
+        var removeCount=k
+        var res=0
+        for ((index,value) in valueList.withIndex()){
+            if (removeCount>=value){
+                removeCount-=value
+                res+=1
+            }else{
+                break
+            }
+        }
+        return valueList.size-res
+
+    }
+}

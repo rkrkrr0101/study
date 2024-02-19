@@ -1,0 +1,15 @@
+-2^32부터 2^32까지 전부 배열에 넣어두고,해당숫자가 그안에있으면 true없으면 false
+
+정답
+class Solution {
+    fun isPowerOfTwo(n: Int): Boolean {
+        val twoList = mutableListOf<Long>()
+        var tempNum:Long=1
+        twoList.add(tempNum)
+        for (i in 0..32){
+            tempNum *= 2
+            twoList.add(tempNum)
+        }
+        return twoList.contains(n.toLong())
+    }
+}

@@ -1,0 +1,18 @@
+그냥 정렬치고 없는거있으면 리턴
+
+정답
+class Solution {
+    fun missingNumber(nums: IntArray): Int {
+        val numList = nums.sorted()
+        var res=0
+        for (i in numList){
+            
+            if (res!=i){
+                return res
+            }
+            res+=1
+        }
+        return res
+
+    }
+}

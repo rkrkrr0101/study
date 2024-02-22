@@ -1,0 +1,32 @@
+trust배열의 2번쨰값이 n만큼 있는사람이 있고,해당번호가 한번도 신뢰건적이없으면 해당번호 리턴,없으면 -1리턴
+n-1만큼 신뢰받은애들을 뽑아서,그중에서 신뢰건적이 없는애들을 찾자
+
+
+정답
+class Solution {
+    fun findJudge(n: Int, trust: Array<IntArray>): Int {
+        if (n==1){
+            return 1
+        }
+        val trustMap = hashMapOf<Int, Int>()
+        val giveTrustSet=mutableSetOf<Int>()
+        for (i in trust){
+            trustMap[i[1]]=trustMap[i[1]]?.plus(1)?:1
+            giveTrustSet.add(i[0])
+        }
+        val candiJudgeList= mutableListOf<Int>()
+        for ((key,value) in trustMap){
+            if (value==n-1){
+                candiJudgeList.add(key)
+            }
+        }
+        println(candiJudgeList)
+        for (i in candiJudgeList){
+            if (!giveTrustSet.contains(i)){
+                return i
+            }
+        }
+
+        return -1
+    }
+}

@@ -1,0 +1,89 @@
+그 사이에 있는 모든 숫자를 비트로 바꾸고,각 자리수마다 and쳐서 나온 숫자를 리턴
+
+브루트포스->타임아웃
+class Solution {
+    fun rangeBitwiseAnd(left: Int, right: Int): Int {
+        val binList = mutableListOf<String>()
+        for (i in left .. right){
+            binList.add(Integer.toBinaryString(i).padStart(32,'0'))
+        }
+        var res=""
+        for (i in 0..31){
+            var tempNum=""
+            for ( j in binList){
+                if (j[i]=='0'){
+                    tempNum="0"
+                    break
+                }
+            }
+            if (tempNum=="0"){
+                res+=tempNum
+            }else{
+                res+="1"
+            }
+
+        }
+        println(res)
+        println(Integer.parseInt(res,2))
+        return Integer.parseInt(res,2)
+    }
+}
+
+2배이상일때 0리턴하는 조건추가한 브루트포스->2^30~2^31을 통과하지못함
+class Solution {
+    fun rangeBitwiseAnd(left: Int, right: Int): Int {
+        if (left.toLong()*2<=right.toLong()){
+            return 0
+        }
+        val binList = mutableListOf<String>()
+        for (i in left .. right){
+            binList.add(Integer.toBinaryString(i).padStart(32,'0'))
+        }
+        var res=""
+        for (i in 0..31){
+            var tempNum=""
+            for ( j in binList){
+                if (j[i]=='0'){
+                    tempNum="0"
+                    break
+                }
+            }
+            if (tempNum=="0"){
+                res+=tempNum
+            }else{
+                res+="1"
+            }
+
+        }
+        println(res)
+        println(Integer.parseInt(res,2))
+        return Integer.parseInt(res,2)
+    }
+}
+
+정답
+class Solution {
+    fun rangeBitwiseAnd(left: Int, right: Int): Int {
+        if(left == 0){
+            return 0
+        }
+        var l = left
+        var r = right
+        var pos = 0
+        while(l != r){
+            l = l shr 1
+            r = r shr 1
+            pos ++
+        }
+        return l shl pos
+    }    
+}
+
+
+
+
+
+
+
+
+

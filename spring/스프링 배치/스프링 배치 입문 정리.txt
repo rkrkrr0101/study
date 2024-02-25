@@ -1,1 +1,119 @@
-배치는 실시간작업을 할수없는,모아서 하는게 효율적인 작업을을 모아서 처리하는걸
+1.서론
+	배치는 실시간작업을 할수없는,모아서 하는게 효율적인 작업을을 모아서 처리하는걸 말함
+	보통 카드결제같은걸 특정날짜에 몰아서 처리하는식이나,좋아요나 조회횟수등을 모아서 한번에 처리할때 사용함
+	그리고 이메일 쿠폰발송,정산,명세서생성,추천시스템 데이터작업등에서 사용함
+	이렇게해야 실시간 작업에 영향을 주지않고 작업을 할수있음
+
+	스프링배치를 쓰는 가장 큰 이유는,일단 만들기편하고(기능다만들어뒀으니),기존서비스에 있는 로직을 그대로 긁어서 사용할수있다는 장점이 있음
+
+	스프링배치는
+		배치가 수행될때 Job의 메타데이터를 관리하는 JobRepository
+		Job을 실행시키는 JobLauncher
+		Step들의 집합인 Job(ex: 이메일 발송 job)
+		실제 로직단위인 Step
+		스텝속에서 읽기를 담당하는 ItemReader
+		스탭속에서 로직을 담당하는 ItemProcessor
+		스탭속에서 쓰기를 담당하는 ItemWriter
+	로 구성됨
+2.기본실행
+	잡을 실행할때 잡이름을 파라미터로 넘기려면(특정잡만 실행하고싶을때),application.yaml에
+		spring:
+		  batch:
+			job:
+			  name:${job.name:NONE}
+	추가
+	그리고 디비설정하고,
+	5.0이후버전에선 따로 뭐 설정안해도 모든 job를 자동으로 실행하고(디폴트),위의 설정을 했으면 프로그램인수로 넘겨받은 이름의 job만 실행함
+	인수는
+		--spring.batch.job.name=잡이름
+	넣으면됨,인텔리제이는 그냥 위에 실행하는곳에서 설정열고,옵션수정으로 프로그램인수 추가한후 넣으면됨
+	
+	근데 만약 배치 5.0이전버전이라면 메인앱에 @EnableBatchProcessing 추가하면됨(5.0이상에서 붙이면 실행안되니 주의)	
+	그리고 JobBuilderFactory와 StepBuilderFactory는 depercated됐으니 빌더를 그냥쓰면됨
+	
+	가장 정석적으로는 각각 잡과 스탭 클래스를 만들고,Job와 Step인터페이스를 상속받아서 구현한다음(빈아님),
+	Configration에서 해당 클래스를 리턴하는 빈을 만들면 되는데,이렇게는 보통 사용하지않음
+	
+	보통 잡은 만들일없고,심플잡(이건 순서대로 스탭 실행시켜주는애임,기본값)이나 플로우잡(복잡한처리할때 사용)같은 구현체 가져다가,스탭붙여서 사용함
+	즉,실제론
+		@Bean
+		fun helloWorldJob(jobRepository: JobRepository, helloWorldStep: Step, byeWorldStep: Step):Job{
+			return JobBuilder("helloWorldJob",jobRepository)
+				.incrementer(RunIdIncrementer()) //잡이 여러개실행될때,잡이름뒤에 숫자를 AI해줌
+				.start(helloWorldStep)
+				.next(byeWorldStep)
+				.build()
+		}
+	이런식으로 JobBuilder를 사용해서,잡이름을 붙이고 스탭들을 di해서 순서대로 나열한후 빌드하는식으로 사용함 
+	
+	스탭도 잡처럼 여러 구현체들이 있음
+		TaskletStep:파일복사나 아카이브생성과 같은 간단한작업이나 파일,db테이블읽기와 같은 항목중심작업을 위해 설계됨
+		PartitionedStep:파티션으로 구성된 입력데이터셋처리를 위해 설계됨
+		FlowStep:스탭을 플로우로 논리적 그룹화하는데 유용
+		JobStep:플로우스탭과 유사하지만 지정된 플로우단계에 대해 별도의 잡을 생성하고 실행함,잡 밑에 잡을 두는식으로 구성할떄 유용	
+	이렇게
+	
+	여기서 태스크랫스탭이 주로 사용되는데,태스크랫에 대해 알아야함
+	태스크랫은 스탭이 호출될때 작업의 단위임,한 스탭은 한개이상의 태스크랫으로 이루어지고,
+	이 태스크랫은 작업이 성공할때까지 계속 반복됨(최대횟수제한도 가능)
+	여기서 성공은,명시적으로 성공했다는 내용을 보내야함
+	즉 반복문의 속내용이라고 보면됨
+	이 태스크랫안에 아이템리더,라이터,프로세서들이 포함됨(즉 리더,라이터등은 태스크랫의 구현체임)
+	
+	스탭도 똑같이 스탭빌더를 사용해서 만듬
+		@Bean
+		fun helloWorldStep(jobRepository: JobRepository,
+						   transactionManager: PlatformTransactionManager,
+						   helloWorldTaskLet: Tasklet): Step {
+			return StepBuilder("helloWorldStep",jobRepository)
+				.tasklet(helloWorldTaskLet,transactionManager)
+				.build()
+		}
+	태스크랫은
+		class HelloWorldTaskLet:Tasklet{
+			override fun execute(contribution: StepContribution, 
+								 chunkContext: ChunkContext): RepeatStatus? {
+				println("hello World")
+				return RepeatStatus.FINISHED
+			}
+		}	
+	이렇게 클래스를 만들고 execute를 구현한다음,작업을 하고 RepeatStatus를 리턴해주면됨(성공하면 finished)
+	그리고나서 빈등록해서 쓰면됨
+		@Bean
+		fun helloWorldTasklet():Tasklet{
+			return HelloWorldTaskLet()
+		}
+	이렇게
+	
+	이러면 일단 돌려볼수있는데,따로 설정안했으면 그냥 나올거고,이름선택하게 설정했으면 프로그램인수로 이름던져야할거임
+
+
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

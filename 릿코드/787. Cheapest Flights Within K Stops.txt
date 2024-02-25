@@ -1,0 +1,20 @@
+그래프문제인데 거기서 최대갈수있는 갯수가 추가됨
+
+
+
+class Solution {
+    fun findCheapestPrice(n: Int, flights: Array<IntArray>, src: Int, dst: Int, k: Int): Int {
+        var dist = IntArray(n) { Int.MAX_VALUE }
+        dist[src] = 0
+        
+        for (i in 0..k) {
+            val temp = dist.copyOf()
+            flights.forEach { (from, to, cost) -> 
+                if (dist[from] == Int.MAX_VALUE) return@forEach                
+                temp[to] = Math.min(temp[to], dist[from] + cost)    
+            }
+            dist = temp
+        }
+        return if (dist[dst] == Int.MAX_VALUE) -1 else dist[dst]
+    }
+}

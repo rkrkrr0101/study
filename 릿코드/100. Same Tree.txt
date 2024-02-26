@@ -1,0 +1,33 @@
+그냥 리스트로 뽑은다음 두개==해서 리턴
+
+정답
+class Solution {
+    fun isSameTree(p: TreeNode?, q: TreeNode?): Boolean {
+        if (p==null || q==null){
+            if (p==q){
+                return true
+            }else{
+                return false
+            }
+        }
+        return leftFirstTreeAllNodeSearch(p)==leftFirstTreeAllNodeSearch(q)
+    }
+    fun leftFirstTreeAllNodeSearch(root1: TreeNode?):List<Int?>{
+        val tempList = mutableListOf<Int?>()
+        if (root1==null){
+            throw IllegalArgumentException()
+        }
+        tempList.add(root1.`val`)
+        if(root1.left!=null){
+            tempList.addAll( leftFirstTreeAllNodeSearch(root1.left))
+        }else{
+            tempList.add(null)
+        }
+        if(root1.right!=null){
+            tempList.addAll( leftFirstTreeAllNodeSearch(root1.right))
+        }else{
+            tempList.add(null)
+        }
+        return tempList
+    }
+}

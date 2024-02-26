@@ -23,7 +23,8 @@
 			  name:${job.name:NONE}
 	추가
 	그리고 디비설정하고,
-	5.0이후버전에선 따로 뭐 설정안해도 모든 job를 자동으로 실행하고(디폴트),위의 설정을 했으면 프로그램인수로 넘겨받은 이름의 job만 실행함
+	5.0이후버전에선 따로 뭐 설정안해도 잡이 하나라면 자동으로 실행하고(디폴트),위의 설정을 했으면 프로그램인수로 넘겨받은 이름의 job만 실행함
+	즉 2개이상일땐 선택해야함
 	인수는
 		--spring.batch.job.name=잡이름
 	넣으면됨,인텔리제이는 그냥 위에 실행하는곳에서 설정열고,옵션수정으로 프로그램인수 추가한후 넣으면됨
@@ -62,6 +63,7 @@
 	
 	스탭도 똑같이 스탭빌더를 사용해서 만듬
 		@Bean
+		@JobScope
 		fun helloWorldStep(jobRepository: JobRepository,
 						   transactionManager: PlatformTransactionManager,
 						   helloWorldTaskLet: Tasklet): Step {
@@ -69,41 +71,120 @@
 				.tasklet(helloWorldTaskLet,transactionManager)
 				.build()
 		}
+	여기서 잡스코프는 저걸 사용해서 레이트바인딩을 할수있음
+	즉 어플리케이션 실행시점이 아닌,메서드 실행시점으로 바인딩을 미뤄(빈생성을 미루는거),각 실행시점마다 다른 잡파라미터를 할당하게할수있음
 	태스크랫은
-		class HelloWorldTaskLet:Tasklet{
+		open class HelloWorldTaskLet:Tasklet{
 			override fun execute(contribution: StepContribution, 
 								 chunkContext: ChunkContext): RepeatStatus? {
 				println("hello World")
 				return RepeatStatus.FINISHED
 			}
-		}	
+		}
+	이때 open을 붙여야함,코틀린은 기본적으로 클래스의 하위클래스 생성을 막기때문에,프록시객체 생성(위빙)이 불가능해져서 예외가 발생함
 	이렇게 클래스를 만들고 execute를 구현한다음,작업을 하고 RepeatStatus를 리턴해주면됨(성공하면 finished)
 	그리고나서 빈등록해서 쓰면됨
 		@Bean
+		@StepScope
 		fun helloWorldTasklet():Tasklet{
 			return HelloWorldTaskLet()
 		}
 	이렇게
+	이떄 @StepScope는 잡파라미터를 쓸때 필요하고,스프링배치는 저걸 사용해서 레이트바인딩을 함
 	
 	이러면 일단 돌려볼수있는데,따로 설정안했으면 그냥 나올거고,이름선택하게 설정했으면 프로그램인수로 이름던져야할거임
+	
+	배치에서 잡을 실행하고나면,잡레포지토리가 연결된 저장소에 실행한 잡의 로그를 남김
+	근데 보통은 자기알아서 로그테이블을 만들어서 던지는편
+	
+3.배치 실행시 파일이름받기 및 csv검증
+	파일이름이나 그런 파라미터를 받고 검증할땐,이거도 프로그램인수로 받을수있음
+		fileName=test.csv
+	즉
+		--spring.batch.job.name=validatedParamJob fileName=test.csv
+	이렇게
+	그리고 태스크랫빈에서
+	    @Bean
+		@StepScope
+		fun validatedParamTasklet(@Value("#{jobParameters['fileName']}") fileName:String):ValidatedParamTaskLet{
+			return ValidatedParamTaskLet(fileName)
+		}
+	이렇게 건네주고(@Value를 사용해서 jobParameters를 받으려면 @StepScope를 붙여야함)	
+		open class ValidatedParamTaskLet(private val fileName:String):Tasklet{
+			override fun execute(contribution: StepContribution, chunkContext: ChunkContext): RepeatStatus? {
+				println(fileName)
+				println("valid batch")
+				return RepeatStatus.FINISHED
+			}
+		}	
+	이렇게 받을수있음
+	그리고 해당값을 검증할땐,직접 로직짤수도 있지만,이미 스프링배치에서 인터페이스는 다 만들어뒀음
+	이건 잡이 실행할때 검증할수있음
+	일단 밸리데이터를 만들고
+		class FileParamValidator:JobParametersValidator {
+			override fun validate(parameters: JobParameters?) {
+				parameters!!
+				val fileName = parameters.getString("fileName")
+				if (!StringUtils.endsWithIgnoreCase(fileName,"csv")){
+					throw JobParametersInvalidException("not csv")
+				}
+			}
+		}
+	이 밸리데이터는 잡파라메터를 받아서 예외가 뜨면 중단,예외가 안뜨면 넘어가는구조로 만들면됨,즉 여기서 다 검증하고 넘어갈수있음
+	그리고 잡에서 등록하면됨
+	    @Bean
+		fun validatedParamJob(jobRepository: JobRepository,validatedParamStep: Step):Job{
+			return JobBuilder("validatedParamJob",jobRepository)
+				.incrementer(RunIdIncrementer())
+				.validator(FileParamValidator())
+				.start(validatedParamStep)
+				.build()
+		}
+	그러면 스타트전에 저걸 거쳐서 테스트하고 스타트로 넘어가고,아니면 예외뜨고 넘어가는거임
+	이 밸리데이터는 여러개 등록할수있는데,이떈 밸리데이터를 합쳐줘야함
+	    private fun multiValidator():CompositeJobParametersValidator{
+			val validator = CompositeJobParametersValidator()
+			validator.setValidators(listOf(FileParamValidator()))
+			return validator
+		}
+	이렇게,저기서 리스트안에 여러개넣고,위에서 저거호출하면됨
+	
+	
+4.배치작업 실행 전,후 로그추가를 위한 리스너
+	테스트처럼 배치작업 실행전과 후에 동작하는 리스너를 등록할수있음
+		@Bean
+		fun jobListenerJob(jobRepository: JobRepository,jobListenerStep: Step):Job{
+			return JobBuilder("jobListenerJob",jobRepository)
+				.incrementer(RunIdIncrementer())
+				.listener(JobLoggerListener())
+				.start(jobListenerStep)
+				.build()
+		}
+	리스너는
+		class JobLoggerListener:JobExecutionListener {
+			private val log=LoggerFactory.getLogger(this.javaClass)
+			private val BEFORE_MESSAGE="{} Job is Running"
+			private val AFTER_MESSAGE="{} Job is Done. (Status: {})"
 
+			override fun beforeJob(jobExecution: JobExecution) {
+				log.info(BEFORE_MESSAGE,jobExecution.jobInstance.jobName)
 
+			}
 
+			override fun afterJob(jobExecution: JobExecution) {
+				log.info(AFTER_MESSAGE,jobExecution.jobInstance.jobName,jobExecution.status)
+				if (jobExecution.status==BatchStatus.FAILED){
+					//슬랙같은거로 던지게 할수있음
+					log.info("Job is fail")
+				}
+				
+			}
+		}	
+	이런식으로 JobExecutionListener를 구현하고,beforeJob과 afterJob을 오버라이딩하는식으로 할수있음
+	그리고 after에서는 상태를 받을수있으니,해당상태에 따른 추가적 알림같은걸 넣을수도있음
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+5.db데이터 이관	
 	
 	
 	

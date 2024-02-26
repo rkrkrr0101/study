@@ -16,3 +16,6 @@ EntityToDto를 만들땐,dto에서 함수확장을 사용해서,엔티티쪽에 
 코틀린에서 abc.class하려면
 	AuditingEntityListener::class
 이렇게하면됨 콜론2개
+
+코틀린에서 롬복없이 slf4j부르려면
+	private val log=LoggerFactory.getLogger(this.javaClass)

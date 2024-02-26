@@ -48,6 +48,26 @@ class TreeNode(var `val`: Int) {
         }
         return tempList
     }
+트리 전체순회후 모든 노드값 리턴,널도 포함(왼쪽우선)	
+	    fun leftFirstTreeAllNodeSearch(root1: TreeNode?):List<Int?>{
+        val tempList = mutableListOf<Int?>()
+        if (root1==null){
+            throw IllegalArgumentException()
+        }
+        tempList.add(root1.`val`)
+        if(root1.left!=null){
+            tempList.addAll( leftFirstTreeAllNodeSearch(root1.left))
+        }else{
+            tempList.add(null)
+        }
+        if(root1.right!=null){
+            tempList.addAll( leftFirstTreeAllNodeSearch(root1.right))
+        }else{
+            tempList.add(null)
+        }
+        return tempList
+    }
+	
 트리 루트부터 타겟까지 층수 리턴
     fun treeLayerCount(root: TreeNode?,target: Int,count:Int):Int{
         var res=count

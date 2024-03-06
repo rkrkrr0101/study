@@ -17,3 +17,7 @@ assertThat().extracting 이거로 해당 클래스배열의 필드값을 명시�
 이렇게 붙이면됨
 
 PostConstruct와 @Transactional을 같이불일수없음,같이쓰고싶으면 트랜잭션을 밖으로 메서드로 뽑고,그걸 불러오는건 허용됨
+
+
+@Transactional 상황별 commit, rollback 전략
+https://velog.io/@eastperson/Transactional-%EC%83%81%ED%99%A9%EB%B3%84-commit-rollback-%EC%A0%84%EB%9E%B5#case-8

@@ -1,0 +1,26 @@
+그냥 맨앞에 1하나두고 그다음에 0으로 채우고 그담에 나머지1전부로 채우면됨
+어짜피 1하나는 보장되어있으니 신경안써도됨
+
+정답
+class Solution {
+    fun maximumOddBinaryNumber(s: String): String {
+        val bitMap = hashMapOf<Char, Int>()
+        bitMap['0']=0
+        bitMap['1']=0
+        for (i in s){
+            bitMap[i]=bitMap[i]?.plus(1)?:1
+        }
+        bitMap['1'] = bitMap['1']!! - 1
+        var tempZero=""
+        for (i in 1 .. bitMap['0']!!){
+            tempZero=tempZero.plus("0")
+        }
+        var tempOne=""
+
+        for (i in 1 .. bitMap['1']!!){
+            tempOne=tempOne.plus("1")
+        }
+        val res=tempOne+tempZero+"1"
+        return res
+    }
+}

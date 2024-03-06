@@ -1,0 +1,25 @@
+가장쉬운건 그냥 만나는거 해시맵에 넣고 있냐없냐 체크하는거일듯
+
+정답
+
+class Solution {
+    fun hasCycle(head: ListNode?): Boolean {
+        if (head==null)return false
+        val reMap = hashMapOf<ListNode, Int>()
+        var curNode=head!!
+        while (true){
+            if (curNode.next==null){
+                return false
+            }
+            if(reMap[curNode]==null){
+                reMap[curNode]=1
+                curNode=curNode.next!!
+            }else{
+                return true
+            }
+        }
+    }
+}
+class ListNode(var `val`: Int) {
+         var next: ListNode? = null
+}

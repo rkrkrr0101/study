@@ -185,11 +185,71 @@
 	
 	
 5.db데이터 이관	
+	데이터를 읽고쓸떄(db든 파일이든)는 ItemReader와 ItemProcessor, ItemWriter를 사용하면됨
+	이걸 사용할떈 청크를 사용해야함
+	청크는 한 트랜잭션을 얼만큼씩 가져와서 성공실패처리를 할건지를 정함
+	즉 트랜잭션을 걸 단위임
+	이게없으면 데이터전체를 잡고 트랜잭션을 걸어야하니 실패율이 기하급수적으로 올라감,
 	
+	청크를 사용하면 실패시,청크를 다시 재시도하는식으로 에러처리를 쉽게할수있음
+	이건
+		.chunk<Order, Account>(5,transactionManager)
+	이렇게 한번에 5개씩 앞의값으로 읽어서 뒤의값으로 쓰겠다는거임
+	즉 리더는 Order로,라이터는 Account로 입출력이 됨
 	
+	아이템리더는
+		@StepScope
+		@Bean
+		fun trOrderReader():RepositoryItemReader<Order>{
+			return RepositoryItemReaderBuilder<Order>()
+				.name("trOrder")//리더이름
+				.repository(orderRepository)//사용할 레포지토리
+				.methodName("findAll")//내가 사용할 메서드명
+				.arguments()//메서드에서 사용할 매개변수,여기선 없으니까 안넘김,있으면 리스트에 담아서 넘기면됨(listOf<String>("ㅁㅁ",))
+				.pageSize(5)//청크사이즈와 일치시키면됨
+				.sorts(Collections.singletonMap("id",Sort.Direction.ASC))//정렬추가
+				.build()
+		}
+	이렇게 만들면됨
+	그리고 저걸 변형하려면
+		@StepScope
+		@Bean
+		fun trOrderProcessor():ItemProcessor<Orders,Accounts>{
+			return ItemProcessor { Accounts.orderToAccount(it) }
+		}
+	이렇게 작업을 ItemProcessor에서 하고(단일레코드단위로 생각하면됨)
 	
+	이걸 적어야하는데 이건 ItemWriter를 사용하면됨
+		@StepScope
+		@Bean
+		fun trAccountWriter():ItemWriter<Accounts>{
+			return RepositoryItemWriterBuilder<Accounts>()
+				.repository(accountRepository)
+				.methodName("save")
+				.build()
+		}
+	이러면 읽어서 변환해서 쓰는 작업이 끝나는거임
+	이걸 스탭에 담고
+		@JobScope
+		@Bean
+		fun trMigrationStep(jobRepository: JobRepository,
+							transactionManager: PlatformTransactionManager,
+							trOrderReader:ItemReader<Orders>,
+							trOrderProcessor:ItemProcessor<Orders,Accounts>,
+							trAccountWriter: ItemWriter<Accounts>
+		):Step{
+			return StepBuilder("trMigrationStep",jobRepository)
+				.chunk<Orders, Accounts>(5,transactionManager) //트랜잭션매니저는 반드시 넣어줘야함
+				.reader(trOrderReader)
+				.processor(trOrderProcessor)
+				.writer(trAccountWriter)
+				.build()
+		}
+	잡에서 이거 부르기만하면 끝임
+	물론 레포지토리아이템리더 라이터 대신 그냥 아이템리더라이터를 사용해서 직접로직을 호출해서(레포지토리를 직접불러서 처리후 리턴)해도 됨
+	그냥 jpa레포지토리같은거임 날먹가능하게만들어둔거
 	
-	
+6.파일 읽고 쓰기
 	
 	
 	

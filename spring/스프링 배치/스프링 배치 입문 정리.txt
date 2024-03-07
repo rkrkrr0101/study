@@ -197,7 +197,7 @@
 	이렇게 한번에 5개씩 앞의값으로 읽어서 뒤의값으로 쓰겠다는거임
 	즉 리더는 Order로,라이터는 Account로 입출력이 됨
 	
-	아이템리더는
+	아이템리더는 레포지토리아이템리더를 쓰면 편하게할수있음
 		@StepScope
 		@Bean
 		fun trOrderReader():RepositoryItemReader<Order>{
@@ -211,7 +211,7 @@
 				.build()
 		}
 	이렇게 만들면됨
-	그리고 저걸 변형하려면
+	그리고 저걸 변형하려면 아이템프로세서를 사용하면됨
 		@StepScope
 		@Bean
 		fun trOrderProcessor():ItemProcessor<Orders,Accounts>{
@@ -219,7 +219,7 @@
 		}
 	이렇게 작업을 ItemProcessor에서 하고(단일레코드단위로 생각하면됨)
 	
-	이걸 적어야하는데 이건 ItemWriter를 사용하면됨
+	이걸 적어야하는데 이건 ItemWriter를 사용하면됨,그중에서 레포지토리아이템리더를 사용하면 더 편함
 		@StepScope
 		@Bean
 		fun trAccountWriter():ItemWriter<Accounts>{
@@ -246,10 +246,130 @@
 				.build()
 		}
 	잡에서 이거 부르기만하면 끝임
-	물론 레포지토리아이템리더 라이터 대신 그냥 아이템리더라이터를 사용해서 직접로직을 호출해서(레포지토리를 직접불러서 처리후 리턴)해도 됨
+	물론 레포지토리아이템리더라이터 대신 그냥 아이템리더라이터를 사용해서 직접로직을 호출해서(레포지토리를 직접불러서 처리후 리턴)해도 됨
 	그냥 jpa레포지토리같은거임 날먹가능하게만들어둔거
 	
 6.파일 읽고 쓰기
+	파일을 읽고쓸땐 
+		FlatFileItemReaderBuilder
+		FlatFileItemWriterBuilder
+	를 사용하면됨
+	리더는
+		@StepScope
+		@Bean
+		fun fileDataReadWriteReader():FlatFileItemReader<Player>{
+			return FlatFileItemReaderBuilder<Player>()
+				.name("fileDataReadWriteReader")
+				.resource(FileSystemResource("player.csv"))//파일을 담으면됨
+				.lineTokenizer(DelimitedLineTokenizer())//데이터를 나누는기준,delimitedLineTokenizer은 ,기준으로 분할
+				.fieldSetMapper (PlayerFieldSetMapper())//파일과 엔티티를 매핑시키는 매퍼
+				.linesToSkip(1)//파일의 첫줄스킵,엑셀파일의 맨위의 줄 스킵
+				.build()
+		}
+	이렇게 사용하면되고,여기서 fieldSetMapper는,해당파일을 엔티티로 변환시켜서 리턴해주면됨
+	여기서 StepScope를 붙이면 인터페이스가 아닌 구현체인 FlatFileItemReader<>를 리턴해야하는거에대해 주의
+	이건 FieldSetMapper<>를 구현해서 만들면됨
+		class PlayerFieldSetMapper:FieldSetMapper<Player> {
+			override fun mapFieldSet(fieldSet: FieldSet): Player {
+				return Player(
+					fieldSet.readString(0),
+					fieldSet.readString(1),
+					fieldSet.readString(2),
+					fieldSet.readString(3),
+					fieldSet.readInt(4),
+					fieldSet.readInt(5),
+				)
+			}
+		}
+	이렇게 fieldSet에서 값을 가져와서(앞에서 순서대로 라인토크나이저로 끊은거대로 가져옴,여기선 순서로했지만 이름으로도 가능)
+	중간에 작업있으면 똑같이 프로세서쓰면되고
+	    @StepScope
+		@Bean
+		fun fileDataReadWriteProcessor():ItemProcessor<Player,PlayerYear>{
+			return ItemProcessor { PlayerYear.playerToPlayerYear(it) }
+		}
+	쓸땐
+		@StepScope
+		@Bean
+		fun fileDataReadWriteWriter(): FlatFileItemWriter<PlayerYear> {
+			val filedExtractor=BeanWrapperFieldExtractor<PlayerYear>()//적을 필드명을 나열
+			filedExtractor.setNames(arrayOf("ID","lastName","firstName","position","birthYear","debutYear","yearsExperience"))
+
+			val lineAggregator=DelimitedLineAggregator<PlayerYear>()//어떤기준으로 나눠적을지
+			lineAggregator.setDelimiter(",")
+			lineAggregator.setFieldExtractor(filedExtractor)
+
+			return FlatFileItemWriterBuilder<PlayerYear>()
+				.name("fileDataReadWriteWriter")
+				.resource(FileSystemResource("playerYear.csv"))
+				.lineAggregator(lineAggregator)
+				.build()
+		}	
+	이렇게 쓰면됨
+	그리고 스탭에 넣고
+	    @JobScope
+		@Bean
+		fun fileDataReadWriteStep(
+			jobRepository: JobRepository,
+			transactionManager: PlatformTransactionManager,
+			fileDataReadWriteReader: ItemReader<Player>,
+			fileDataReadWriteProcessor:ItemProcessor<Player,PlayerYear>,
+			fileDataReadWriteWriter: ItemWriter<PlayerYear>
+
+		):Step{
+			return StepBuilder("trMigrationStep",jobRepository)
+				.chunk<Player, PlayerYear>(5,transactionManager)
+				.reader(fileDataReadWriteReader)
+				.processor (fileDataReadWriteProcessor)
+				.writer (fileDataReadWriteWriter)
+				.build()
+		}
+	잡에넣어서 실행시키면됨
+	    @Bean
+		fun fileDataReadWriteJob(jobRepository: JobRepository,fileDataReadWriteStep:Step):Job{
+			return JobBuilder("fileDataReadWriteJob",jobRepository)
+				.incrementer(RunIdIncrementer())
+				.start(fileDataReadWriteStep)
+				.build()
+
+		}
+	
+7.여러 스탭 구동 및 실행상태에 따른 분기처리
+	당연히 스탭을 여러개 실행할수도있음(각 종류별로 분리해서)
+	    @Bean
+		fun abcJob(jobRepository: JobRepository,abcStep1:Step,abcStep2:Step,abcStep3:Step):Job{
+			return JobBuilder(",abcStep1:Step",jobRepository)
+				.incrementer(RunIdIncrementer())
+				.start(abcStep1)
+				.next(abcStep2)
+				.next(abcStep3)
+				.build()
+
+		}	
+	그리고 스탭에서 다음스탭으로 데이터를 전달할땐,ExecutionContext를 사용해서 옮길수있음
+		https://docs.spring.io/spring-batch/reference/common-patterns.html#passingDataToFutureSteps
+	그리고 분기처리는,스탭의 상태(failed completed이런거)에 따라 분기할수있음
+	이건
+        return JobBuilder("abcJob",jobRepository)
+            .incrementer(RunIdIncrementer())
+            .start(mainStep)
+                .on("FAILED").to(failStep)
+			.from(mainStep)
+                .on("COMPLETED").to(completedStep)
+			.from(mainStep)
+                .on("*").to(conditionStep)
+            .end()
+            .build()
+	이런식으로 할수있음
+	메인스탭에서 성공,실패,기타등등으로 나눠서 다음스탭을 정하는거
+	
+	
+8.배치 테스트코드 작성	
+	
+	
+	
+	
+	
 	
 	
 	

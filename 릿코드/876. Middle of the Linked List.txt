@@ -1,0 +1,27 @@
+노드의 중간을 리턴해라
+만약 노드갯수가 짝수면 중간2개를 리턴해라
+그냥 노드 순회돌아서 전부 더하고,절반위치에서 더하면될듯,짝수든 홀수든 받는건 노드니까 대충던져도됨
+
+정답
+class Solution {
+    fun middleNode(head: ListNode?): ListNode? {
+        if (head!!.next==null){
+            return head
+        }
+        val numList = mutableListOf<Int>()
+        val nodeList = mutableListOf<ListNode>()
+        var curNode=head!!
+        while (true){
+
+            numList.add(curNode.`val`)
+            nodeList.add(curNode)
+            if (curNode.next==null){
+                break
+            }
+            curNode=curNode.next!!
+
+        }
+
+        return nodeList[numList.size/2]
+    }
+}

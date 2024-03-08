@@ -1,0 +1,18 @@
+그냥 모든값 해시맵에 담아서 빈도수 찾아내고,
+그 해시맵의 빈도수를 다시 다른해시맵에 담아서,가장큰값 밸류*키해서 리턴
+
+정답
+class Solution {
+    fun maxFrequencyElements(nums: IntArray): Int {
+        val numMap = hashMapOf<Int, Int>()
+        for (i in nums){
+            numMap[i]=numMap[i]?.plus(1)?:1
+        }
+        val sizeMap= hashMapOf<Int,Int>()
+        for (i in numMap){
+            sizeMap[i.value]= sizeMap[i.value]?.plus(1)?:1
+        }
+        val max = sizeMap.maxOf { it.key }
+        return sizeMap[max]!!*max
+    }
+}

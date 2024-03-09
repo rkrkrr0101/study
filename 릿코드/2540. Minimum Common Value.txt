@@ -1,0 +1,21 @@
+두 리스트중 나오는 겹치는수중 가장 작은값 리턴
+그냥 뒤에거 해시맵에 넣고,앞에거 정렬쳐서 해시맵에서 찾아서 리턴하면될듯
+없으면 -1리턴하고
+
+정답
+
+class Solution {
+    fun getCommon(nums1: IntArray, nums2: IntArray): Int {
+        val num2Map = hashMapOf<Int, Int>()
+        for (i in nums2){
+            num2Map[i]=num2Map[i]?.plus(1)?:1
+        }
+        val sortNum1List = nums1.sorted()
+        for (i in sortNum1List){
+            if (num2Map[i]!=null){
+                return i
+            }
+        }
+        return -1
+    }
+}

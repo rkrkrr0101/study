@@ -20,6 +20,7 @@ import org.springframework.batch.item.data.RepositoryItemWriter
 import org.springframework.batch.item.data.builder.RepositoryItemReaderBuilder
 import org.springframework.batch.item.data.builder.RepositoryItemWriterBuilder
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.domain.Sort

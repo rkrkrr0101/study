@@ -1,0 +1,33 @@
+그냥 문자열 스트링 다 해시맵에 때려박은다음
+정렬에서 나온거만큼 res스트링에 추가후
+남은거 집합으로 빼서 그거 마지막으로 추가
+
+
+정답
+class Solution {
+    fun customSortString(order: String, s: String): String {
+        val stringMap= hashMapOf<Char,Int>()
+        val stringSet= hashSetOf<Char>()
+        for (i in s){
+            stringMap[i]=stringMap[i]?.plus(1)?:1
+            stringSet.add(i)
+        }
+        var res=""
+        val orderSet= hashSetOf<Char>()
+        for (i in order){
+            orderSet.add(i)
+            if (stringMap[i]!=null){
+                for (j in 0 until stringMap[i]!!){
+                    res+=i
+                }
+            }
+        }
+        val otherSet = stringSet - orderSet
+        for (i in otherSet){
+            for (j in 0 until stringMap[i]!!){
+                res+=i
+            }
+        }
+        return res
+    }
+}

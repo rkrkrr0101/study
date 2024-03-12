@@ -1,0 +1,32 @@
+그냥 전부 리스트에 넣은다음 해시맵에도 담고 -된거있으면 해당값 제거
+그리고 남은거 노드로 엮어서 리턴
+
+
+class Solution {
+    fun removeZeroSumSublists(head: ListNode?): ListNode? {
+        val dummy = ListNode(0)
+        dummy.next = head
+        var current: ListNode? = dummy
+
+        while (current != null && current.next != null) {
+            var sum = 0
+            val map = mutableMapOf<Int, ListNode?>()
+            var runner: ListNode? = current.next
+
+            while (runner != null) {
+                sum += runner.`val`
+                if (sum == 0) {
+                    current.next = runner.next
+                }
+                else {
+                    map[sum] = runner
+                }
+                runner = runner.next
+            }
+
+            current = current.next
+        }
+
+        return dummy.next
+    }
+}

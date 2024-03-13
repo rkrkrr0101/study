@@ -1,0 +1,26 @@
+while돌리고
+1부터 현재까지 더하고(a),현재부터 n까지 더한뒤(b)
+	a<b 계속진행
+	a==b 현재값리턴
+	a>b -1리턴
+일단 이렇게인데 반복문안에서 계산귀찮으니까 a>b일때 트리거떙겨서 현재값더해서 비교후 리턴선택하면될듯
+
+정답
+class Solution {
+    fun pivotInteger(n: Int): Int {
+        var cur=0
+        var curPoint=0
+        var max=(1..n).sum()
+        while (true){
+            cur+=curPoint
+            max-=curPoint
+            if (cur>max){
+                if (max+curPoint==cur){
+                    return curPoint
+                }
+                return -1
+            }
+            curPoint+=1
+        }
+    }
+}

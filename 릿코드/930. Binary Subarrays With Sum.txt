@@ -1,0 +1,39 @@
+모든 배열중 합이 골과 같은 배열의 수를 리턴해라
+그냥 3*10^4니까 o(n^2)를 돌려도될듯
+
+타임아웃
+class Solution {
+    fun numSubarraysWithSum(nums: IntArray, goal: Int): Int {
+        var res=0
+        val numList = nums.toList()
+        for (i in numList.indices){
+            for (j in i until numList.size){
+                val tempSum = numList.subList(i, j+1).sum()
+                if (tempSum==goal){
+                    res+=1
+                }
+            }
+
+        }
+        return res
+
+    }
+}
+이게 걸리네
+결국 포인터2개써서해야할듯
+아니면 윈도우크기만 루프돌리면서 sum?
+
+class Solution {
+    fun numSubarraysWithSum(nums: IntArray, goal: Int): Int {
+        var sum = 0
+        var count = 0
+        val hasSeen = mutableMapOf<Int, Int>()
+        hasSeen[0] = 1
+        for (num in nums) {
+            sum += num
+            count += hasSeen[sum - goal]?:0
+            hasSeen[sum] = (hasSeen[sum] ?: 0) + 1
+        }
+        return count
+    }
+}

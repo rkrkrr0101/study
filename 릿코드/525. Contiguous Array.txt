@@ -1,0 +1,62 @@
+0과1이 같은수만큼있는 부분배열갯수 리턴
+그냥 처음에서 끝점만 1씩 늘리고,그 사이에 있는 부분배열체크해서 res에 +1
+처음에 0과 1합을 만들어두고,현재위치값을 빼는식으로 하면되지않을까
+
+타임아웃
+import kotlin.math.max
+
+class Solution {
+    fun findMaxLength(nums: IntArray): Int {
+        var res=0
+        var maxCount=0
+        var zeroCount=0
+        var oneCount=0
+        for ((iIndex,iValue) in nums.withIndex()){
+            if (iValue==0){
+                zeroCount+=1
+            }else{
+                oneCount+=1
+            }
+            if (zeroCount==oneCount){
+                res+=1
+                maxCount= max( zeroCount+oneCount,maxCount)
+            }
+            var tempZeroCount=zeroCount
+            var tempOneCount=oneCount
+            //println("""$iIndex : $tempZeroCount  $tempOneCount""")
+            for (j in 0 until  iIndex){
+                //println(j)
+                if (nums[j]==0){
+                    tempZeroCount-=1
+                }else{
+                    tempOneCount-=1
+                }
+                if (tempZeroCount==tempOneCount){
+                    res+=1
+                    maxCount= max( tempZeroCount+tempOneCount,maxCount)
+                }
+            }
+        }
+        println(maxCount)
+        return maxCount
+    }
+}
+정답
+class Solution {
+    fun findMaxLength(nums: IntArray): Int {
+        val mp = HashMap<Int, Int>()
+        var sum = 0
+        var subArrayLength = 0
+        for (i in nums.indices) {
+            sum += if (nums[i] == 0) -1 else 1
+            if (sum == 0) {
+                subArrayLength = i + 1
+            } else if (mp.containsKey(sum)) {
+                subArrayLength = maxOf(subArrayLength, i - mp[sum]!!)
+            } else {
+                mp[sum] = i
+            }
+        }
+        return subArrayLength
+    }
+}

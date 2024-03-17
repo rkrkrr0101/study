@@ -1,0 +1,36 @@
+그냥 맥스값까지 배열을 만든다고 생각하고,그사이에 있는값은 전부 1을 넣고,새로 추가하는거도 1넣고,
+for돌려서 서로 떨어지는부분끼리 배열로 떼서 리턴
+
+
+class Solution {
+    fun insert(intervals: Array<IntArray>, newInterval: IntArray): Array<IntArray> {
+        
+
+        var ans = mutableListOf<IntArray>()
+        
+        
+        var start = newInterval[0]
+        var end = newInterval[1]
+        
+        var counter = 0
+        
+        // get the intervals which are smaller than the newInterval
+        while(counter < intervals.size && intervals[counter][1] < start) ans.add(intervals[counter++])
+        
+        // check if any overlapping exist and define the boundraies for the merged intervals
+        while(counter < intervals.size && intervals[counter][0] <= end){
+            start = Math.min(intervals[counter][0],start)
+            end = Math.max(intervals[counter++][1],end)
+        }
+        
+        // add the merged intervals
+        ans.add(intArrayOf(start,end))
+        
+        // add the remaining part that its size is larger than the merged part
+        while(counter < intervals.size) ans.add(intervals[counter++])
+
+        return ans.toTypedArray()
+
+    }
+    
+}

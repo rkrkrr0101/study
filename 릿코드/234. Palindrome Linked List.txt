@@ -1,0 +1,40 @@
+그냥 노드까서 팰린드롬인지 확인
+
+정답
+
+
+
+
+class Solution {
+    fun isPalindrome(head: ListNode?): Boolean {
+        head?:return false
+        val resList= mutableListOf<Int>()
+        var curNode:ListNode=head
+        while (true){
+            resList.add(curNode.`val`)
+            if (curNode.next==null){
+                break
+            }
+            curNode=curNode.next!!
+
+        }
+        return isPalindrome(resList)
+    }
+}
+
+fun isPalindrome(word:List<Int>):Boolean{
+    var leftPointer = 0
+    var rightPointer = word.size-1
+
+    while (leftPointer<rightPointer){
+        if (word[leftPointer]!=word[rightPointer]) {
+            return false
+        }
+        leftPointer+=1
+        rightPointer-=1
+    }
+    return true
+}
+class ListNode(var `val`: Int) {
+    var next: ListNode? = null
+}

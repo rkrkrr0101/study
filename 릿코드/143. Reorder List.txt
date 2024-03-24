@@ -1,0 +1,43 @@
+노드 리스트로 변경후에(해시맵에 인덱스 키로 담아두기)
+사이즈 변수뽑아두고
+인덱스로 for돌리고 i,size-i가 같으면 하나만 추가,다르면 i추가후 size-i추가
+
+
+class Solution {
+     fun reorderList(head: ListNode?): Unit {
+        //find the middle of the list
+        var slow = head
+        var fast = head
+        while (fast?.next!=null){
+            slow=slow?.next
+            fast=fast.next?.next
+        }
+
+        var list1 = head
+        var list2 = reverse(slow?.next)
+        slow?.next = null
+        var l2Next = list2?.next
+        while (list2!=null){
+            list2.next = list1?.next
+            list1?.next = list2
+
+            list1 = list2.next
+            list2 = l2Next
+            l2Next = list2?.next
+        }
+    }
+    fun reverse(head: ListNode?):ListNode?{
+        var prevNode:ListNode? = null
+        var currentNode = head
+        var nextNode = currentNode?.next
+        while (currentNode!=null){
+            currentNode.next = prevNode
+
+            prevNode = currentNode
+            currentNode = nextNode
+            nextNode = nextNode?.next
+        }
+        return prevNode
+    }
+
+}

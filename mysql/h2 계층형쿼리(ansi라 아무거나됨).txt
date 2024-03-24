@@ -1,0 +1,49 @@
+WITH RECURSIVE cte(id,parent_id,name_english,name_korean,lvl) AS(
+	select reg.id,reg.parent_id,reg.name_english,reg.name_korean,1 as lvl
+	from region reg
+	where reg.id=4//:regId
+	union all
+	select parent.id,parent.parent_id,parent.name_english,parent.name_korean,child.lvl+1 as lvl
+	from region parent
+	join cte child
+	on parent.id=child.parent_id
+)
+select * from cte
+
+
+WITH RECURSIVE cte(id,parent_id,name_english,name_korean,lvl) AS(
+	select reg.id,reg.parent_id,reg.name_english,reg.name_korean,1 as lvl
+	from "region" reg
+	where reg.id=4//:regId
+	union all
+	select parent.id,parent.parent_id,parent.name_english,parent.name_korean,child.lvl+1 as lvl
+	from "region" parent
+	join cte child
+	on parent.id=child.parent_id
+)
+select * from cte
+
+
+WITH RECURSIVE cte("id","parent_id","name_english","name_korean","lvl") AS(
+	select reg."id",reg."parent_id",reg."name_english",reg."name_korean" ,1 as "lvl" 
+	from "region" as reg
+	where reg."id"=4//:regId
+	union all
+	select parent."id",parent."parent_id",parent."name_english",parent."name_korean", child."lvl"+1 as "lvl"
+	from "region" as parent
+	join cte child
+	on parent."id"=child."parent_id"
+)
+select * from cte
+
+WITH RECURSIVE cte("id","parent_id","name_english","name_korean") AS(
+	select reg."id",reg."parent_id",reg."name_english",reg."name_korean"  
+	from "region" as reg
+	where reg."id"=4//:regId
+	union all
+	select parent."id",parent."parent_id",parent."name_english",parent."name_korean" 
+	from "region" as parent
+	join cte child
+	on parent."id"=child."parent_id"
+)
+select * from cte

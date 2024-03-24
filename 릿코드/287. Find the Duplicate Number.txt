@@ -1,0 +1,16 @@
+그냥 해시맵에 숫자담고 반복되면 해당숫자리턴
+
+정답
+class Solution {
+    fun findDuplicate(nums: IntArray): Int {
+        val numMap = hashMapOf<Int, Int>()
+        for (i in nums){
+            if (numMap[i]==null) {
+                numMap[i] =1
+            }else{
+                return i
+            }
+        }
+        return 0
+    }
+}

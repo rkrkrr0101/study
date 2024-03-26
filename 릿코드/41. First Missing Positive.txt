@@ -1,0 +1,29 @@
+배열에 없는 가장 작은 양의정수 리턴
+시간복잡도 o(n) 공간복잡도 o(1)
+
+정답(정렬썼는데 왜패스?)
+import kotlin.math.max
+
+class Solution {
+    fun firstMissingPositive(nums: IntArray): Int {
+        var res=1
+        var prevNum=-2400000
+        for (i in nums.sorted()){
+            if(i<=0){
+                prevNum=i
+                continue
+            }
+            if (i==res || i==prevNum){
+                if (i!=prevNum){
+                    res+=1
+                }
+                
+                prevNum=i
+            }else{
+                return res
+            }
+
+        }
+        return max(nums.max()+1,1)
+    }
+}

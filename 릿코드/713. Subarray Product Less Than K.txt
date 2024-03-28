@@ -1,0 +1,24 @@
+k보다 낮은 인접부분배열의 갯수구하기
+그냥 슬라이딩윈도우써서 앞에서부터 커질때까지 한칸씩 밀면될듯?
+
+정답
+class Solution {
+    fun numSubarrayProductLessThanK(nums: IntArray, k: Int): Int {
+        var res=0
+        for ((iIndex,iValue) in nums.withIndex()){
+            val numSliceList = nums.slice(iIndex until nums.size)
+            var tempNum=1
+            for (j in numSliceList){
+                //println(tempNum)
+                if(j*tempNum<k){
+                    res+=1
+                    tempNum *= j
+                }else{
+                    break
+                }
+            }
+        }
+        return res
+
+    }
+}

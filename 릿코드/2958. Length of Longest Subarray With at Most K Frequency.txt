@@ -1,0 +1,37 @@
+슬라이스윈도우 사용
+레프트랑 라이트 두고,반복문속에서 right+1해보고 해당값 해시맵에 추가,만약 해당값이 k보다 크면,같아질때까지 left +1해가면서 해시맵에서 제거
+그리고나서 res를 res와 현재 right-left+1과 max쳐서 res갱신
+레프트가 라이트보다 커지거나,라이트가 배열끝에 도달하면 반복문종료
+
+정답
+import kotlin.math.max
+
+class Solution {
+    fun maxSubarrayLength(nums: IntArray, k: Int): Int {
+        if (nums.size==1){
+            return 1
+        }
+        var left=0
+        var right=0
+        var res=0
+        var numMap= hashMapOf<Int,Int>()
+        numMap[nums[right]]=1
+        while (true){
+            right+=1
+            if (right==nums.size){
+                return res
+            }
+            numMap[nums[right]]= numMap[nums[right]]?.plus(1)?:1
+            while (numMap[nums[right]]!!>k){
+                numMap[nums[left]]=numMap[nums[left]]!!.minus(1)
+                left+=1
+                if (left>right){
+                    return res
+                }
+            }
+            res= max(right-left+1,res)
+
+        }
+    }
+}
+//1 2 3 2 3 1 3  //2

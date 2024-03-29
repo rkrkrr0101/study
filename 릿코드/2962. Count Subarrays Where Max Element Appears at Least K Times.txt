@@ -1,0 +1,59 @@
+배열의 최대숫자가 k보다 크면 res+1
+그냥 0부터 right까지 돌리면서,배열맥스갯수가 k보다 크면 left1씩 줄여가면서 만족하지않을때까지 res+1
+타임아웃나니까 뒤에 내부반복문을 제거하고 해당위치값만큼을 저장해둔뒤 그걸 더하는식으로 해결
+
+
+타임아웃
+class Solution {
+    fun countSubarrays(nums: IntArray, k: Int): Long {
+        var res:Long=0
+        val numMax = nums.max()
+        var subMax=0
+        for (i in nums.indices){
+            if (nums[i]==numMax){
+                subMax+=1
+            }
+            if (subMax>=k){
+                res+=1
+                var tempMax=subMax
+                for (j in 0 .. i){
+                    if (nums[j]==numMax){
+                        tempMax-=1
+                    }
+                    if (tempMax>=k){
+                        res+=1
+                    }
+                }
+            }
+        }
+        return res
+
+    }
+}
+
+정답
+class Solution {
+    fun countSubarrays(nums: IntArray, k: Int): Long {
+        var res:Long=0
+        val numMax = nums.max()
+        var subMax=0
+        val maxIndexList = mutableListOf<Int>()
+        for (i in nums.indices){
+            if (nums[i]==numMax){
+                subMax+=1
+                maxIndexList.add(i)
+            }
+            if (subMax>=k){
+                res+=1
+                if (subMax==k){
+                    res+=maxIndexList[0]
+                }else{
+                    res+=maxIndexList[subMax-k]
+                }
+
+            }
+        }
+        return res
+
+    }
+}

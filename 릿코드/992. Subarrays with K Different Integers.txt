@@ -1,0 +1,59 @@
+유니크한 수의 갯수가 k와 완전히 같은 부분배열의 갯수
+슬라이딩윈도우 사용해서,k보다 크면 아무것도 안하고 진행,k랑 같으면 res+1,k보다 작으면 브레이크->타임아웃
+각 
+
+타임아웃
+class Solution {
+    fun subarraysWithKDistinct(nums: IntArray, k: Int): Int {
+        var res=0
+        val numMap = hashMapOf<Int, Int>()
+        for (i in nums.indices){
+            numMap[nums[i]]=numMap[nums[i]]?.plus(1)?:1
+            if (numMap.size==k){
+                res+=1
+            }
+            val tempMap=HashMap(numMap)
+            for (j in 0 .. i){
+                tempMap[nums[j]]=tempMap[nums[j]]!!.minus(1)
+                if (tempMap[nums[j]]==0){
+                    tempMap.remove(nums[j])
+                }
+                if (tempMap.size==k){
+                    res+=1
+                }
+                if (tempMap.size<k){
+                    break
+                }
+            }
+        }
+        return res
+    }
+}
+정답
+class Solution {
+    fun subarraysWithKDistinct(nums: IntArray, k: Int): Int {
+        return atMostK(nums, k) - atMostK(nums, k - 1)
+    }
+
+    fun atMostK(nums: IntArray, _k: Int): Int {
+        var result = 0
+        var i = 0
+        var k = _k
+        var cache = HashMap<Int, Int>()
+
+        for (j in nums.indices) {
+            if (cache.getOrDefault(nums[j], 0) == 0) k--
+            cache.put(nums[j], cache.getOrDefault(nums[j], 0) + 1)
+
+            while (k < 0) {
+                cache.put(nums[i], cache.getOrDefault(nums[i], 1) - 1)
+                if (cache.getOrDefault(nums[i], 0) == 0) k++
+                i++
+            }
+
+            result += j - i + 1
+        }
+
+        return result
+    }
+}

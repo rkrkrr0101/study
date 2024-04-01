@@ -1,0 +1,11 @@
+마지막 문장의 길이재기
+마지막에 스페이스 있을수있으니 trim쓰고 split로 잘라서 마지막거 length리턴
+
+정답
+class Solution {
+    fun lengthOfLastWord(s: String): Int {
+        val splitList = s.trimEnd() .split(" ")
+        return splitList.last().length
+
+    }
+}

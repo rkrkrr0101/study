@@ -1,0 +1,25 @@
+두 스트링이 같은구조인지 확인
+
+
+정답
+class Solution {
+    fun isIsomorphic(s: String, t: String): Boolean {
+        val firstString = isomorphicString(s)
+        val secondString = isomorphicString(t)
+        return firstString==secondString
+    }
+
+    private fun isomorphicString(s: String): String {
+        var firstString = ""
+        val stringMap = hashMapOf<Char, Int>()
+
+        for (i in s.indices) {
+            if (stringMap[s[i]] == null) {
+                stringMap[s[i]] = 1000+i
+
+            }
+            firstString = firstString.plus(stringMap[s[i]])
+        }
+        return firstString
+    }
+}

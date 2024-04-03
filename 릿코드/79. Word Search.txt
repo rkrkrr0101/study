@@ -1,0 +1,45 @@
+연결된 해당 단어가 배열에 있는지 확인
+length가 작아서 시간복잡도 신경안써도됨
+그냥 첫글자 찾고,위아래왼오로 다음거있나 재귀하고,만약 그게 이미 갔던자리면 패스하는식으로 하면될듯
+
+
+
+정답
+class Solution {
+    fun exist(board: Array<CharArray>, word: String): Boolean {
+        val firstWord = word[0]
+        for ((iIndex,iValue) in board.withIndex()){
+            for ((jIndex,jValue) in iValue.withIndex()){
+                val wordFind = wordFind(board, Pair(iIndex, jIndex), listOf(), word, 0)
+                if (wordFind){
+                    return true
+                }
+
+            }
+        }
+        return false
+    }
+    fun wordFind(board: Array<CharArray>, point:Pair<Int,Int>,prevList:List<Pair<Int,Int>>,
+                 word: String,wordIndex:Int ):Boolean{
+        if (point.first>=board.size || point.second>=board[0].size || point.first<0 ||point.second<0){
+            return false
+        }
+        if (prevList.contains(point)){
+            return false
+        }
+        if (board[point.first][point.second]!=word[wordIndex]){
+            return false
+        }
+        if (word.length-1==wordIndex){
+            return true
+        }
+        val prevCurList = prevList.toMutableList()
+        prevCurList.add(point)
+        var res=wordFind(board,Pair(point.first+1,point.second),prevCurList,word,wordIndex+1)
+        res=res.or(wordFind(board,Pair(point.first-1,point.second),prevCurList,word,wordIndex+1))
+        res=res.or(wordFind(board,Pair(point.first,point.second+1),prevCurList,word,wordIndex+1))
+        res=res.or(wordFind(board,Pair(point.first,point.second-1),prevCurList,word,wordIndex+1))
+
+        return res
+    }
+}

@@ -1,0 +1,40 @@
+(가 있으면 )도 같이 적고,)만 만나면 무시
+끝까지 (못채웠으면(스택이 비지않았으면) res 역으로 타고들어가서 해당갯수만큼 (제거
+
+정답
+import java.util.Stack
+
+class Solution {
+    fun minRemoveToMakeValid(s: String): String {
+        val stack=Stack<Char>()
+        var res=""
+        for (i in s){
+            if (i==')'){
+                if (!stack.empty()) {
+                    stack.pop()
+                }else{
+                    continue
+                }
+
+            }
+            if (i=='('){
+                stack.push(i)
+            }
+            res+=i
+        }
+        if (!stack.empty()){
+            var tempRes=""
+            var stackSize=stack.size
+            for (i in res.reversed()){
+                
+                if (i=='(' && stackSize!=0){
+                    stackSize-=1
+                    continue
+                }
+                tempRes+=i
+            }
+            res=tempRes.reversed()
+        }
+        return res
+    }
+}

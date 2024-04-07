@@ -1,0 +1,53 @@
+괄호 스택과 와일드카드를 따로관리하고,스택에는 현재인덱스를 투입하고 와카리스트에도 인덱스로 관리
+만약 스택이 비었는데 인출이 뜨면 와카확인후 와카제거하고,스택끝났는데 남은거있으면 와카확인해서 하나씩 제거후 비면 true 아니면 false
+
+
+정답
+import java.util.Stack
+
+class Solution {
+    fun checkValidString(s: String): Boolean {
+        val stack=Stack<Int>()
+        val wildCardList= mutableListOf<Int>()
+        for ((iIndex,iValue) in s.withIndex()){
+            if (iValue=='*'){
+                wildCardList.add(iIndex)
+            }
+            if (iValue=='('){
+                stack.push(iIndex)
+            }
+            if (iValue==')'){
+                if (stack.isNotEmpty()){
+                    stack.pop()
+                    continue
+                }
+                if (wildCardList.isNotEmpty()){
+                    wildCardList.removeLast()
+                }else{
+                    return false
+                }
+            }
+        }
+        if(stack.empty()){
+            return true
+        }
+        while (stack.isNotEmpty()){
+            if (wildCardList.isEmpty()){
+                return false
+            }
+            var tempInt=-1
+            for (j in wildCardList){
+                if (stack.peek()<j){
+                    stack.pop()
+                    tempInt=j
+                    break
+                }
+            }
+            if (tempInt==-1){
+                return false
+            }
+            wildCardList.remove(tempInt)
+        }
+        return true
+    }
+}

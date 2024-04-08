@@ -1,0 +1,29 @@
+샌드위치와 학생배열중 맨앞이 같으면 제거,다르면 학생배열의 맨앞을 맨뒤로 넣음
+이렇게 학생배열 한바퀴를 돌아도 샌드위치를 하나못없앴으면 학생배열남은거 리턴
+
+정답
+class Solution {
+    fun countStudents(students: IntArray, sandwiches: IntArray): Int {
+        val sandwichList = sandwiches.toMutableList()
+        val studentList = students.toMutableList()
+        var count=0
+        while (true){
+            if (sandwichList.isEmpty()){
+                break
+            }
+            if (sandwichList[0]==studentList[0]){
+                sandwichList.removeAt(0)
+                studentList.removeAt(0)
+                count=0
+                continue
+            }
+            count+=1
+            if (count==studentList.size){
+                return studentList.size
+            }
+            val tempInt = studentList.removeAt(0)
+            studentList.add(tempInt)
+        }
+        return 0
+    }
+}

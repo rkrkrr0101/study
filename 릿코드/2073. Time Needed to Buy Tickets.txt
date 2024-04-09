@@ -1,0 +1,26 @@
+그냥 해당값 맨앞으로 빼주고 전체제거해도되고
+큐써서 처리해도되고 상관없을듯
+
+정답
+class Solution {
+    fun timeRequiredToBuy(tickets: IntArray, k: Int): Int {
+        var ticketList = tickets.toMutableList()
+        var res=0
+        for (i in 0 until k){
+            res+=1
+            val temp = ticketList.removeAt(0) - 1
+            if (temp>0){
+                ticketList.add(temp)
+            }
+        }
+        while (ticketList[0]!=0){
+            if (ticketList[0]==1){
+                res+=1
+                return res
+            }
+            res+=ticketList.size
+            ticketList=ticketList.map { it-1 }.filter { it>0 }.toMutableList()
+        }
+        return res
+    }
+}

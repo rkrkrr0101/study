@@ -1,0 +1,35 @@
+해당규칙에 맞춰서 뽑으면 오름차순이 되게 덱을 구성해라
+그냥 해당배열크기만큼 배열만든후에,그거로 실제로 돌리고나서 해당배열대로 원래배열인덱스 수정후 리턴
+
+
+정답
+import java.util.LinkedList
+import java.util.Queue
+
+class Solution {
+    fun deckRevealedIncreasing(deck: IntArray): IntArray {
+        val queue:Queue<Int> =LinkedList()
+        val indexList= mutableListOf<Int>()
+        val resArray= IntArray(deck.size)
+        for (i in deck.indices){
+            queue.add(i)
+        }
+        while (queue.isNotEmpty()){
+            if (queue.peek()==null){
+                break
+            }
+            indexList.add( queue.poll())
+            queue.add(queue.poll())
+        }
+        val sortDeckList = deck.sorted()
+        for ((iIndex,iValue) in indexList.withIndex()){
+            resArray[iValue]=sortDeckList[iIndex]
+        }
+        
+        return resArray
+
+
+    }
+
+
+}

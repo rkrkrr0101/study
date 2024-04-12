@@ -1,0 +1,5 @@
+C:\Users\qkrru\kafka 로 cd해서 docker-compose -f kafka-compose.yaml up 실행
+
+
+참고
+https://9hyuk9.tistory.com/92

@@ -1,0 +1,27 @@
+노드 리프의 왼쪽의 총합을 구해라
+그냥 다음거내려갈떄 오른쪽인지 왼쪽인지만 확인해주고 sum하면될듯
+
+정답
+
+class Solution {
+    fun sumOfLeftLeaves(root: TreeNode?): Int {
+        val leftLeafList = leftLeafSearch(root, false)
+        return leftLeafList.sum()
+    }
+}
+fun leftLeafSearch(root1: TreeNode?, isLeft:Boolean):List<Int>{
+    val tempList = mutableListOf<Int>()
+    if (root1==null){
+        throw IllegalArgumentException()
+    }
+    if (root1.left==null && root1.right==null && isLeft){
+        tempList.add(root1.`val`)
+    }
+    if(root1.left!=null){
+        tempList.addAll( leftLeafSearch(root1.left,true))
+    }
+    if(root1.right!=null){
+        tempList.addAll( leftLeafSearch(root1.right,false))
+    }
+    return tempList
+}

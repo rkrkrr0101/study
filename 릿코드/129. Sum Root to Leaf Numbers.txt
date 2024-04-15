@@ -1,0 +1,30 @@
+그냥 재귀로 노드탐색하면서 val텍스트로 저장하다가 리프면 값으로 변환해서 리턴
+리프아니면 레프트나 라이트에서 값받아오고
+
+정답
+class Solution {
+    fun sumNumbers(root: TreeNode?): Int {
+        return leftLeafSearch(root,"")
+    }
+}
+fun leftLeafSearch(root1: TreeNode?, reqStr:String ):Int{
+    if (root1==null){
+        throw IllegalArgumentException()
+    }
+    var valueString=reqStr+root1.`val`.toString()
+    if (root1.left==null && root1.right==null){
+        return valueString.toInt()
+    }
+    var res=0
+    if(root1.left!=null){
+        res+=leftLeafSearch(root1.left,valueString)
+    }
+    if(root1.right!=null){
+        res+=leftLeafSearch(root1.right,valueString)
+    }
+    return res
+}
+class TreeNode(var `val`: Int) {
+    var left: TreeNode? = null
+    var right: TreeNode? = null
+}

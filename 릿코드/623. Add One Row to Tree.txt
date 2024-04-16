@@ -1,0 +1,40 @@
+노드에서 해당댑스진입해서 사이에 해당숫자 끼워넣기
+레프트일경우 다음숫자는 레프트에,라이트는 라이트,반대쪽은 널
+dfs쓰면될듯
+
+
+정답
+class Solution {
+    fun addOneRow(root: TreeNode?, `val`: Int, depth: Int): TreeNode? {
+        if (depth==1){
+            val newLeftNode=TreeNode(`val`)
+            newLeftNode.left=root
+            return newLeftNode
+        }
+        return nodeInsert(root, `val`, depth-2)
+    }
+}
+fun nodeInsert(curNode: TreeNode?, `val`:Int, curDepth: Int ):TreeNode{
+    if (curNode==null){
+        throw IllegalArgumentException()
+    }
+    val newNode = TreeNode(curNode.`val`)
+
+    if (curDepth==0){
+        val newLeftNode=TreeNode(`val`)
+        newLeftNode.left=curNode.left
+        newNode.left = newLeftNode
+
+        val newRightNode=TreeNode(`val`)
+        newRightNode.right=curNode.right
+        newNode.right = newRightNode
+        return newNode
+    }
+    if(curNode.left!=null){
+        newNode.left=nodeInsert(curNode.left,`val`,curDepth-1)
+    }
+    if(curNode.right!=null){
+        newNode.right=nodeInsert(curNode.right,`val`,curDepth-1)
+    }
+    return newNode
+}

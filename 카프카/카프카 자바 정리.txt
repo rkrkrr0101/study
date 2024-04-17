@@ -307,7 +307,7 @@
 	헤더는 레코드의 추가정보를 담는 메타데이터저장소임,여기에 키값형태로 데이터를 추가하여 레코드속성을 저장해서 컨슈머에서 받아볼수있음
 		
 		
-		
+  1.카프카 클라이언트		
 	카프카클러스터에 명령을 내리거나 데이터송수신을 할때는 카프카 클라이언트를 사용해서 앱을 개발하면됨
 	카프카클라이언트는 라이브러리고,프로듀서api,컨슈머api,어드민api로 구성됨
 	
@@ -446,30 +446,110 @@
 	예를들면
 		구독하는 토픽의 파티션수만큼 스레드를 생성하거나 할때,토픽의 파티션수를 가져올수있음
 		웹 대시보드를 통해 리소스접근권한규칙 추가를 할수있음
-		토픽데이터양증감을 감지하고 해당토픽의 파티션을 자동으로 늘릴수있음
+		토픽데이터양 증감을 감지하고 해당토픽의 파티션을 자동으로 늘릴수있음
 	이건 AdminClient.create(config)로 생성하면됨
 	설정은 그냥 configs.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "my-kafka:9092") 주면됨
 	이걸 사용해서 브로커정보,토픽리스트,컨슈머그룹,신규토픽생성,파티션개수변경,접근제어규칙생성 등을 할수있음
 	
 	
 	
+	카프카 스트림즈는 토픽에 적재된 데이터를 실시간변환하여 다른토픽에 적재하는 라이브러리임
+	카프카의 배치라고 생각하면됨
+	이거랑 비슷한일을 하는애들로는 스파크,플링크,스톰,플루언트디 등이 있음
+	
+	스트림즈는 내부적으로 스레드를 1개이상 생성할수있고,스레드는 1개이상의 태스크를 가짐
+	태스크는 스트림즈의 데이터최소처리단위임
+	그래서 3개의 파티션으로 이뤄진 토픽을 처리하려면 3개의 태스크가 생김(컨슈머그룹이랑 똑같이된다고 생각하면됨)
+	이거도 한 서버에 다때려박을수있지만,보통 분할해서 처리하는편(장애허용),이러면 한군데 문제생겨도 속도가 느려지긴해도 처리는 다 하니까
+	
+	스트림즈는 트리형으로 구성됨
+	배치에서 리더,프로세서,라이터처럼,여기서는 소스(데이터가져오기),스트림(데이터가공),싱크(데이터 쓰기) 3가지임
+	이때 스트림이 2군데이상의 싱크에 전달해서,여러토픽에 한번에 적거나,소스에서 스트림2군데로 보내는등 여러응용이 가능함
+	예를들면
+	스트림즈dsl은
+		메시지값 기반 토픽분기처리
+		10분간 데이터갯수집계
+		토픽과 다른토픽결합
+	프로세서api는
+		메시지값 종류에따라 토픽 가변전송
+		일정시간간격 데이터처리
+	이런식으로 처리가 가능함
 	
 	
+	스트림즈dsl은,레코드의 흐름을 추상화한 개념인 KStream,KTable,GlobalKTable가 있음
+	이건 스트림즈dsl에서만 사용되는 개념임
+	
+	KStream은 레코드의 흐름을 표현한것으로,키와 값으로 구성되어있고,이거로 데이터를 조회하면 토픽의 모든 레코드가 출력됨
+	즉 컨슈머로 토픽을 구독하는것과 같음
+	
+	KTable은 메시지키를 기준으로 가장 최신의 값만 출력함,즉 같은키값으로 다른값이 들어올경우 덮어쓰이는느낌
+	회원정보같은거를 사용하기좋음
+	
+	GlobalKTable은 KTable처럼 키를 기준으로 묶는데,
+	KTable은 1개파티션기준으로 유니크처리가 되고,GlobalKTable은 모든 파티션,즉 토픽전체기준으로 유니크처리가 됨
+	이건 조인같은걸 할때 자주사용되는데,KStream이나 KTable은 서로간의 파티션개수가 동일하고 파티셔닝전략이 동일해야 조인할수있음(코파티셔닝)
+	그래야 같은메시지키를 가진 데이터가 같은태스크에 들어가는게 보장되기때문
+	만약 파티션갯수가 다르다면 해당토픽으로 새로운토픽을 만들어서(리파티셔닝) 갯수를 맞추는작업을 해야함
+	이러면 중복이 발생하고 프로세싱도 해야하는데,
+	근데 GlobalKTable를 사용하면 이걸 하지않고 조인할수있음
+	KTable을 GlobalKTable로 선언하여 사용하면,이건 코파티셔닝되지않은 KTable과 조인을 할수있음(모든테스크에서 값이 전부같기때문)
+	단,이건 모든데이터를 저장하고 사용하기때문에,디스크용량을 많이차지하고 네트워크,브로커에 부하가 걸리므로 작은용량의 데이터에만 사용하는게 좋음
+	만약 데이터가 많은걸 조인해야한다면 그냥 KTable을 리파티셔닝을 해서 KTable을 사용하는게좋음
+	
+  2.카프카 스트림즈	
+	스트림즈DSL의 옵션도 필수옵션과 선택옵션이 있음
+	필수옵션은
+		bootstrap.servers:서버나열,2개이상가능
+		application.id:스트림즈 앱을 구별하기위한 아이디,다른로직을 가진 어플리케이션은 서로 id가 달라야함(같은 디플로이먼트면 같게,다르면 다르게)
+	선택옵션은
+		default.key.serde:레코드의 메시지키 직렬,역직렬화 클래스지정,기본값 바이트직렬화
+		default.value.serde:레코드의 메시지값 직렬,역직렬화 클래스지정,기본값 바이트직렬화
+		num.stream.threads:스레드갯수설정,기본값1
+		state.dir:데이터 저장위치,기본값 /tmp/kafka-streams,상용일경우 바꾸는게좋음
+	가 있음	
+	
+	스트림즈dsl에서는 stream()으로 받아와서 filter()로 처리하고 to()로 적을수있음
+	해당토픽을 구독한뒤 자기 처리방식에 맞춰서 테이블을 짜는느낌
+	이때 stream()은 KStream을 만드는거고,table()과 globalTable()도 있음
+	StreamsBuilder로 이렇게 로직을 짠다음, KafkaStreams로 해당스트림을 빌드해서 start()날리면됨(128p)
+	
+	filter로 해당값중 필터링을 할수있음
+		StreamsBuilder builder = new StreamsBuilder();
+		KStream<String, String> streamLog = builder.stream(STREAM_LOG);
+		KStream<String, String> filteredStream = streamLog.filter((key,value)->value.length()>5)
+		filteredStream.to(STREAM_LOG_FILTER);
+	이런식임(필터와 to는 한줄로묶어도됨)
+	그리고나서 카프카스트림으로 start()날리는건 똑같음
+	
+	조인을 칠때는 소스로 2개를 가져온뒤에,join()으로 조인하고 데이터를 가공한뒤 to()로 적으면됨
+	이때 가장 중요한건 코파티셔닝이 되어있는지 확인하는것
+	조인도
+		StreamsBuilder builder = new StreamsBuilder();
+		KTable<String, String> addressTable = builder.table(ADDRESS_TABLE);
+		KStream<String, String> orderStream = builder.stream(ORDER_STREAM);
+		orderStream.join(addressTable,(order, address) -> order + " send to " + address);	
+		orderStream.to(ORDER_JOIN_STREAM);
+	이런식으로 두개를 조인한뒤에,두테이블의 값을 람다로 처리할수있음
+	이경우 orderStream를 풀테이블서치한다음,해당하는 키값을 address로 검색해서 그걸 붙이는느낌일듯
+	테이블의 경우 가장 최신값만을 가지고있으니까,해당 키값에 대해 반드시 1개이하가 존재한다는게 보장되니까
+	
+	만약 코파티셔닝이 되지않아서,GlobalKTable로 만들어서 처리하려면
+		StreamsBuilder builder = new StreamsBuilder();
+		KTable<String, String> addressGlobalTable = builder.globalTable(ADDRESS_GLOBAL_TABLE);
+		KStream<String, String> orderStream = builder.stream(ORDER_STREAM);
+		orderStream.join(addressGlobalTable,(order, address) -> order + " send to " + address);	
+		orderStream.to(ORDER_JOIN_STREAM);	
+	이런식으로 똑같이 처리하면됨
 	
 	
+	커스텀 프로세서api는 스트림즈dsl보다 투박하지만,토폴로지기준으로 처리한다는거에서 같은역할을 함
+	만약 스트림즈dsl보다 더 추가적인 상세로직이 필요하면,커스텀 프로세서api를 활용할수있음
+	단 이때 커스텀 프로세서api에는 KStream같은게 없다는거에 대해 주의
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	이건 그냥 Processor<키타입,밸류타입>을 상속받아서,init와 process,close를 구현하면되는데
+	이때 ProcessorContext를 init에서 di받고,process에서 이걸사용해서 로직을 짠다음 커밋(ok),포워드(ng)를 선택하면됨
+	그리고나서 이걸 사용하는 Topology를 만들어서 소스,프로세서,싱크를 더하고 실행하면됨(151p)
+  3.카프카 커넥트	
 	
 	
 	

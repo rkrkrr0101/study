@@ -1,0 +1,29 @@
+그냥 노드돌려서 텍스트가져온뒤 비교해서 사전값으로 작은거 리턴하는 재귀함수만들면될듯
+
+정답
+class Solution {
+    fun smallestFromLeaf(root: TreeNode?): String {
+        return smallDictTreeString(root,"")
+    }
+}
+fun smallDictTreeString(root1: TreeNode?, temp:String):String{
+    val tempList = mutableListOf<Int>()
+    if (root1==null){
+        throw IllegalArgumentException()
+    }
+    val asciiChar = (root1.`val` + 97).toChar()
+    val res=asciiChar+temp
+    if (root1.left==null && root1.right==null){
+        return res 
+    }
+    var leftNodeStr="z".repeat(8500)
+    if(root1.left!=null){
+        leftNodeStr=smallDictTreeString(root1.left,res)
+    }
+    var rightNodeStr="z".repeat(8500)
+    if(root1.right!=null){
+        rightNodeStr=smallDictTreeString(root1.right,res)
+    }
+    
+    return minOf (leftNodeStr,rightNodeStr)
+}

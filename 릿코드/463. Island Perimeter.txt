@@ -1,0 +1,48 @@
+크기작으니까 그냥 o(n^2)쓰면서 상하좌우중 0인거의 갯수만큼 다 더하면될듯
+함수로 뺴는게 더깔끔할거같긴한데 귀찮다
+
+정답
+class Solution {
+    fun islandPerimeter(grid: Array<IntArray>): Int {
+        var res=0
+        for (i in grid.indices) {
+            for (j in grid[0].indices) {
+                if (grid[i][j] == 1) {
+                    if (i+1>=grid.size){
+                        res+=1
+                    }else{
+                        if(grid[i+1][j]==0){
+                            res+=1
+                        }
+                    }
+                    if (i-1<0){
+                        res+=1
+                    }else{
+                        if(grid[i-1][j]==0){
+                            res+=1
+                        }
+                    }
+
+                    if (j+1>=grid[0].size){
+                        res+=1
+                    }else{
+                        if(grid[i][j+1]==0){
+                            res+=1
+                        }
+                    }
+                    if (j-1<0){
+                        res+=1
+                    }else{
+                        if(grid[i][j-1]==0){
+                            res+=1
+                        }
+                    }
+                }
+
+
+            }
+        }
+        return res
+
+    }
+}

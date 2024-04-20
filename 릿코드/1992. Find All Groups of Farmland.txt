@@ -1,0 +1,56 @@
+그냥 dfs쓰면될듯
+
+
+class Solution {
+    fun findFarmland(land: Array<IntArray>): Array<IntArray> {
+        
+        
+        val res = mutableListOf<IntArray>()
+        val visited = Array(land.size){IntArray(land[0].size){-1}}
+        
+        fun dfs(row: Int, col: Int, list: IntArray){
+            var inBoundries = row >= 0 && col >=0 && row < land.size && col < land[0].size
+            
+            if(!inBoundries || visited[row][col] != -1 || land[row][col] == 0) return 
+            
+            list[0] = Math.min(list[0] ,row)
+            list[1] = Math.min(list[1],col)
+            
+            
+                 
+            list[2] = Math.max(list[2],row)
+            list[3] = Math.max(list[3],col)
+            
+            
+            visited[row][col] = 1
+            
+            for(direction in arrayOf(intArrayOf(0,1),intArrayOf(0,-1),intArrayOf(-1,0),intArrayOf(1,0))){
+                dfs(row + direction[0], col + direction[1],list)
+            }
+            
+        }
+        
+        for(row in 0 until land.size){
+            for(col in 0 until land[0].size){
+                if(land[row][col] == 1 && visited[row][col] == -1){
+                    val temp = IntArray(4){0}
+                    temp[0] = row
+                    temp[1] = col
+                    dfs(row,col,temp)
+                    
+                    res.add(temp)
+                }
+            }
+        }
+        
+        
+        val ans = Array<IntArray>(res.size){intArrayOf()}
+        
+        for(indx in 0 until res.size){
+            ans[indx] = res[indx]
+        }
+        
+        return ans
+        
+    }
+}

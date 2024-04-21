@@ -1,0 +1,48 @@
+해당위치까지 가는 길 있는지 확인
+그냥 배열2개만들고,이미 지나간곳과 갈수있는곳배열 만든뒤,큐에다가 담아서 큐다떨어지기전에 도착하면 true던지면될듯
+
+
+정답
+import java.util.LinkedList
+import java.util.Queue
+
+class Solution {
+    fun validPath(n: Int, edges: Array<IntArray>, source: Int, destination: Int): Boolean {
+        val queue:Queue<Int> =LinkedList()
+        val edgeMap = hashMapOf<Int, MutableList<Int>>()
+        val prevEdgeSet = hashSetOf<Int>()
+
+        for (i in edges){
+            if (edgeMap[i[0]]==null){
+                edgeMap[i[0]]= mutableListOf(i[1])
+            }else{
+                edgeMap[i[0]]?.add(i[1])
+            }
+            if (edgeMap[i[1]]==null){
+                edgeMap[i[1]]= mutableListOf(i[0])
+            }else{
+                edgeMap[i[1]]?.add(i[0])
+            }
+        }
+
+        queue.add(source)
+        while (queue.isNotEmpty()){
+            val poll = queue.poll()
+            if (prevEdgeSet.contains(poll)){
+                continue
+            }
+            prevEdgeSet.add(poll)
+
+            if (destination==poll){
+                return true
+            }
+
+
+            val curEdgeList= edgeMap[poll]?: mutableListOf()
+            queue.addAll(curEdgeList)
+
+        }
+        return false
+
+    }
+}

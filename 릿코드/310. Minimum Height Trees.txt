@@ -1,0 +1,97 @@
+그래프를 노드로 취급하고,각 n을 루트로 삼았을때 가장 작은높이의 트리의 루트값들을 리턴해라
+
+타임아웃
+import java.util.*
+
+class Solution {
+    fun findMinHeightTrees(n: Int, edges: Array<IntArray>): List<Int> {
+        if (n==1) return listOf(0)
+        val nodeMap=hashMapOf<Int,List<Int>>()
+        for (edge in edges) {
+            nodeMap[edge.first()]=nodeMap[edge.first()]?.plus(edge.last())?: mutableListOf(edge.last())
+            nodeMap[edge.last()]=nodeMap[edge.last()]?.plus(edge.first())?: mutableListOf(edge.first())
+        }
+        var max=99999
+        val resList= mutableListOf<Int>()
+
+        for (i in 0 until n) {
+            val queue: Queue<Pair<Int,Int>> = LinkedList()
+            val prevList= mutableListOf<Int>()
+            queue.add(Pair(i,1))
+            var tempMax=0
+            while (!queue.isEmpty()) {
+                val poll = queue.poll()
+                prevList.add(poll.first)
+                tempMax=poll.second
+                if (tempMax>max) {
+                    break
+                }
+                for (j in nodeMap[poll.first]!!) {
+                    if (prevList.contains(j)) {
+                        continue
+                    }
+                    queue.add(Pair(j,poll.second+1))
+                }
+            }
+            if (tempMax==max){
+                resList.add(i)
+            }
+            if (tempMax<max) {
+                max = tempMax
+                resList.clear()
+                resList.add(i)
+            }
+
+        }
+        return resList
+    }
+}
+정답
+import java.lang.Integer.max
+import java.lang.Integer.min
+class Solution {
+
+    fun findMinHeightTrees(n: Int, edges: Array<IntArray>): List<Int> {
+        if (n == 1) return arrayListOf(0)
+        if (n == 2) return arrayListOf(0, 1)
+
+        var adjMap = HashMap<Int, ArrayList<Int>>()
+
+
+        for (edge in edges) {       // [[1,0],[1,2],[1,3]]
+            if (adjMap.containsKey(edge[0]))
+                adjMap[edge[0]]?.add((edge[1]))
+            else
+                adjMap[edge[0]] = arrayListOf(edge[1])
+            if (adjMap.containsKey(edge[1]))
+                adjMap[edge[1]]?.add(edge[0])
+            else
+                adjMap[edge[1]] = arrayListOf(edge[0])
+        }
+
+
+        var queue = mutableListOf<Int>()   // Add the leaflets to the queue
+        for (i in 0 until n) {
+            var list = adjMap[i]
+            if (list != null)
+                if (list.size == 1) {
+                    queue.add(i)
+                }
+        }
+
+
+        while (adjMap.size > 2) {
+            var qSize = queue.size  
+            while (qSize-- > 0) {     
+                var i = queue.removeAt(0)
+                var ni = adjMap[i]?.get(0)
+                adjMap[ni]?.remove(i)
+                if (adjMap[ni]?.size == 1)
+                    queue.add(ni!!)
+                adjMap.remove(i)
+            }
+        }
+
+        return adjMap.keys.toList()
+    }
+}

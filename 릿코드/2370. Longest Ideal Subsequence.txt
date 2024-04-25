@@ -1,0 +1,23 @@
+가장 긴 조건을 만족하는 시퀸스를 찾아라
+문자삭제가능,정렬불가
+조건은 해당글자의 아스키코드로 앞자리가 k만큼 차이 안에 들어가야함
+그냥 n-2랑 n-1에 +1추가한거랑 비교해서 큰거 자기자리 메모이제이션하면될거같음
+
+
+class Solution {
+    fun longestIdealString(s: String, k: Int): Int {
+        var result = 0
+        val dp = IntArray(150)
+
+        for(curr in 0 until s.length) {
+            val i = s[curr].code
+
+            for(j in i - k .. i + k)
+                dp[i] = maxOf(dp[i], dp[j])
+
+            result = maxOf(result, ++dp[i])
+        }
+
+        return result
+    }
+}

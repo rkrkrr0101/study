@@ -1,0 +1,17 @@
+그냥 피보나치짭임 메모이제이션해서 데이터쌓아올려라 그거
+
+
+class Solution {
+    fun tribonacci(n: Int): Int {
+        val dpMap = hashMapOf<Int, Int>()
+        dpMap[0]=0
+        dpMap[1]=1
+        dpMap[2]=1
+        for (i in 3..n) {
+            dpMap[i]=dpMap[i-1]!!+dpMap[i-2]!!+dpMap[i-3]!!
+        }
+
+        return dpMap[n]!!
+
+    }
+}

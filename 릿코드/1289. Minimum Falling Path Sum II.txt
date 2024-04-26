@@ -1,0 +1,25 @@
+해당배열과 같은크기의 배열을 만든뒤(dp),해당위치의 값과,i-1의 값중 j가 같지않은 값중 가장 작은값을 더해서 배열에 넣기
+j가 같은값을 최대숫자로 치환한뒤 min치면될듯
+
+정답
+class Solution {
+    fun minFallingPathSum(grid: Array<IntArray>): Int {
+        val dpArray = Array(grid.size) { IntArray(grid[0].size) { 0 } }
+        for (i in grid[0].indices) {
+            dpArray[0][i] = grid[0][i]
+        }
+        for (i in grid.indices) {
+            if (i==0){
+                continue
+            }
+            
+            for (j in grid[0].indices) {
+                val tempArray = dpArray[i-1].copyOf()
+                tempArray[j]=2147483646
+                dpArray[i][j] = grid[i][j]+tempArray.min()
+            }
+        }
+        
+        return dpArray.last().min()
+    }
+}

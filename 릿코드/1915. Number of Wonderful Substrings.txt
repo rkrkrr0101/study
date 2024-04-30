@@ -1,0 +1,28 @@
+슬라이딩윈도우쓰면서 갯수세면될듯
+
+class Solution {
+    fun wonderfulSubstrings(word: String): Long {
+        val charr = word.toCharArray()
+        val n = charr.size
+
+        var result = 0L
+        val dp = LongArray(1 shl 11)
+        var bits = 0
+
+        for (i in 0 until n) {
+            val ch = charr[i].toInt() - 'a'.toInt()
+            bits = bits xor (1 shl ch)
+
+            var ret = dp[bits] + if (bits.countOneBits() <= 1) 1L else 0L
+
+            for (j in 0 until 10) {
+                ret += dp[bits xor (1 shl j)]
+            }
+
+            result += ret
+            dp[bits] += 1L
+        }
+
+        return result
+    }
+}

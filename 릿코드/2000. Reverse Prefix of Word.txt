@@ -1,0 +1,15 @@
+그냥 해당문자찾아서 거기까지 다 리버스하고,뒤에거 다시더하면될듯
+
+정답
+class Solution {
+    fun reversePrefix(word: String, ch: Char): String {
+        val chIndex = word.indexOfFirst { it == ch }
+        if (chIndex==-1){
+            return word
+        }
+        var res=""
+        res+= word.substring(0, chIndex+1).reversed()
+        res+=word.substring(chIndex+1,word.length)
+        return res
+    }
+}

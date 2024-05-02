@@ -1,0 +1,15 @@
+그냥 양수만 필터쳐서뽑아낸다음 정렬치고 뒤에서부터 자기 -가 본배열에 존재하는지 확인
+
+정답
+class Solution {
+    fun findMaxK(nums: IntArray): Int {
+        val sortList = nums.filter { it > 0 }.sortedDescending()
+        for (i in sortList){
+            if (nums.contains(-i)){
+                return i
+            }
+        }
+        return -1
+
+    }
+}

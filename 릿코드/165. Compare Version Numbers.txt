@@ -1,0 +1,47 @@
+콤마단위로 찢은다음 각 자리를 int로 변경후 왼쪽부터 비교
+
+서로 자리수가 다른경우엔 자리수맞는곳까지만 비교하고,뒷자리는 떼서 인트로 변경해서 비교
+
+
+
+정답
+import kotlin.math.max
+import kotlin.math.min
+
+class Solution {
+    fun compareVersion(version1: String, version2: String): Int {
+        val version1List = version1.split(".").map { it.toInt() }
+        val version2List = version2.split(".").map { it.toInt() }
+        val maxIndex= max(version1List.size, version2List.size)
+        val minIndex= min(version1List.size, version2List.size)
+        
+        for (i in 0 until minIndex) {
+            if (version1List[i] > version2List[i]) {return 1}
+            if (version1List[i] < version2List[i]) {return -1}
+        }
+        
+        if (maxIndex!=minIndex){
+            val version1MinorStr = version1List.subList(minIndex, version1List.size)
+                .toString().filter { it.isDigit() }
+            var version1Minor=0
+            if (version1MinorStr!=""){
+                version1Minor=version1MinorStr.toInt()
+            }
+            
+            var version2Minor=0
+            val version2MinorStr = version2List.subList(minIndex,version2List.size)
+                .toString().filter { it.isDigit() }
+            if (version2MinorStr!=""){
+                version2Minor=version2MinorStr.toInt()
+            }
+
+            if (version1Minor>version2Minor){return 1}
+            if (version1Minor<version2Minor){return -1}
+        }
+        
+        return 0
+
+
+
+    }
+}

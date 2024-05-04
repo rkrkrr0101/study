@@ -5,3 +5,4 @@
 멤버참조
 generateSequence()
 재귀(tailRef)
+sam

@@ -1,0 +1,37 @@
+해시맵에 다 때려박고,큰값부터 넣고,리미트에 자기뺀거중 가장 큰값도 -1후 res+1
+
+
+정답
+class Solution {
+    fun numRescueBoats(people: IntArray, limit: Int): Int {
+        val sortPeople = people.sorted()
+        var res=0
+        val peopleMap = hashMapOf<Int, Int>()
+        for (i in sortPeople){
+            peopleMap[i]=peopleMap[i]?.plus(1)?:1
+        }
+        while (peopleMap.isNotEmpty()){
+            val tempMax = peopleMap.keys.max()
+            res+=1
+            peopleMap[tempMax]=peopleMap[tempMax]!!-1
+            if (peopleMap[tempMax]==0){
+                peopleMap.remove(tempMax)
+
+            }
+            val otherLimit = limit - tempMax
+            val outer = peopleMap.keys.firstOrNull() { it <= otherLimit }
+            if (outer==null){
+                continue
+            }
+            peopleMap[outer]=peopleMap[outer]!!-1
+            if (peopleMap[outer]==0){
+                peopleMap.remove(outer)
+            }
+
+        }
+        return res
+    }
+}
+
+
+그냥 제일큰거랑 제일작은거랑 두개 더해서 리미트보다 크면 큰거만 리스트에서 제거하는거 반복하는게 시간복잡도도 낮고 더 편하긴했겠다 생각해보니

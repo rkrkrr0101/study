@@ -6,3 +6,4 @@
 generateSequence()
 재귀(tailRef)
 sam
+위임

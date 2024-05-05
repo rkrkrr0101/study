@@ -8,3 +8,5 @@ generateSequence()
 sam
 위임
 is(스마트캐스트)
+타입검사
+내포클래스

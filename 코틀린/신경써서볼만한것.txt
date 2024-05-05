@@ -7,3 +7,4 @@ generateSequence()
 재귀(tailRef)
 sam
 위임
+is(스마트캐스트)

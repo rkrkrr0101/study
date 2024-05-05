@@ -1,0 +1,13 @@
+걍 노드삭제하는 함수 만들라니까 그냥 다음거로 덮어씌우면끝인듯
+
+정답
+class Solution {
+    fun deleteNode(node: ListNode?) {
+        if (node != null) {
+            node. `val` = node.next!!.`val`
+            node.next = node.next!!.next
+        }
+
+
+    }
+}

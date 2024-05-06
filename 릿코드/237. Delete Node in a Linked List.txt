@@ -2,12 +2,32 @@
 
 정답
 class Solution {
-    fun deleteNode(node: ListNode?) {
-        if (node != null) {
-            node. `val` = node.next!!.`val`
-            node.next = node.next!!.next
+    var head1 : ListNode ? = null
+    fun removeNodes(head: ListNode?): ListNode? {
+
+        var stack = Stack<Int>()    
+        var curr = head
+         while (curr != null) {
+            while (!stack.isEmpty() && curr.`val` > stack.peek()) {
+                stack.pop()
+            }
+            stack.push(curr.`val`)
+            curr = curr.next
         }
 
+        while (!stack.isEmpty()) {
+            addNode(ListNode(stack.pop()))
+        }
 
+       
+        return head1
+    }
+    fun addNode(node:ListNode?){
+ if (head1 == null) {
+            head1 = node
+        } else {
+            node?.next = head1
+            head1 = node
+        }
     }
 }

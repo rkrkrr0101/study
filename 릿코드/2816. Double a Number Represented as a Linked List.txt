@@ -1,0 +1,30 @@
+그냥 다 뽑아낸다음 x2하고 스트링으로 바꿔서 한자리씩 노드생성하기
+
+정답
+class Solution {
+    fun doubleIt(head: ListNode?): ListNode? {
+        var curNode=requireNotNull(head)
+        var tempValue=""
+        while (true){
+            tempValue+=curNode.`val`.toString()
+            if (curNode.next==null){
+                break
+            }
+            curNode=curNode.next!!
+        }
+        val resStr = (tempValue.toBigDecimal() * BigDecimal(2)).toString()
+        var prevNode=ListNode(resStr[0].digitToInt())
+        val resNode=prevNode
+        for (i in resStr.substring(1,resStr.length)){
+            val tempNode=ListNode(i.digitToInt())
+            prevNode.next=tempNode
+            prevNode=tempNode
+        }
+        return resNode
+
+    }
+}
+
+class ListNode(var `val`: Int) {
+         var next: ListNode? = null
+}

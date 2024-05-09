@@ -1,0 +1,16 @@
+그냥 정렬친다음에 k번만큼 반복해서,res에 더할때 max(루프인덱스만큼 뺀거,0)하면될듯
+
+
+
+정답
+class Solution {
+    fun maximumHappinessSum(happiness: IntArray, k: Int): Long {
+        val happyList = happiness.sorted().reversed()
+        var res=0L
+        for (i in 0 until k){
+            res+= max( happyList[i]-i,0)
+        }
+
+        return res
+    }
+}

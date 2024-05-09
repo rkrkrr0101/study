@@ -1,0 +1,38 @@
+그냥 배열의 랭크매기고 1,2,3등 이름바꾸기
+배열랭크매기는게 표준라이브러리에 있었던거같은데 기억안난다
+
+
+정답
+
+class Solution {
+    fun findRelativeRanks(score: IntArray): Array<String> {
+        val scoreMap = hashMapOf<Int, Int>()
+        for ((index,value) in score.withIndex()){
+            scoreMap[value] = index
+        }
+        val sortIndexList = scoreMap.keys.sorted().reversed()
+        val valueList = mutableListOf<Int>()
+        for (i in sortIndexList){
+            valueList.add(scoreMap.getValue(i))
+        }
+        val resArray= Array(score.size) { "" }
+        for ((index,value) in valueList.withIndex()){
+            if (index==0){
+                resArray[value]="Gold Medal"
+                continue
+            }
+            if (index==1) {
+                resArray[value]="Silver Medal"
+                continue
+            }
+            if (index==2) {
+                resArray[value]="Bronze Medal"
+                continue
+            }
+            resArray[value]=(index+1).toString()
+        }
+
+        return resArray
+    }
+
+}

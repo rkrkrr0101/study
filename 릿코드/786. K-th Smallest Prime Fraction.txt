@@ -1,0 +1,21 @@
+그냥 이중루프돌려서 해당값들 전부 넣고 나누기한다음 맵에 값,나눈값 리스트<int>로 넣고,키 정렬해서 k번째꺼 리스트리턴
+이진탐색써도될거같은문제
+
+
+정답
+class Solution {
+    fun kthSmallestPrimeFraction(arr: IntArray, k: Int): IntArray {
+        val divMap = hashMapOf<Double, List<Int>>()
+        val sortArrList = arr.sorted()
+        for (i in sortArrList.indices){
+            for (j in i until sortArrList.size){
+                val tempList = listOf(sortArrList[i], sortArrList[j])
+                val divValue = sortArrList[i].toDouble() / sortArrList[j].toDouble()
+                divMap[divValue]=tempList
+            }
+        }
+        val keyList = divMap.keys.sorted()
+        val res=divMap[keyList[k-1]]?:throw IllegalArgumentException()
+        return res.toIntArray()
+    }
+}

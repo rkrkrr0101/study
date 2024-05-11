@@ -1,0 +1,22 @@
+가장 효율이 높은애들순으로 정렬하고,그순으로 가져가기
+
+
+
+class Solution {
+    fun mincostToHireWorkers(quality: IntArray, wage: IntArray, k: Int): Double {
+
+        val workers =  quality.foldIndexed(Array(quality.size){0.0 to 0.0}) { i, r, q ->
+                                    val q = q.toDouble()
+                                    r[i] = wage[i].toDouble()/q to q 
+                                    r }
+                              .sortedBy { it.first }
+
+        val pq = PriorityQueue<Double> { a, b -> (b - a).toInt() }
+        var pqSum = 0.0
+
+        return workers.fold(Double.MAX_VALUE) { r, w ->
+                        pqSum += w.second .also { pq.add(it) }
+                        if (pq.size > k) pqSum -= pq.poll()
+                        if (pq.size == k) minOf(pqSum*w.first, r) else r }
+    }
+}

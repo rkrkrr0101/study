@@ -1,0 +1,46 @@
+n-2짜리 최대풀링층을 만들어라
+그냥 3x3윈도우 만들고,해당윈도우 가로로 끝까지 밀고,세로로 밀고 하면될듯
+
+
+정답
+class Solution {
+    fun largestLocal(grid: Array<IntArray>): Array<IntArray> {
+        val len=grid.size
+        val resList=mutableListOf<IntArray>()
+        for (i in 0 until len) {
+            val rowList= mutableListOf<Int>()
+            for (j in 0 until len) {
+                if (!isValid(grid, i, j)){
+                    continue
+                }
+                val tempList=mutableListOf<Int>()
+                tempList.add(grid[i-1][j+1])
+                tempList.add(grid[i][j+1])
+                tempList.add(grid[i+1][j+1])
+                tempList.add(grid[i-1][j])
+                tempList.add(grid[i][j])
+                tempList.add(grid[i+1][j])
+                tempList.add(grid[i-1][j-1])
+                tempList.add(grid[i][j-1])
+                tempList.add(grid[i+1][j-1])
+                rowList.add(tempList.max())
+            }
+            if (rowList.isNotEmpty()) {
+                resList.add(rowList.toIntArray())
+            }
+
+        }
+        return resList.toTypedArray()
+
+
+    }
+    private fun isValid(grid: Array<IntArray>,i:Int,j:Int): Boolean {
+        val len=grid.size
+        if (i+1>=len) {return false}
+        if (i-1<0) {return false}
+        if (j+1>=len) {return false}
+        if (j-1<0) {return false}
+        return true
+
+    }
+}

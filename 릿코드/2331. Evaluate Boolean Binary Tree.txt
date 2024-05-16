@@ -1,0 +1,29 @@
+그냥 시키는대로하면될듯 재귀타면서
+
+
+정답
+class Solution {
+    fun evaluateTree(root: TreeNode?): Boolean {
+        val res = leftFirstTreeLeafSearch(root)
+        if (res ==0) return false
+        return true
+    }
+    fun leftFirstTreeLeafSearch(root1: TreeNode?):Int{
+
+        if (root1==null){
+            throw IllegalArgumentException()
+        }
+        if (root1.left==null && root1.right==null){
+            return root1.`val`
+        }
+        val left=leftFirstTreeLeafSearch(root1.left)
+        val right=leftFirstTreeLeafSearch(root1.right)
+        if (root1.`val`==2){
+            return min(1,left+right)
+        }
+        if (root1.`val`==3){
+            return left*right
+        }
+        throw IllegalArgumentException()
+    }
+}

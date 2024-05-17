@@ -1,0 +1,28 @@
+그냥 노드다루는문제
+타겟값이 자신일때 마지막에 좌우확인후 제거 한번 더돌려주는거로 해결가능
+
+정답
+class Solution {
+    fun removeLeafNodes(root: TreeNode?, target: Int): TreeNode? {
+        return leftFirstTreeLeafSearch(root, target)
+    }
+    fun leftFirstTreeLeafSearch(root1: TreeNode?,target: Int):TreeNode?{
+
+        if (root1==null){
+            return null
+        }
+        if (root1.left==null && root1.right==null){
+            if (root1.`val`==target){
+                return null
+            }
+        }
+        root1.left=leftFirstTreeLeafSearch(root1.left,target)
+        root1.right=leftFirstTreeLeafSearch(root1.right,target)
+        if (root1.`val`==target){
+            if (root1.left==null && root1.right==null){
+                return null
+            }
+        }
+        return root1
+    }
+}

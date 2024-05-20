@@ -1,0 +1,43 @@
+모든 서브셋을 구하고 모든 서브셋의 xor값의 합을 리턴
+걍시키는대로하면됨
+
+정답
+class Solution {
+    fun subsetXORSum(nums: IntArray): Int {
+        val numList = nums.toList()
+        val subsetList = numList.subset()
+        var res=0
+        for (i in subsetList){
+            if (i.isEmpty()) continue
+            if(i.size==1){
+                res+=i[0]
+                continue
+            }
+            var tempRes=i[0]
+
+            for (j in i.subList(1,i.size)){
+                tempRes=tempRes xor j
+            }
+            res+=tempRes
+        }
+        return res
+    }
+}
+
+
+
+fun List<Int>.subset(): List<List<Int>> {
+    val res = mutableListOf<List<Int>>()
+
+    for (i in 0 until (1 shl this.size)) {
+        val list = mutableListOf<Int>()
+        for (j in this.indices) {
+            if (i and (1 shl j) != 0) {
+                list.add(this[j])
+            }
+        }
+
+        res.add(list)
+    }
+    return res
+}

@@ -1,0 +1,28 @@
+그냥 서브셋만들라는거
+
+
+정답
+class Solution {
+    fun subsets(nums: IntArray): List<List<Int>> {
+        val subsetList = nums.toList().subset()
+        return subsetList
+    }
+}
+
+
+
+fun List<Int>.subset(): List<List<Int>> {
+    val res = mutableListOf<List<Int>>()
+
+    for (i in 0 until (1 shl this.size)) {
+        val list = mutableListOf<Int>()
+        for (j in this.indices) {
+            if (i and (1 shl j) != 0) {
+                list.add(this[j])
+            }
+        }
+
+        res.add(list)
+    }
+    return res
+}

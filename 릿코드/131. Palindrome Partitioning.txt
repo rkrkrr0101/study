@@ -1,0 +1,34 @@
+
+class Solution {
+    // Approach: Recursive DFS. Make the recursive call only if the current string
+    // is a palindrome, else check the next possible substring.
+    // T = O(2^n)
+    fun partition(s: String): List<List<String>> {
+        val results = mutableListOf<List<String>>()
+        
+        fun partitionRecur(currentList: MutableList<String>, startIndex: Int) {
+            // Base case, exit when the index is out of bounds. If we are here we
+            // know all the strings that were added are palindromes
+            if (startIndex == s.length) {
+                results.add(currentList.toList())
+                return
+            }
+
+            val currentStr = StringBuilder()
+            // Check all possible substrings starting with the startIndex
+            for (i in startIndex until s.length) {
+                // Keep appending regardless of palindrome
+                currentStr.append(s[i])
+                // Make the recursive call only if the current string is a palindrome
+                if (currentStr.toString().contentEquals(currentStr.reversed().toString())) {
+                    currentList.add(currentStr.toString())
+                    partitionRecur(currentList, i + 1)
+                    // Clean up
+                    currentList.removeAt(currentList.lastIndex)
+                }
+            }
+        }
+        partitionRecur(mutableListOf(), 0)
+        return results.toList()
+    }
+}

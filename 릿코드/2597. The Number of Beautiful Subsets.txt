@@ -1,0 +1,32 @@
+갯수 작으니까 서브셋 다뽑은다음에 루프돌리면될듯
+
+class Solution {
+
+    fun beautifulSubsets(nums: IntArray, k: Int): Int {
+
+        if(nums.size == 1 || nums.isEmpty()) return nums.size
+        nums.sort()
+
+        var count = 0
+        val seen = hashMapOf<Int,Int>()
+
+        fun backTrack(index:Int) {
+            if(index == nums.size) {
+                return
+            }
+
+            for(i in index until nums.size) {
+                val cur = nums[i]
+                if(seen.getOrDefault(cur - k, 0) == 0) {
+                    count++
+                    seen[cur] = seen.getOrDefault(cur,0) + 1
+                    backTrack(i+1)
+                    seen[cur] = seen[cur]!! - 1
+                }
+            }
+        }
+
+        backTrack(0)
+        return count
+    }
+}

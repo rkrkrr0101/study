@@ -1,0 +1,54 @@
+그냥 해시맵에 때려박고 점수계산해서 젤큰거리턴하면될듯
+
+
+class Solution {
+    fun maxScoreWords(words: Array<String>, letters: CharArray, score: IntArray): Int {
+         // Step 1: Count the available letters
+        val lettersCounter = mutableMapOf<Char, Int>()
+        for (letter in letters) {
+            lettersCounter[letter] = lettersCounter.getOrDefault(letter, 0) + 1
+        }
+
+        // Step 2: Initialize the totalScore
+        var totalScore = 0
+
+        // Step 3: Define the recursive function to explore all combinations
+        fun explore(index: Int, letterCounter: MutableMap<Char, Int>, currScore: Int) {
+            // Update the total score with the current score if it's higher
+            totalScore = maxOf(totalScore, currScore)
+
+            // Base case: if all words have been considered, return
+            if (index == words.size) return
+
+            // Step 3: Try each word starting from the current index
+            for (i in index until words.size) {
+                val tmpCounter = letterCounter.toMutableMap()
+                val word = words[i]
+                var wordScore = 0
+                var isValid = true
+
+                // Check if the word can be formed with the available letters
+                for (ch in word) {
+                    if (tmpCounter.getOrDefault(ch, 0) > 0) {
+                        tmpCounter[ch] = tmpCounter.getOrDefault(ch, 0) - 1
+                        wordScore += score[ch - 'a']
+                    } else {
+                        isValid = false
+                        break
+                    }
+                }
+
+                // If the word can be formed, explore further with the updated state
+                if (isValid) {
+                    explore(i + 1, tmpCounter, currScore + wordScore)
+                }
+            }
+        }
+
+        // Start the exploration from index 0 with the initial letter counts and score 0
+        explore(0, lettersCounter, 0)
+
+        // Step 4: Return the maximum score found
+        return totalScore
+    }
+}

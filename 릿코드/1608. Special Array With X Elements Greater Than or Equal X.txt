@@ -1,0 +1,17 @@
+자기와 자기보다 큰 숫자의 갯수가 같은(1,2,3,4 에서 2보다 큰게 3,4 2개니 성립)게 있으면 해당값을 리턴
+
+
+정답
+class Solution {
+    fun specialArray(nums: IntArray): Int {
+        var res = 0
+        for (i in 0..nums.size) {
+            val size = nums.filter { it >= i }.size
+            if (size==i){
+                return i
+            }
+
+        }
+        return -1
+    }
+}

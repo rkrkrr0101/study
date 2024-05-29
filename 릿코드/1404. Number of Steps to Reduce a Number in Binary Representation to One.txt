@@ -1,0 +1,23 @@
+그냥 이진수 스트링을 십진수로 변경하고,해당숫자가 홀수면 +1 짝수면 /2하면서 1될때까지 반복후 반복횟수리턴
+long로도 크기제한때문에 안되고 BigDecimal써야함
+그거빼면 쉬움
+
+정답
+import java.math.BigDecimal
+
+class Solution {
+    fun numSteps(s: String): Int {
+        var target = s.toBigInteger(2).toBigDecimal()
+
+        var res=0
+        while (target!= BigDecimal.ONE){
+            if (target%(BigDecimal(2))  == BigDecimal(1)){
+                target=target.plus(BigDecimal(1))
+            }else{
+                target=target.div(BigDecimal(2))
+            }
+            res+=1
+        }
+        return res
+    }
+}

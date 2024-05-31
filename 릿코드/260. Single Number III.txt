@@ -1,0 +1,12 @@
+걍 해시맵에 때려박고 1인거리턴하면될듯
+
+
+정답
+class Solution {
+    fun singleNumber(nums: IntArray): IntArray {
+        val numMap = hashMapOf<Int, Int>()
+        nums.forEach {numMap[it]=numMap[it]?.plus(1)?:1}
+
+        return numMap.filter{it.value==1 }.map { it.key }.toIntArray()
+    }
+}

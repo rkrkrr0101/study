@@ -1,0 +1,20 @@
+그냥 앞에거랑 뒤에거 아스키코드로 바꿔서 빼기
+
+
+정답
+import kotlin.math.absoluteValue
+
+class Solution {
+    fun scoreOfString(s: String): Int {
+        var res = 0
+        var before=0
+        s.forEach {
+            if(before!=0){
+                res+=(it.code-before).absoluteValue
+            }
+            before=it.code
+
+        }
+        return res
+    }
+}

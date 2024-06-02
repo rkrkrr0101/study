@@ -1,0 +1,9 @@
+걍 스트링을 o(1)메모리로 뒤집기
+
+
+정답
+class Solution {
+    fun reverseString(s: CharArray): Unit {
+        s.reverse()
+    }
+}

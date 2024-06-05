@@ -1,0 +1,21 @@
+그냥 해당문자열로 만들수있는 최대크기팰린드롬의 길이를 만들라는거
+예제1번을 보면 문자열을 마음대로 조작할수있음,즉 해시맵에 담아서 2이상인거 갯수센다음에 1인거 하나더해서 리턴하면됨
+
+
+정답
+class Solution {
+    fun longestPalindrome(s: String): Int {
+        val hashMap = hashMapOf<Char, Int>()
+        s.forEach { hashMap[it]=hashMap[it]?.plus(1) ?: 1 }
+        var res=0
+        hashMap.forEach { res+=(it.value/2)*2 }
+        val size = hashMap.filter { it.value % 2 == 1 }.toList().size
+        if (size>=1){
+            res+=1
+        }
+        return res
+
+
+    }
+
+}

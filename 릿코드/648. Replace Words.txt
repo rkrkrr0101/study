@@ -1,0 +1,17 @@
+해당 스트링을 공백을 기준으로 자른후,사전과 비교해 가장 짧은 startsWith로 변경
+사전을 정렬하고,find를 쓰면될듯
+
+
+정답
+class Solution {
+    fun replaceWords(dictionary: List<String>, sentence: String): String {
+        val sortDict = dictionary.sorted()
+        val splitSentence = sentence.split(' ')
+        var res=""
+        for (i in splitSentence){
+            val temp = sortDict.find { i.startsWith(it) } ?: i
+            res+= "$temp "
+        }
+        return res.trim()
+    }
+}

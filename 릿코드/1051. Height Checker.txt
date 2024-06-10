@@ -1,0 +1,17 @@
+그냥 정렬친거랑 원본이랑 랭스로 for돌려서 다르면 res+=1
+
+
+정답
+class Solution {
+    fun heightChecker(heights: IntArray): Int {
+        val sortList = heights.sorted()
+        val heightList = heights.toList()
+        var res=0
+        for (i in heightList.indices) {
+            if (heightList[i] != sortList[i]) {
+                res+=1
+            }
+        }
+        return res
+    }
+}

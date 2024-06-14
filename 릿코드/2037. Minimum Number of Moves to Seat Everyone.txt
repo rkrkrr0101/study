@@ -1,0 +1,17 @@
+배열두개를 일치시키는 비용을 리턴해라
+그냥 둘다 정렬치고 앞에서부터 절대값차이 더해서 리턴
+
+정답
+import kotlin.math.abs
+
+class Solution {
+    fun minMovesToSeat(seats: IntArray, students: IntArray): Int {
+        val seatList = seats.sorted()
+        val studentList = students.sorted()
+        var res=0
+        for (i in seatList.indices){
+            res+= abs(seatList[i]-studentList[i])
+        }
+        return res
+    }
+}

@@ -1,0 +1,62 @@
+1.스프링개발 시작하기
+	개발할땐
+		빠르게 완성해서 가장 간단한 방법 찾기
+		작성한코드가 동작하는지 확인하는 방법 찾기
+		조금씩 기능을 추가하고 다시 검증
+		코드를 한눈에 이해하기 힘들다면 코멘트달기(안다는게 낫지만 이해하기힘든데 없는거보단 있는게 나음)
+	그래서 각 요구사항을 작은 스탭으로 쪼개고,각 스탭단위로 만들고,테스트하고,개선하고 완성을 하고 다음스탭을 진행
+	
+	코틀린에선 최상위함수를 만들면 인텔리제이로 해당파일을 실행시킬때 해당함수를 실행시킴
+	
+	https://open.er-api.com/v6/latest/USD 여기서 환율정보등을 받을수있음
+	
+	리눅스에서 http -v url을 하면 내가 보내는 정보도 표시를해줌
+	
+	구시대 api호출처리
+		val url = URL("https://open.er-api.com/v6/latest/$currency")		
+        val connection = url.openConnection() as HttpURLConnection
+        val br = BufferedReader(InputStreamReader(connection.inputStream))
+        val response = br.lines().collect(Collectors.joining())
+        br.close()
+	url열고 버퍼로 받아서 바이트합성후 스트림닫기
+	어짜피 요즘은 잭슨쓰고 그러겠지
+	
+	잭슨매퍼쓸때 코틀린에서는 그냥 ObjectMapper쓰는게 아니라
+		implementation("com.fasterxml.jackson.module:jackson-module-kotlin")//의존성
+		val mapper = jacksonObjectMapper()
+		val data = mapper.readValue(response, ExRateData::class.java)
+	jacksonObjectMapper를 써야함,그냥 ObjectMapper는 자바용이라 안되는게있음
+	
+	이때 json의 최상위키와 현재필드중 같은이름을 매핑해줌
+	
+2.오브젝트와 의존관계
+  1.오브젝트와 의존관계
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+		

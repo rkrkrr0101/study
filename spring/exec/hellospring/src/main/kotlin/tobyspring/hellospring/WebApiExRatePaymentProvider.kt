@@ -1,6 +1,7 @@
 package tobyspring.hellospring
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import org.springframework.stereotype.Component
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.math.BigDecimal
@@ -8,6 +9,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.stream.Collectors
 
+@Component
 class WebApiExRatePaymentProvider : ExRateProvider {
     override fun getExRate(currency: String): BigDecimal {
         val url =

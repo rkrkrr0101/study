@@ -1,12 +1,11 @@
 package tobyspring.hellospring
 
+import org.springframework.stereotype.Component
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
-class PaymentService {
-    // private val exRateProvider:ExRateProvider = WebApiExRatePaymentProvider()
-    private val exRateProvider: ExRateProvider = SimpleExRateProvider()
-
+@Component
+class PaymentService(private val exRateProvider: ExRateProvider) {
     fun prepare(
         orderId: Long,
         currency: String,

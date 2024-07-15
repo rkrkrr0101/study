@@ -1,7 +1,9 @@
 package tobyspring.hellospring
 
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import tobyspring.hellospring.payment.PaymentService
 import java.math.BigDecimal
+import java.util.concurrent.TimeUnit
 
 class Client {
     companion object {
@@ -9,8 +11,18 @@ class Client {
         fun main(args: Array<String>) {
             val beanFactory = AnnotationConfigApplicationContext(ObjectFactory::class.java)
             val paymentService = beanFactory.getBean(PaymentService::class.java)
-            val prepare = paymentService.prepare(100L, "USD", BigDecimal.valueOf(50.7))
-            println(prepare)
+
+            val prepare1 = paymentService.prepare(100L, "USD", BigDecimal.valueOf(50.7))
+            println(prepare1)
+            println("------------------")
+            TimeUnit.SECONDS.sleep(1)
+            val prepare2 = paymentService.prepare(100L, "USD", BigDecimal.valueOf(50.7))
+            println(prepare2)
+
+            TimeUnit.SECONDS.sleep(4)
+
+            val prepare3 = paymentService.prepare(100L, "USD", BigDecimal.valueOf(50.7))
+            println(prepare3)
         }
     }
 }

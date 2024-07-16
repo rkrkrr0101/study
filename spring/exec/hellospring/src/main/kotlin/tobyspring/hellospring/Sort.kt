@@ -1,6 +1,10 @@
 package tobyspring.hellospring
 
 class Sort {
+    fun sort(list: List<String>): List<String> {
+        return list.sortedBy { it.length }
+    }
+
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {

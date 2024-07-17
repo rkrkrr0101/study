@@ -9,7 +9,7 @@ class Client {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
-            val beanFactory = AnnotationConfigApplicationContext(ObjectFactory::class.java)
+            val beanFactory = AnnotationConfigApplicationContext(PaymentConfig::class.java)
             val paymentService = beanFactory.getBean(PaymentService::class.java)
 
             val prepare1 = paymentService.prepare(100L, "USD", BigDecimal.valueOf(50.7))

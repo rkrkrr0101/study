@@ -2,25 +2,28 @@ package tobyspring.hellospring
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import tobyspring.hellospring.exrate.CachedExRateProvider
-import tobyspring.hellospring.exrate.WebApiExRatePaymentProvider
 import tobyspring.hellospring.payment.ExRateProvider
+import tobyspring.hellospring.payment.ExRateProviderStub
 import tobyspring.hellospring.payment.PaymentService
+import java.math.BigDecimal
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 
 @Configuration
-class ObjectFactory {
+class TestPaymentConfig {
     @Bean
     fun paymentService(): PaymentService {
-        return PaymentService(CachedExRateProvider())
+        return PaymentService(exRateProvider(), clock())
     }
 
     @Bean
     fun exRateProvider(): ExRateProvider {
-        return WebApiExRatePaymentProvider()
+        return ExRateProviderStub(BigDecimal(1000))
     }
 
     @Bean
-    fun cachedExRateProvider(): ExRateProvider {
-        return CachedExRateProvider()
+    fun clock(): Clock {
+        return Clock.fixed(Instant.now(), ZoneId.systemDefault())
     }
 }

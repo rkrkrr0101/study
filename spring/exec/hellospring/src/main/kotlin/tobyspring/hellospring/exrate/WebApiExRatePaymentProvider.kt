@@ -6,24 +6,38 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.math.BigDecimal
 import java.net.HttpURLConnection
-import java.net.URL
+import java.net.URI
 import java.util.stream.Collectors
 
 class WebApiExRatePaymentProvider : ExRateProvider {
     override fun getExRate(currency: String): BigDecimal {
-        val url =
-            URL("https://open.er-api.com/v6/latest/$currency")
-        val connection = url.openConnection() as HttpURLConnection
-        val br = BufferedReader(InputStreamReader(connection.inputStream))
-        val response = br.lines().collect(Collectors.joining())
-        br.close()
+        val url = "https://open.er-api.com/v6/latest/$currency"
+        return runApiForExRate(url)
+    }
 
-        val mapper = jacksonObjectMapper()
-        val data = mapper.readValue(response, ExRateData::class.java)
-        val exRate = data.rates["KRW"] ?: throw IllegalArgumentException("KRW is null")
+    private fun runApiForExRate(url: String): BigDecimal {
+        val uri = URI(url)
+        val connection = uri.toURL().openConnection() as HttpURLConnection
+        val response = executeApi(connection)
+        val exRate = extractExRate(response)
 
         println(exRate)
 
         return exRate
+    }
+
+    private fun extractExRate(response: String): BigDecimal {
+        val mapper = jacksonObjectMapper()
+        val data = mapper.readValue(response, ExRateData::class.java)
+        val exRate = data.rates["KRW"] ?: throw IllegalArgumentException("KRW is null")
+        return exRate
+    }
+
+    private fun executeApi(connection: HttpURLConnection): String {
+        val response =
+            BufferedReader(InputStreamReader(connection.inputStream)).use {
+                it.lines().collect(Collectors.joining())
+            }
+        return response
     }
 }

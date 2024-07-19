@@ -4,8 +4,7 @@ import tobyspring.hellospring.payment.ExRateProvider
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
-class CachedExRateProvider : ExRateProvider {
-    private val target: ExRateProvider = WebApiExRatePaymentProvider()
+class CachedExRateProvider(private val target: ExRateProvider) : ExRateProvider {
     private var cachedExRate: BigDecimal = target.getExRate("USD")
     private var cacheExpTime: LocalDateTime = LocalDateTime.now().plusSeconds(3)
 

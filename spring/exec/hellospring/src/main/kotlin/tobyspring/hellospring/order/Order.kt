@@ -6,8 +6,7 @@ class Order(
     no: String,
     total: BigDecimal,
 ) {
-    var id = 0
-        protected set
+    var id = 0L
 
     var no = no
         protected set

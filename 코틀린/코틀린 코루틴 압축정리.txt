@@ -1,0 +1,17 @@
+코루틴시작
+	launch:결과를 반환할필요가 없을때 사용,job을 반환
+	async:결과를 반환할필요가 있을때 사용,Deferred를 반환
+	withContext:
+코루틴 기다리기
+	join:job이 끝날때까지 대기,launch와 같이 자주 사용됨
+	await:Deferred가 끝날때까지 대기한후 결과값을 반환,async와 같이 사용됨
+코루틴 취소
+	cancelAndJoin:job을 캔슬하고 Cancelled가 될때까지(모든 자식코루틴이 취소될때까지) 대기
+	
+	
+* Coroutine 예외처리
+CoroutineExceptionHandler를 이용하여 코루틴 내부의 기본 catch block으로 사용할 수 있다.
+launch, actor: exception발생 시 바로 예외가 발생한다.
+async, produce: 중간에 exception이 발생하면 부모의 코루틴까지 모두 취소시킨다. 이는 structured concurrency를 유지하기 위함으로 CoroutineExceptionHandler를 설정해도 막을 수 없다.
+자식 코루틴에서 exception이 발생하면 다른 자식 코루틴 및 부모코루틴이 다 취소되버리기 때문에, 문제가 생긴 코루틴만 exception 처리할 수 있도록 하기 위해 CoroutineExceptionHandler를 설정한다. 단, CancellationException는 handler에서 무시된다.
+여러개의 exception이 발생하면 가장 먼저 발생한 exception이 handler로 전달되며 나머지는 무시된다.

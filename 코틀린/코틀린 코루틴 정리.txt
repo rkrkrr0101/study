@@ -730,19 +730,141 @@
 	코루틴스코프함수는 람다식 전체를 래핑할때 주로 사용됨
 
 12.디스패처
+  1.서론
+	디스패처는 코루틴이 실행되어야 할,즉 시작되거나 재개될 스레드를 결정할수있게 함
+	또한 직접적으로 코루틴이 어디서 실행될지 정하는건 CoroutineContext임
+
+  2.기본디스패처
+	디스패처를 설정하지않으면 기본값은 cpu집약적인 연산을 수행하게 설계된 Dispatchers.Default를 사용함
+	이건 코드가 실행되는 컴퓨터의 cpu코어 갯수와 동일한수의 스레드풀을 가지고있음(이론상 최적의 스레드수)
 	
+	추가적으로 runBlocking은 디스패처설정을 안하면 자신만의 디스패처를 사용해서,Dispatchers.Default를 사용하지않음
+
+  3.기본디스패처를 제한하기
+	비용이 많이드는 작업이 Dispatchers.Default의 스레드를 다 써버려서,같은 디스패처를 사용하는 다른코루틴이 실행될 기회를 제한한다면,
+	이때 limitedParallelism을 사용해서 디스패처가 같은 스레드풀을 사용하지만,같은시간에 해당갯수이상 스레드를 사용하지못하게 제한할수있음
+		val dispatcher11=Dispatchers.Default.limitedParallelism(5)
+	이건 Default에만 사용하지않고 여러군데서 사용함(주로 Dispatchers.IO에서 사용함)
+
+  4.메인 디스패처
+	안드로이드같은 어플리케이션쪽에선,가장 중요한 스레드인 메인스레드라는 개념이 있음
+	이 메인스레드는 ui와 상호작용하는데 사용되는 유일한 스레드임
+	이 메인스레드는 조심스럽게 다뤄야함,이게 멈추면 전체앱이 멈춰버림
+	이 메인스레드에서 코루틴을 실행할떈 Dispatchers.Main을 사용하면됨
+	
+	만약 블로킹하지않고 복잡한 연산을 쓰지않는다면 Dispatchers.Main을 써도되지만,
+	Cpu집약적인 작업을 실행한다면 Dispatchers.Default로 실행해야함
+	또한 Cpu는 별로 안들지만 스레드를 블로킹해야하는,시간이 오래걸리는 io작업을 하려면 Dispatchers.IO를 사용하면됨
+
+  5.IO디스패처
+	Dispatchers.IO는 파일을 읽고 쓸때,블로킹함수를 호출할때 등 io연산으로 스레드를 블로킹해야할때 사용하기위해 설계됨
+	Dispatchers.Default는 프로세스가 가진 코어수로 제한이 되지만,여기는 추가적으로 더 많은 갯수의 스레드풀을 생성함
+	
+	이때 중요한건 Dispatchers.Default와 Dispatchers.IO는 같은 스레드풀을 공유한다는것
+	즉 Dispatchers.Default로 실행되는 도중에 withContext(Dispatchers.IO){..}에 도달하면,
+	대부분 같은스레드풀(Dispatchers.Default)로 실행되지만,
+	만약 Default의 갯수를 넘겼을경우에는 스레드 수 제한이 Dispatchers.IO걸 사용하는식으로 적용됨(디폴트먼저쓰고 모자라면 io)
+	즉 디폴트 12개 io 30개면,공유스레드풀에서 활성화된 갯수는 42개임
+	
+	그리고 스레드의 한도는 독립적이라서,다른 디스패처의 스레드를 고갈시키지않음
+	
+	Dispatchers.IO를 사용하는 가장 흔한경우는,블로킹함수를 호출해야할때 사용됨
+	이때는
+		suspend fun aa:abcd=withContext(Dispatchers.IO){..}
+	이렇게 래핑해서 중단함수로 만드는게 가장좋음,이러면 쓰기도편함
+	
+	만약 저 래핑한 함수가 너무 많은 스레드를 블로킹할경우엔,limitedParallelism를 사용해야함
+
+  6.커스텀스레드풀을 사용하는 io디스패처
+	Dispatchers.IO에는 limitedParallelism을 위해 정의된 특별한 작동방식이 있음
+	limitedParallelism은 독립적인 스레드풀을 가진 새로운 디스패처를 만드는데,이렇게 만들어진 풀은 원하는만큼 스레드수를 설정할수있음
+	디스패처의 한도는 서로 무관하기때문에 아예 새로운 디스패처를 만들어버리고,갯수제한도 풀어주면 딱맞게 만들수있는거
+	
+	즉
+		Dispatchers.Default의 limitedParallelism->기본스레드풀 안에서 갯수제한(12개중 5개만 쓰기)
+		Dispatchers.io->새로운 io용 스레드풀(기본스레드풀과 별개)
+		Dispatchers.io.limitedParallelism->완전히 새로운 io용 스레드풀(기본스레드풀과 별개고,Dispatchers.IO과도 별개)
+	이렇게됨
+	모든 디스패처는 스레드가 무제한인 스레드풀을 함께 공유함
+	
+	limitedParallelism을 사용하는 가장 좋은방법은,스레드를 블로킹하는 경우가 잦은 클래스에서,자기만의 한도를 가진 커스텀 디스패처를 정의하는것
+	한도는 대충 딱 맞추는게 좋음,너무많으면 자원낭비고,너무적으면 회차를 돌아야해서 오래걸림
+	가장 중요한건 이때 사용하는 스레드한도가 Dispatchers.IO을 비롯한 다른 디스패처와 무관하다는것
+	그래서 얘가 뭔짓을하든 다른서비스를 블로킹하진않음
+
+  7.정해진수의 스레드풀을 가진 디스패처
+	만약 스레드풀을 직접 관리하길 원하면,Executors클래스로 스레드의 수가 정해져있는 스레드풀이나 캐싱된 스레드풀을 만들수있음
+	이건 asCoroutineDispatcher로 디스패처로 변형하는것도 가능함
+	
+	주의할건,ExecutorService.asCoroutineDispatcher()로 만들어진 디스패처는 반드시 close로 닫혀야함
+	이걸 까먹으면 그대로 스레드누수임
+	또 다른문제는 이렇게 스레드풀을 만들면 스레드가 효율적으로 돌아가지않음
+	사용하지않는 스레드가 다른서비스와 공유되지않고 살아있는채로 유지되기때문
+
+  8.싱글스레드로 제한된 디스패처
+	다수의 스레드를 사용하는 모든 디스패처에서는 공유상태문제를 생각해야함
+	만약 신경쓰기귀찮다면 해결책중 하나로 싱글스레드를 사용할수있음
+		val dispatcher11=Executors..newSingleThreadExecutor().asCoroutineDispatcher()
+	이건 스레드 하나가 액티브한 상태로 유지되고,반드시 끝나고 닫아줘야한다는 문제점이 있어서,
+	Dispatchers.Default나 병렬처리를 1로 제한한 Dispatchers.IO를 주로 사용함
+		Dispatchers.Default.limitedParallelism(1)
+	이 단일스레드는 스레드가 하나뿐이라서 스레드가 블로킹되면 순차처리된다는게 가장 큰 단점임
+
+  9.프로젝트룸의 가상스레드 사용하기
+	프로젝트룸은 버추얼스레드임(java 22)
+	코틀린 코루틴을 사용할땐 크게 저걸 사용할일이 없고,
+	저게 유용한경우는 스레드를 블로킹할수밖에 없는 Dispatchers.IO 대신 버추얼스레드를 사용할때 유용함
+	
+	중요하진않아서 필요해지면 보자
+
+  10.제한받지 않는 디스패처
+	Dispatchers.Unconfined는 디스패처를 스레드로 바꾸지않고,이건 시작한 스레드에서 실행이 되고,
+	재개될때도 재개한 스레드에서 실행이 됨
+	즉 해당 코루틴을 호출한 스레드에서 바로 실행이 되는것
+	
+	이건 단위테스트에서 유용하고,프로덕션에서 쓰긴 위험함
+
+  11.메인디스패처로 즉시 옮기기
+	코루틴을 배정하는것도 비용이 듬
+	스레드에서 이미 실행되고있는 코루틴을 다시 배정하면 이동비용이 들고,잠시 지연이 생김(이전에 해당스레드에서 실행중인 코루틴을 기다려야하기때문)
+	
+	그래서 반드시 필요한경우에만 배정을 하는 Dispatchers.Main.immediate가 있음
+	이건 메인함수에서 호출하면 스레드배정없이 즉시 실행됨
+
+	메인디스패처 외에 다른 디스패처에서는 즉시 배정하는 옵션을 지원하지않고있고,
+	그리고 이미 메인디스패처에서 호출이 되었다면
+		withContext(Dispatchers.Main.immediate)
+	를 쓰는게 더좋음
+
+  12.컨티뉴에이션 인터셉터
+	디스패칭은 코틀린언어에서 지원하는 컨티뉴에이션 인터셉션을 기반으로 작동함
+	ContinuationInterceptor은 코루틴이 중단되었을때 interceptContiunation메서드로 컨티뉴에이션 객체를 수정하고 포장함
+	또한 releaseInterceptedContinuation메서드가 컨티뉴에이션이 종료되면 호출됨
+	
+	컨티뉴에이션을 래핑할수있다는건,다양한 방법으로 제어할수있다는걸 의미함
+	디스패처는 특정 스레드풀에서 실행되는 DispatchedContinuation으로 컨티뉴에이션 객체를 래핑하기위해 interceptContiunation를 사용함
+	이떄 DispatchedContinuation은 디스패처가 작동하는 핵심요소임
+	
+	문제는 runTest도 같은 컨텍스트를 사용하고있다는것,그래서 키가 겹치는 문제가 있음(해결법은 밑에 테스트에서)
+
+  13.작업의 종류에 따른 각 디스패처의 성능 비교
+	cpu집약적인 연산에서는 Dispatchers.Default
+	단순히 중단할때는 스레드수가 많은건 문제가 되지않음
+	블로킹할때는 스레드수가 많을수록 종료시간이 빨라짐
+	
+	추가적으로 Dispatchers.IO는 cpu집약적인 연산에서 사용하면안됨,얘는 블로킹연산을 처리하기위한 용도라서 다른작업이 스레드전체를 블로킹할수있음
+
+  14.요약
+	Dispatchers.Default는 cpu집약적인연산에 사용됨
+	Dispatchers.Main은 안드로이드에서 메인스레드에 접근할때 사용됨
+	Dispatchers.Main.immediate는 Dispatchers.Main이 사용하는 스레드에서 실행되지만,꼭 필요할때만 재배정됨
+	Dispatchers.IO는 블로킹연산을 해야할떄 사용됨
+	병렬처리를 제한한 Dispatchers.IO나 특정 스레드풀을 사용하는 커스텀디스패처는 블로킹호출양이 아주 많을때 사용됨
+	병렬처리가 1로 제한된 Dispatchers.Default나 Dispatchers.IO는 공유상태변경문제를 방지하기위해 사용됨
+	Dispatchers.Unconfined는 코루틴이 실행될 스레드에 대해 신경쓸필요가 없을때 사용됨
 
 
-
-
-
-
-
-
-
-
-
-
+13.코루틴 스코프 만들기
 
 
 

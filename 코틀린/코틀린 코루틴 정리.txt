@@ -979,6 +979,174 @@
 	또한 원자값이나 뮤텍스를 사용하는 방법도 있음
 
 15.코틀린 코루틴 테스트하기
+  1.서론
+	중단함수의 동작을 테스트하는건 일반함수와 다르지않음
+	runBlocking과 어설트만 사용해도 될정도임
+
+  2.시간의존성 테스트
+	근데 시간의존성을 테스트하기 시작하면 좀 달라짐
+	즉 병렬처리되는지 이런것들을 테스트하기위해,모킹객체에 delay를 넣어두면 일반상황에서는 진짜 딜레이가 걸려서 테스트가 오래걸리게됨
+	
+	그래서 사용하는게 StandardTestDispatcher임
+	이건 delay같은 의미없이 기다리는시간을 압축해줌(기다린것처럼 처리해줌)
+ 
+  3.TestCoroutineScheduler와 StandardTestDispatcher
+	delay를 호출하면 코루틴은 중단되고 설정한 시간 후에 재개됨
+	이떄 TestCoroutineScheduler를 사용하면 delay를 가상시간동안 실행해서 실제시간이 흘러간상황과 동일하게 만들어줌
+	
+	TestCoroutineScheduler를 쓸떈 이를 지원하는 디스패처를 써야하는데,이게 StandardTestDispatcher임
+	StandardTestDispatcher는 다른 디스패처와 달리 스레드선택에만 쓰이는게 아님,
+	이거로 시작된 코루틴은 가상시간만큼 지나기전까지 실행되지않음
+	코루틴을 시작하는 일반적인 방법은,실제시간처럼 작동하는 가상시간을 흐르게하여,
+	그 시간동안 호출되었을 모든 작업을 실행하는 advanceUntilIdle를 사용하는것
+	
+	기본적으로 StandardTestDispatcher는 TestCoroutineScheduler를 만들기때문에 명시적으로 만들지않아도됨
+	즉
+		val dispatcher11=StandardTestDispatcher()
+		CoroutineScope(dispatcher11).launch{
+			print("a")
+			delay(1000)
+			print("a")
+			delay(1000)
+			print("a")
+		}
+		dispatcher11.scheduler.advanceUntilIdle()
+	이렇게하면 순식간에 실행되지만,가상시간으로는 2초지난거임
+	이떄 advanceUntilIdle를 빼버리면,영원히 실행됨
+	
+	또 다른 시간을 흐르게하는 방법은
+		dispatcher11.scheduler.advanceTimeBy(1000)
+		dispatcher11.scheduler.runCurrent()
+	이렇게 시간을 넣어주고 돌리는것,그러면1000까지만 실행됨
+	
+	이렇게 StandardTestDispatcher를 사용해도되지만,더 쉬운건 TestScope를 사용하는것
+	이건 StandardTestDispatcher의 모든 기능을 수행함
+		val scope11=TestScope()
+		scope.launch{
+			print("a")
+			delay(1000)
+			print("a")
+			delay(1000)
+			print("a")
+		}
+		scope11.advanceTimeBy(1000)
+		scope11.runCurrent()
+
+  4.runTest
+	runTest는 TestScope에서 코루틴을 시작하고,즉시 유휴상태가 될떄까지 시간을 흐르게함
+	이걸 테스트할때는 제일 많이 씀
+	
+	코루틴에서는 스코프가 TestScope타입이므로 아무때나 currentTime을 사용할수있음
+		@Test
+		fun test1()=runTest{
+			assertEquals(0,currentTime)
+			delay(1000)
+			assertEquals(1000,currentTime)
+		}
+		@Test
+		fun test2()=runTest{
+			assertEquals(0,currentTime)
+			coroutineScope{
+				launch{delay(1000)}
+				launch{delay(1500)}
+				launch{delay(2000)}
+			}
+			assertEquals(2000,currentTime)
+		}
+	이런식으로 사용할수있음이러면 가상시간을 쓰기때문에 테스트는 즉시끝나고,가상시간은 정확한 수치로 나오게됨
+
+  5.백그라운드 스코프
+	runTest함수는 다른함수처럼 스코프를 만들고,자식코루틴이 끝날때까지 기다림
+	만약 무한루프를 돌때를 대비해서,backgroundScope를 제공함
+	이걸 사용해서 코루틴빌더를 사용하면, 스코프가 종료될떄까지 기다리지않음,그래서 테스트가 기다릴필요없는 모든프로세스를 시작할떄 사용됨(뭐 띄울때)
+
+  6.취소와 컨텍스트 전달 테스트
+	구조화된 동시성 테스트를 할땐,중단함수로부터 컨텍스트를 받고 컨텍스트가 기대한값을 가지고있는지,잡이 적절한 상태인지 확인해야함
+	이럴땐 mapAsync를 사용할수있음(27장)
+	이건 순서를 보장하면서 비동기적으로 원소를 매핑함
+	
+	근데 이게 끝이 아니고,구조화된동시성을 지키는 중단함수가 정확하게 구현되어야함
+	이걸 확인하는 가장 쉬운방법은,부모코루틴에서 CoroutineName같은 특정 컨텍스트를 명시하고,transformation으로 확인하는것
+	
+	중단함수에서 컨텍스트를 확인할떈,currentCoroutineContext나 coroutineContext프로퍼티를 사용하면됨
+	코루틴빌더의 람다식이나 스코프함수에선 currentCoroutineContext를 써야하는데,
+	현재 코루틴컨텍스트프로퍼티보다 CoroutineScope의 coroutineContext 프로퍼티가 우선하기때문
+	
+	취소를 확인하는 가장 쉬운 방법은,내부함수에서 잡을 참조하고,외부코루틴에서 코루틴을 취소한뒤,참조된 잡이 취소되는걸 확인하는것
+	
+	보통 이정도까지 할필요는없지만,라이브러리만들땐 쓰기좋음
+
+  7.UnconfinedTestDispatcher
+	이건 StandardTestDispatcher말고 다른 선텍지인데,
+	이건 StandardTestDispatcher와 다르게 코루틴을 시작했을때 첫 지연 전까지 모든 연산을 즉시 수행함
+
+  8.mock 사용하기
+	모킹객체에서 delay를 사용하기 쉽지만,명확히 드러나지않음
+	그래서 테스트함수에서 delay를 선호하는걸 보통 선호함
+
+  9.디스패처를 바꾸는 함수 테스트하기
+	보통은 runBlocking로 테스트하면되지만,함수가 실제로 디스패처를 바꾼다면,
+	호출하는 함수를 모킹해서 사용한 스레드의 이름을 가져오는방법으로 확인할수있음
+	
+	만약 극히 드물지만,디스패처를 바꾸는함수에서 시간의존성을 테스트해야하면 209p참조
+
+  10.함수실행중에 일어나는일 테스트하기
+	함수를 새로운 코루틴에서 시작하고,바깥에서 가상시간을 조절하면서 테스트하면 함수실행중에 현재 상태를 시계열로 계속 확인할수있음
+	즉 advanceTimeBy을 사용하면서 계속 시간진행을 시키면서 assertEquals로 확인하는방식
+
+  11.새로운 코루틴을 시작하는 함수 테스트하기
+	보통 백엔드에선 스프링에서 시작되지만,
+	직접만든 스코프내부에서 코루틴을 시작할땐,스코프의 일부로 StandardTestDispatcher를 사용할수있음
+
+  12.메인디스패처 교체하기
+	단위테스트에는 메인함수가 없음,그래서 메인스레드 대신 쓰게 Dispatchers에는 setMain확장함수가 있음
+	
+	보통 @BeforeEach에다가 이 셋업을 넣고,테스트가 끝난뒤에는 AfterEach로 Dispatchers.resetMain()으로 반드시 초기화를 시켜줘야함
+
+  13.코루틴을 시작하는 안드로이드함수 테스트하기
+	이때까지했던거 총집편,실전연습
+
+  14.룰이있는 테스트 디스패처 설정
+	룰은 테스트클래스의 수명동안 반드시 실행되어야할 로직을 포함함(@BeforeEach,@AfterEach)
+	보통 여기다가 뭐 넣기좋고,안드로이드 코루틴 테스트를 할땐 자주 사용함
+
+16.채널
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

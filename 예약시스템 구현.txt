@@ -8,7 +8,7 @@ https://alswns7984.tistory.com/91
 https://www.perplexity.ai/search/naneun-deiteobeiseu-teibeuleul-w.8uEIpJR0uuYj3113vUnA
 
 시간은 타임슬롯으로[24][6]관리?스타트엔드만 관리?
-창고와 시간을 미리 선택하면,해당부분을 확인하고 겹치지않으면 예약주문을 날림(이)
+창고와 시간을 미리 선택하면,해당부분을 확인하고 겹치지않으면 예약주문을 날림
 이때 확인을 누르는 즉시 임시예약을 insert하고,스키마에 겹치지않게 유니크처리(창고와 날짜?),겹쳤을때 예외처리
 
 할증처리,공휴일처리?공휴일은 구하기힘드니 일요일처리?

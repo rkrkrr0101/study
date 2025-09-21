@@ -1,0 +1,67 @@
+/init 로 claude.md 생성
+  핵사고날,ddd,tdd
+
+mcp연결
+  스코프(local,project,user)
+    claude mcp add mcp서버명 --scope project 프로젝트경로
+	claude mcp list
+
+추천 mcp
+  git
+  mysql
+  context7
+
+쉬프트탭으로 모드변경가능(플랜,액셉트)
+  플랜부터 하고 액셉트하는게 좋음
+
+/config에서 use todo list true로 변경
+/terminal-setup 쉬프트엔터 허용(윈도우에선 키보드매니저?)
+파워쉘 탭(https://velog.io/@bear_with_me/%ED%8C%8C%EC%9B%8C%EC%89%98-Tab-%EC%9E%90%EB%8F%99%EC%99%84%EC%84%B1-%EA%B8%B0%EB%8A%A5)
+
+/output-style로 스타일세팅(안해도됨,선택)
+
+서브에이전트+병렬처리(옵션,익숙해지면사용),서브에이전트를 만들고,병렬처리는 그냥 n개작업을 나열하고 에이전트A n개를 띄워서 병렬처리해달라고하면됨
+
+hooks->특정이벤트에 자동으로 실행되는 셸 명령어를 등록해 클로드코드의 동작을 제어(옵션)
+  알림(작업종료시 알림등)
+  코드포맷터
+  로깅
+  
+
+명령어
+  /clear 대화지우기(새 채팅을 여는거에 가까움,한기능 완료하면 초기화권장)
+  /resume 기존대화내역 불러오기
+  /export 대화를 내보내기  
+  !사용시 bash모드로 변경됨(컨텍스트에 남아서 에러메시지 물어보기편함)
+  커스텀도 가능(재사용할 프롬프트 편하게쓸수있음)
+  claude --dangerously-skip-permissions(모든거 허용,아무것도 다시묻지않음,사용권장안함,사용시엔 컨테이너로 하는게좋음)
+  
+  
+ccusage->클로드코드 사용량확인
+  npx ccusage 로 확인가능
+  
+superclaude->커스텀슬래쉬명령어추가,페르소나 전반적인 지능향상,단 토큰사용량 매우올라감
+
+클로드코드템플릿->세팅값이나 커스텀명령어등 올려두는곳
+aitmpl.com
+  
+  
+  
+개발순서
+  코드 분석 -> 구현 -> 테스트 -> 문서 정리
+  코드 분석 -> 테스트생성 -> 구현-> 테스트 -> 문서 정리
+  
+플랜모드로 플랜을 새우고,끝에 after analyzing the codebase. think hard로 계획을 세우게하고,이계획을 todo.md에 적으라고 시킴
+이후 세션초기화후에 todo.md에 나와있는 단계별로 하나하나 구현하게하고 todo.md 업데이트 
+  
+  
+  
+@todo.md 와 @"docs\어플리케이션 설계.txt" 를 참고해서  
+  
+  
+  
+  
+  
+  
+https://www.youtube.com/watch?v=Ek_I0iFyyZU
+https://gall.dcinside.com/mgallery/board/view/?id=thesingularity&no=818400&s_type=search_name&s_keyword=%EC%95%BD%ED%8C%94%EC%9D%B4%EC%95%84%EB%8B%98&page=1

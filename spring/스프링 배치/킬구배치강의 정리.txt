@@ -461,12 +461,206 @@
   
 3.파일처리배치
 *1.FlatFileItemReader
+  1.청크지향처리
+    데이터처리는 단순히 읽어서 가공하고 쓴다 딱 3개임
+	청크처리도 마찬가지임
+	  데이터읽기(ItemReader):데이터를 하나씩 읽어들임,청크사이즈만큼 반복실행
+	  데이터가공(ItemProcessor):읽어들인 데이터를 원하는대로 가공,필터링도 수행
+	  데이터저장(ItemWriter):청크단위로 모아진 데이터를 한번에 처리
+	이렇게 3개가 다임
+  2.파일기반 배치처리
+    개발자가 직접 파일처리를 구현한다면 보일러플레이트도 많이생기고 귀찮아짐
+	그래서 스프링배치에서는 파일기반 아이템리더와 라이터를 제공해줌
+	이걸쓰면 io작업,데이터파싱,유효성검사,예외처리까지 다 처리해줌
+	
+	1.FlatFile
+	  플랫파일이란 단순하게 행과 열로만 구성된파일,즉 csv같은거임
+	  얘들은
+	    각라인이 하나의 데이터 로우,\n이 레코드의 끝을 의미함
+		쉼표나 탭,스페이스등으로 필드를 구분할수있고 고정길이로 구분할수도있음
+		거의 모든시스템에서 읽고쓸수있는 표준형식,엑셀,db등 다양한 도구와 호환되고 사람이 읽기도 쉽고 대용량처리도 쉬움
+	  이런 특징이 있음
+	2.FlatFileItemReader
+	  이건 플랫파일로부터 데이터를 읽어오는 클래스임
+	  얘는 파일을 한줄씩 읽어서 지정한 도메인객체로 변환해서 반환함
+	  즉
+	    파일을 한줄씩 읽어온다
+		읽어온 한줄의 문자열을 우리가 사용할 객체로 변환해 리턴한다
+	  이런식으로 동작함
+	  
+	  이때 한줄의 데이터를 변환할땐 LineMapper이라는 컴포넌트 인터페이스를 사용하는데,
+	  이건 단순하게 구분자로 분리해낸다음 각 분리한 데이터를 각 지정된 객체의 프로퍼티에 정확하게 매핑해야함
+	  물론 이 인터페이스를 우리가 구현할필요는 없음
+	  DefaultLineMapper이라는 기본구현체를 제공하고있기때문
+	  
+	3.DefaultLineMapper
+	  이건 크게 두단계로 동작함
+	    1.토큰화:하나의 구분자나 고정길이단위로 잘린 문자열을 각 토큰단위로 분리함//LineTokenizer사용하고,여기서도 인터페이스로 구분자나 고정길이별 구현체존재
+		2.객체매핑:분리된 토큰을 도메인객체의 프로퍼티에 매핑함//FieldSetMapper사용하고,기본값은 BeanWrapperFieldSetMapper사용
+	  즉 단순하게 토큰으로 만든다음 매핑하는걸 담당함
+	  이때 매핑의 기본값인 BeanWrapperFieldSetMapper는 자바빈규약을 따르는 객체에 데이터를 매핑해줌
+	  그래서 필드의 이름과 매핑객체의 프로퍼티명이 동일해야하고 setter가 필요함
+	
+	4.구분자로 분리된 형식의 파일 읽기
+	  이걸 사용할땐 단순하게 빈으로 등록한다음 사용하면됨
+		@Bean
+		@StepScope
+		public FlatFileItemReader<SystemFailure> systemFailureItemReader(
+				@Value("#{jobParameters['inputFile']}") String inputFile) {
+			return new FlatFileItemReaderBuilder<SystemFailure>()
+					.name("systemFailureItemReader")
+					.resource(new FileSystemResource(inputFile))
+					.delimited()
+					.delimiter(",")
+					.names("errorId",
+							"errorDateTime",
+							"severity",
+							"processId",
+							"errorMessage")
+					.targetType(SystemFailure.class)
+					.linesToSkip(1)
+					.build();
+		}	  
+	  이렇게 빌더로 
+	    아이템리더 식별자를 넣고,
+		타겟위치(파일위치)를 넣어주고
+		구분자와 필드명을 넣어주고,
+	    타겟클래스를 저장해주고,
+		맨첫줄이 필드명이라면 스킵도 넣어주고 
+		빌드한후 
+	  스탭에서 가져다쓰면됨
+	  또한 제네릭은 컴파일시점의 객체타입을 지정하고,타겟클래스는 런타임시점의 객체타입을 지정함
+	  그리고 FlatFileItemReader는 #을 기본적으로 주석으로 인식하는데,만약 다른식으로 주석을 썼다면 comments("//")로 지정해줄수도있음
+	  
+	  그리고 파일 누락시 예외를 발생시키는걸 컨트롤하려면 .strict(true/false)를 사용하면됨
+	  기본적으로는 true고 false로 하면 아이템리더가 null을 바로 반환하는식임
+	  또한 라인토크나이저에서도 true면 한 row의 토큰리스트의 갯수가 전달된 객체프로퍼티(names)와 다르면 예외를 발생시키고,false면 자동으로 보정함
+    
+	5.고정길이형식의 파일 읽기
+	  고정길이파일은 각 필드가 고정된길이로 맞춰진 텍스트파일임
+	  이땐 각 필드의 길이를 스프링배치에 알려야함
+		@Bean
+		@StepScope
+		public FlatFileItemReader<SystemFailure> systemFailureItemReader(
+			   @Value("#{jobParameters['inputFile']}") String inputFile) {
+		   return new FlatFileItemReaderBuilder<SystemFailure>()
+			   .name("systemFailureItemReader")
+			   .resource(new FileSystemResource(inputFile))
+			   .fixedLength()
+			   .columns(new Range[]{
+				 new Range(1, 8),     // errorId: ERR001 + 공백 2칸
+				 new Range(9, 29),    // errorDateTime: 날짜시간 + 공백 2칸
+				 new Range(30, 39),   // severity: CRITICAL/FATAL + 패딩
+				 new Range(40, 45),   // processId: 1234 + 공백 2칸
+				 new Range(46, 66)    // errorMessage: 메시지 + \n
+			   })
+			   .names("errorId", "errorDateTime", "severity", "processId", "errorMessage")
+				.targetType(SystemFailure.class)
+			   .build();
+		}
+      이런식으로 구분자랑 거의 비슷한데,fixedLength()로 표시한후 .columns로 각 범위를 표시해주면됨	
+	  그리고 .strict()도 true면 추가적으로 파일의 읽은길이를 엄격하게 검증함
+	  파일의 읽은 라인길이가 range에 지정된 최대길이(마지막필드의 끝위치)와 다르다면 예외를 발생시킴
+	  또한 공백의경우 내부적으로 trim을 돌리기때문에 신경안써도됨
+	
+	6.프로퍼티 타입에 LocalDateTime을 쓰고 싶다면?
+	  시간타입을 사용하고싶으면 별도의 변환기가 필요함
+	  BeanWrapperFieldSetMapper는 이런 복잡한 변환까진 처리하지않는데,
+	  그래서 빌더에서 customEditors()를 사용해서 커스텀 propertyEditer를 등록할수있음
+	    .customEditors(Map.of(LocalDateTime.class, customEditor()))	  
+	  즉 propertyEditer를 구현하고,이걸 빌더의 .customEditors를 사용해 등록하면됨 
   
   
-  
-  
-  
-  
+    7.RegexLineTokenizer
+	  이건 복잡한 형식의 파일을 처리할때 사용하는 도구임
+	  이걸 등록하는건 아이템리더빌더에서 .lineTokenizer()을 사용하면되고,
+        RegexLineTokenizer tokenizer = new RegexLineTokenizer();
+        tokenizer.setRegex("\\[\\w+\\]\\[Thread-(\\d+)\\]\\[CPU: \\d+%\\] (.+)");
+	  이런식으로 정규식을 사용해서 토크나이저를 할수있음
+    8.fieldSetMapper()
+	  마찬가지로 fieldSetMapper도 커스텀을 등록할수있음(필드 매핑하는클래스)
+		.fieldSetMapper(fieldSet -> new LogEntry(fieldSet.readString(0), fieldSet.readString(1)))
+	  단 이걸 사용할땐 targetType를 사용하면안됨
+	
+	9.PatternMatchingCompositeLineMapper 
+	  만약 하나의 파일안에 여러형식의 라인이 혼재되어있다면 이걸 사용할수있음
+	  이건 패턴매칭을 지원해서,각 라인의 패턴을 먼저 파악한후,해당 패턴에 맞는 토크나이저와 필드매퍼를 적용할수있음
+		@Bean
+		@StepScope
+		public FlatFileItemReader<SystemLog> systemLogReader(
+				@Value("#{jobParameters['inputFile']}") String inputFile) {
+			return new FlatFileItemReaderBuilder<SystemLog>()
+					.name("systemLogReader")
+					.resource(new FileSystemResource(inputFile))
+					.lineMapper(systemLogLineMapper())
+					.build();
+		}
+	  등록은 이렇게 등록한후에
+		@Bean
+		public PatternMatchingCompositeLineMapper<SystemLog> systemLogLineMapper() {
+			PatternMatchingCompositeLineMapper<SystemLog> lineMapper = new PatternMatchingCompositeLineMapper<>();
+
+			Map<String, LineTokenizer> tokenizers = new HashMap<>();
+			tokenizers.put("ERROR*", errorLineTokenizer());
+			tokenizers.put("ABORT*", abortLineTokenizer());
+			tokenizers.put("COLLECT*", collectLineTokenizer());
+			lineMapper.setTokenizers(tokenizers);
+
+			Map<String, FieldSetMapper<SystemLog>> mappers = new HashMap<>();
+			mappers.put("ERROR*", new ErrorFieldSetMapper());
+			mappers.put("ABORT*", new AbortFieldSetMapper());
+			mappers.put("COLLECT*", new CollectFieldSetMapper());
+			lineMapper.setFieldSetMappers(mappers);
+
+			return lineMapper;
+		}
+	  이렇게 각 종류에 맞는 토크나이저와 매퍼를 등록하면됨(앞에있는게 조건임)
+	  여기선 맨앞의 값으로 구분했지만 패턴이니까 패턴만 맞추면 어떤형식이든 가능
+	
+	10.RecordFieldSetMapper: Record 매핑 지원
+	  만약 targetType을 record타입으로 잡는다면 자동으로 BeanWrapperFieldSetMapper 대신 RecordFieldSetMapper를 사용함
+	  동작자체는 비슷하니까 신경안써도됨
+	
+	11. MultiResourceItemReader:여러 파일 읽기
+	  여러파일을 읽어야할때(여러서버의 로그파일들을 통합분석등),각 파일마다 스탭을 만드는건 비효율적임
+	  이때 사용하는게 MultiResourceItemReader임
+	  이건 여러파일들을 순차적으로 읽게 해주는 ItemReader구현체임
+	  그냥 말그대로 여러파일들은 순서대로 읽음
+	  
+	  얘가 직접 읽진않고,위임대상 ItemReader에게 실제 읽기를 맡기고,걔한테 일주는일을 담당함
+	  그래서 이걸 사용할땐 두가지 구성이 필요함
+	    실제로 사용할 ItemReader
+		읽어들일 파일의 목록
+	  그래서 이런식으로 구성됨
+		return new MultiResourceItemReaderBuilder<SystemFailure>()
+		  .name("multiSystemFailureItemReader")
+		  .resources(new Resource[]{
+			  new FileSystemResource(inputFilePath + "/critical-failures.csv"),
+			  new FileSystemResource(inputFilePath + "/normal-failures.csv")
+		  })
+		  .delegate(systemFailureFileReader())
+		  .build();	 
+	  resources로 파일들을 지정해주고,delegate로 실제 사용할 리더를 넣어주는식
+	  단 여기서 중요한건,systemFailureFileReader() 빈생성시에 resource가 없어야함(그건 우리가 넣어줘야하니까),나머진 동일함
+	  또한 resources의 파일읽기순서는 파일명의 알파벳순서로 기본적으로 읽고,이걸 바꾸고싶다면 comparator()메서드로 원하는 정렬기준을 지정할수있음
+	
+*2.FlatFileItemWriter 	  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   
   
   

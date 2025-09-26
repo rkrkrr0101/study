@@ -645,15 +645,130 @@
 	  또한 resources의 파일읽기순서는 파일명의 알파벳순서로 기본적으로 읽고,이걸 바꾸고싶다면 comparator()메서드로 원하는 정렬기준을 지정할수있음
 	
 *2.FlatFileItemWriter 	  
+  이건 데이터를 플랫파일형식으로 쓰는작업을 담당함,즉 도메인객체를 문자열로 변환해서 파일에 써내려감
+  이것도 리더랑 거의비슷하게 선언해서 빈등록하면됨
+  
+  얘가 하는일은 필드추출과 문자열결합 두개로 나눠볼수있고,필드추출은 FieldExtractor,문자열결합은 LineAggregator이 담당함
+  1.필드추출과 라인결합
+    필드추출은 도메인객체에서 필드를 추출하는역할을 함
+	즉 T를 받아서 object[]를 내보내는 역할을 함
+	
+	이것도 당연히 기본구현체가 있는데 BeanWrapperFieldExtractor 와 RecordFieldExtractor 임
+	BeanWrapperFieldExtractor는 빈객체로부터 필드를 추출하는거고,RecordFieldExtractor는 레코드객체에서 필드를 추출함
+	배치는 파일의 도메인타입에 따라 이 두개중 하나를 자동선택함
+	
+	문자열결합은 추출한 데이터들을 하나의 문자열로 결합하는 역할을 함
+	이것도 구분자기반으로 읽던가 고정길이로 읽던가가 나뉜거처럼,여기도 2개로 나뉘는데
+	DelimitedLineAggregator는 구분자로 구분하는거고 FormatterLineAggregator는 고정길이를 포함한 다른형식으로 쓸때 사용함
+	이거 선택은 직접 라이터빌더설정에서 delimited()와 formatted()를 사용해서 선택할수있음
+	
+	또한 내부적으로는 LineAggregator가 FieldExtractor를 합성한 형태로 구성되어있음
+	그래서 객체를 문자열로 변환하는 전과정은 LineAggregator가 담당함
+	
+	기본적으로 단일객체를 이렇게 바꾸고,라이터는 청크단위로 동작하니까 각 아이템마다 이걸 반복해서처리함
 
+  2.구분자형식의 파일쓰기
+    아이템 라이터는 기본적으로
+	    @Bean
+		@StepScope
+		public FlatFileItemWriter<DeathNote> deathNoteWriter(
+				@Value("#{jobParameters['outputDir']}") String outputDir) {
+			return new FlatFileItemWriterBuilder<DeathNote>()
+				.name("deathNoteWriter")
+				.resource(new FileSystemResource(outputDir + "/death_notes.csv"))
+				.delimited()
+				.delimiter(",")//구분자
+				.sourceType(DeathNote.class)
+				.names("victimId", "victimName", "executionDate", "causeOfDeath")
+				.headerCallback(writer -> writer.write("처형ID,피해자명,처형일자,사인")) //파일헤더
+				.build();
+		}
+	이런형태로 만들어짐
+	FieldExtractor를 전달할때는 빈등록을 하던가 빌더의 fieldExtractor()메서드로 직접 넣어주면됨
+	그리고 FieldExtractor가 객체로부터 어떤 필드를 추출할지를 알려줘야하는데,이게 .names()임
+	단 이때 지정한순서대로 쓰여지니까 순서조심해야함
+	그리고 names()는 자동구성방식에서만 사용되고,fieldExtractor()메서드로 직접 커스텀 fieldExtractor를 넣었을경우엔 무시됨
+	RecordFieldExtractor를 사용할땐 names가 무시되는 버그가 있으니 조심
+	Record타입을 sourceType으로 전달할경우에 자동으로 RecordFieldExtractor 가 사용됨
+	커스텀FieldExtractor의 경우엔 setNames으로 필드명을 지정할수있음
+		
+	이때 스텝의 청크는
+	  .<DeathNote, DeathNote>chunk(10, transactionManager)
+	이런형태로 리더의 출력,라이터의 입력타입을 넣어주면됨
 
+  3.커스텀 포맷 형식으로 파일 쓰기
+    커스텀포맷을 사용할땐 FormatterLineAggregator를 사용할수있음
+		@Bean
+		@StepScope
+		public FlatFileItemWriter<DeathNote> deathNoteWriter(
+				@Value("#{jobParameters['outputDir']}") String outputDir) {
+			return new FlatFileItemWriterBuilder<DeathNote>()
+					.name("deathNoteWriter")
+					.resource(new FileSystemResource(outputDir + "/death_note_report.txt"))
+					.formatted()
+					.format("처형 ID: %s | 처형일자: %s | 피해자: %s | 사인: %s")
+					.sourceType(DeathNote.class)
+					.names("victimId", "executionDate", "victimName", "causeOfDeath")
+					.headerCallback(writer -> writer.write("================= 처형 기록부 ================="))
+					.footerCallback(writer -> writer.write("================= 처형 완료 =================="))
+					.build();
+		}	
+	이런식으로 formatted()를 사용한후 format로 형식을 지정해주고, .names()의 순서대로 집어넣으면됨
 
+  4.파일 처리 옵션
+    현재 
+	  .resource(new FileSystemResource(outputDir + "/death_note_report.txt")) 
+	이런식으로 하면 실행할때마다 파일이 계속 덮어쓰기됨
+	그래서 동작방식을 선택할수있는데,
+		shouldDeleteIfExists: 기존 파일의 삭제 여부(FlatFileItemWriterBuilder.shouldDeleteIfExists()를 사용해 지정)
+		append: 기존 파일에 데이터 덧붙이기 여부(FlatFileItemWriterBuilder.append() 메서드를 사용해 지정)
+		shouldDeleteIfEmpty: 빈 결과 파일 처리 여부(FlatFileItemWriterBuilder.shouldDeleteIfEmpty() 메서드를 사용해 지정)
+	이런식으로 여러 옵션들이 있음
+	
+	shouldDeleteIfExists는 기본값이 true로,겹치는파일이 있다면 삭제하고 새로 파일을 생성함
+	만약 false라면 겹칠때 예외를 던짐
+	
+	append는 기본값이 false로,true로 설정하면 shouldDeleteIfExists는 자동으로 false로 설정되고,기존파일에 데이터를 추가함
+	
+	shouldDeleteIfEmpty는 기본값이 false로,파일에 헤더와 푸터를 제외한 데이터가 하나도없으면 파일을 삭제할지여부를 나타냄 	
+	여기서 주의할건,해당파일에 얼마나 데이터가 있냐가 아닌,이번에 얼마나 데이터를 썼냐가 기준이라 append를 true로 설정해뒀는데 아무것도 안썼으면 지워버리니 주의
+	
+  5.FlatFileItemWriter의 롤백 전략: 버퍼링을 통한 안전한 파일 쓰기
+    파일은 db와 달리 이미 쓰여진 데이터를 롤백할수없음
+	그래서 FlatFileItemWriter는 데이터를 즉시 쓰지않고 내부버퍼에 일시적으로 저장해두다가,
+	트랜잭션이 커밋될때(beforeCommit()이 호출될때) 버퍼의 데이터를 파일에 씀
+	즉 트랜잭션과 같은범위로 성공실패를 시킬수있음
+	이건 FlatFileItemWriterBuilder의 transactional()메서드로 설정할수있고,기본값은 true임
 
+  6.파일 쓰기와 OS 캐시: forceSync 옵션
+	os는 기본적으로 매번 디스크에 파일을 쓰지않고,메모리캐시에 먼저 저장한후 파일쓰기를 하는데 이 시차때문에 유실이 발생할수있음
+    forceSync()를 true로 설정하면 이 시차를 없애서 즉시 동기화할수있음
+	단 잦은동기화로 성능저하가 발생할수있음,기본값은 false임
 
+  7.대용량 파일의 분할 처리: MultiResourceItemWriter
+    한파일에 적게되는 양이 너무 커질경우,파일을 나눠서 저장해야하는 필요성이 생기는데,이때 사용되는게 MultiResourceItemWriter임
+	이건 이름그대로 여러 리소스에 데이터를 분배하는 ItemWriter구현체임
+	애는 직접 파일을 쓰지않고,쓰는작업은 쓰기를 할 ItemWriter에 위임함
+	
+	그래서 이걸 사용할땐
+		@Bean
+		@StepScope
+		public MultiResourceItemWriter<DeathNote> multiResourceItemWriter(
+				@Value("#{jobParameters['outputDir']}") String outputDir) {
+			return new MultiResourceItemWriterBuilder<DeathNote>()
+					.name("multiDeathNoteWriter")
+					.resource(new FileSystemResource(outputDir + "/death_note"))
+					.itemCountLimitPerResource(10)
+					.delegate(delegateItemWriter())
+					.resourceSuffixCreator(index -> String.format("_%03d.txt", index))
+					.build();
+		}
+	이런식으로 delegate에 실제로 사용할 아이템라이터를 넣어주고,
+	itemCountLimitPerResource로 한 파일에 저장할 갯수를 설정한다음,resourceSuffixCreator로 어떤식으로 구분할지를 적어주면됨
+	
+	사용은 그냥 아이템라이터처럼쓰면됨
 
-
-
-
+*3.JSON 파일 읽고 쓰기
 
 
 

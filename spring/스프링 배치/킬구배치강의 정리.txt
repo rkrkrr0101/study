@@ -769,13 +769,135 @@
 	사용은 그냥 아이템라이터처럼쓰면됨
 
 *3.JSON 파일 읽고 쓰기
-
-
-
-
-
-
-
-  
-  
+  1.커스텀 LineMapper를 활용한 json 문자열 읽기
+    만약 줄마다 각각 json객체로 이루어진
+	  {...} 
+	  {...} 
+	  {...}
+	이런형태가 있다면(jsonl),그리고 만약 특정객체로 파싱해야한다면
+	이럴땐 커스텀 라인매퍼를 만들어야함,간단하게는 아이템리더빌더에 람다식을 써서 만들수있음
+	  .lineMapper((line, lineNumber) -> objectMapper.readValue(line, SystemDeath.class))
+	기본적으로 JsonLineMapper을 제공하긴하지만 특정객체를 요구한다면 이렇게 간단하게 커스텀객체를 만들수있음
+	
+	그리고 각 줄마다 json객체가 있는게 아닌,제대로 포맷팅된 객체가 올수도있음(하나의 json객체가 여러줄에 걸쳐 기록된경우)
+	이럴땐 리더빌더에 recordSeparatorPolicy를 추가해 하나의 레코드가 어디서 끝나는지를 결정하면됨
+	  .recordSeparatorPolicy(new JsonRecordSeparatorPolicy())//이건 기본적으로 있는거임
+	RecordSeparatorPolicy 인터페이스는
+	  public interface RecordSeparatorPolicy {
+		boolean isEndOfRecord(String line); // 해당 줄이 레코드의 끝인지 판단.
+		String postProcess(String record); // 레코드가 완성된 후 추가 처리.
+		String preProcess(String record); // 레코드를 시작하기 전 사전 처리.
+	  }
+	이런식으로 구성되고
+	이걸 구현한 JsonRecordSeparatorPolicy는 여는중괄호와 닫는중괄호의 갯수가 동일하고,현재읽은라인이 닫는중괄호로 끝나면 레코드가 완료된걸로 판단함
+	
+	그리고 만약 Json배열로 포장된 데이터라면 
+	  [{...},{...},{...}]
+	JsonItemReader를 사용할수있음
+	이건 resource에 json의 소스를 지정하고(파일,url등 다양한걸 지원)
+	  .resource(new UrlResource("http://kill-batch-system.com/array_system_death.json"))
+	JsonObjectReader구현체를 선택할수있음  
+	  Jackson: JacksonJsonObjectReader
+	  Gson: GsonJsonObjectReader
+	즉
+		@Bean
+		@StepScope
+		public JsonItemReader<SystemDeath> systemDeathReader(
+				@Value("#{jobParameters['inputFile']}") String inputFile) {
+			return new JsonItemReaderBuilder<SystemDeath>()
+					.name("systemDeathReader")
+					.jsonObjectReader(new JacksonJsonObjectReader<>(SystemDeath.class))
+					.resource(new FileSystemResource(inputFile))
+					.build();
+		}
+	이런식으로 오브젝트리더와 리소스위치를 넣어주고 만들어서 쓰면 알아서해줌
+  2.JsonFileItemWriter	
+	비슷하게 JsonFileItemWriter를 사용하면 객체를 json배열로 변환해 파일로 저장할수있음
+	얘는 내부적으로 JsonObjectMarshaller를 사용해 객체를 json문자열로 변환함
+	얘는 
+	  WritableResource: JSON 데이터를 저장할 대상 파일을 나타내는 Spring의 WritableResource.
+	  JsonObjectMarshaller: 객체를 JSON 형식으로 마샬링하는 JSON 객체 변환기
+	    Jackson: JacksonJsonObjectMarshaller
+	    Gson: GsonJsonObjectMarshaller
+	이렇게 얘도 저장위치와 json매퍼 두가지만 넣어주면됨 
+		@Bean
+		@StepScope
+		public JsonFileItemWriter<DeathNote> deathNoteJsonWriter(
+				@Value("#{jobParameters['outputDir']}") String outputDir) {
+			return new JsonFileItemWriterBuilder<DeathNote>()
+					.jsonObjectMarshaller(new JacksonJsonObjectMarshaller<>())
+					.resource(new FileSystemResource(outputDir + "/death_notes.json"))
+					.name("logEntryJsonWriter")
+					.build();
+		}
+	이렇게 생성하면되고
+	
+4.데이터베이스 배치
+*1.rdbms 읽고쓰기	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
   

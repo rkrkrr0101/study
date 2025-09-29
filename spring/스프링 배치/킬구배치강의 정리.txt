@@ -1156,11 +1156,244 @@
 	  그거말곤 그냥 해당엔티티를 뱉는다고 생각하고 쓰면됨
 	  
 *2.nosql읽고쓰기
+  몽고디비는
+    도큐먼트:기본데이터단위,bson으로 저장
+	컬렉션:도큐먼트의 그룹,테이블이라고 보면됨
+	데이터베이스:컬렉션을 그룹화한 최상위컨테이너,rdb의 데이터베이스와 같음
+  로 구성된 기본적인 nosql임
+  얘는
+    스키마정의가 없어서 도큐먼트구조를 자유롭게 변경가능
+	수평확장이쉽고 샤딩을 지원
+	대량데이터처리를 쉽게할수있음
+  이런 특징이 있음
+  얘를 쓸땐
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+  를 넣어줘야함
+  
+  1.MongoCursorItemReader
+    얘도 커서기반의 데이터순차접근방식임
+	얘는
+	  MongoTemplate:핵심엔진,이걸사용해 데이터를 스트리밍조회함
+	  Query :조회할 쿼리를 지정,다른커서리더처럼 얘도 초기화시점에 쿼리를 한번 생성하고,이를기반으로 커서를 가져옴
+	  Cursor:read()가 호출될때마다 커서를 사용해 데이터를 하나씩 순차반환
+	로 구성되어있음  
 	
+	얘는
+		@Bean
+		@StepScope
+		public MongoCursorItemReader<SecurityLog> securityLogReader(
+				@Value("#{jobParameters['searchDate']}") LocalDate searchDate
+		) {
+			Date startOfDay = Date.from(searchDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+			Date endOfDay = Date.from(searchDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+			return new MongoCursorItemReaderBuilder<SecurityLog>()
+					.name("securityLogReader")
+					.template(mongoTemplate) //DI받은 몽고템플릿
+					.collection("security_logs")//읽어올 컬렉션명
+					.jsonQuery("""   //쿼리
+					{
+						"label": "PENDING_ANALYSIS",
+						"timestamp": {
+							"$gte": ?0,
+							"$lt": ?1
+						}
+					}
+					""")
+					.parameterValues(List.of(startOfDay, endOfDay)) //파라미터
+					.sorts(Map.of("timestamp", Sort.Direction.ASC)) //정렬
+					.targetType(SecurityLog.class)
+					.batchSize(10)  //변환타입
+					.build();
+		}
+	이런식으로 구성됨
+	이거말고도 
+	  쿼리의 projection을 위한 fields()
+	  쿼리 최적화를 위한 인덱스 힌트를 지정하는 hint()
+	  조회할 도큐먼트 수를 제한하는 limit()
+	  쿼리 수행 시간을 제한하는 maxTime()
+	등등 다양한 메서드들이 있음
 	
+	1.MongoCursorItemReader의 쿼리 구성, 또 다른 방법
+	  Query객체를 직접 사용할수도 있음
+	  이러면
+	    타입세이프
+		ide자동완성가능
+		체이닝으로 명확하게 구성가능
+	  이런 이점이 있음
+	  이건
+		  Query query = new Query()
+			.addCriteria(Criteria.where("label").is("PENDING_ANALYSIS"))
+			.addCriteria(Criteria.where("timestamp")
+					.gte(Date.from(searchDate.atStartOfDay(ZoneId.systemDefault()).toInstant()))
+					.lt(Date.from(searchDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant())))
+			.with(Sort.by(Sort.Direction.ASC, "timestamp"))
+			.cursorBatchSize(10);
+	  이렇게하면됨
+	  이때 배치버그가 있는데,query객체에서 정렬조건이 있더라도 아이템리더빌더에서 sorts를 반드시 넣어줘야함
+	  이걸 사용하진않는데 없으면 예외띄움
+
+  2.MongoPagingItemReader
+    이건 페이징방식 아이템리더임
+	이건 skip와 limit를 사용해 페이징을 수행하고,이것도 offset기반 페이징임
+	그래서 성능이 당연히 안좋고,특히 몽고db의 샤딩환경에선 처참함
 	
+	또한 오프셋기반 페이징이라서 프로세서에서 쿼리조건에 해당하는 값을 수정하는경우 계속 결과값이 바뀌어서 문제가됨	
+	그래서 이건 실무에서 사용하지않는게 좋고,정 페이징이 필요하다면 아이템리더를 직접 구현해 keyset기반페이징을 해야함
 	
+	꼭 써야한다면
+	  별도필드활용//쿼리조건필드는 절대 건드리지말고 임시필드에만 결과 저장후,배치완료후 일괄업데이트
+	  id기반처리
+	  스냅샷//임시컬렉션에 처리할거 복사한후에 원본대신 임시컬렉션에서 읽기
+	등 우회할수있긴한데,가급적 커서쓰는게나음
+
+  3.MongoItemWriter
+    얘는 MongoTemplate을 사용해 청크의 아이템을 추가,수정,삭제함
+	얘는 batchUpdate와 비슷한 bulkWrite를 사용함
+	이때 각 연산은 순차실행되고,하나가 실패하면 후속작업은 실행되지않음
 	
+	얘는
+	  MongoTemplate //핵심엔진
+	  collection  //테이블비스무리
+	  mode  //인서트,업서트(기존도큐먼트수정,없으면추가,기본값),리무브를 설정해야함
+	로 구성됨
+	얘는 뭘할질 미리 정해줘야함
+	얘는
+		@Bean
+		public MongoItemWriter<SecurityLog> securityLogWriter() {
+		   return new MongoItemWriterBuilder<SecurityLog>()
+				   .template(mongoTemplate)
+				   .collection("security_logs")
+				   .mode(MongoItemWriter.Mode.UPSERT)  // 기존 문서 수정
+				   .build();
+		}
+	이렇게 간단하게 만들수있음
+	이때 업서트는 기본동작은 id를 사용해서 검색하고,없으면 새로생성함
+	만약 로직을 추가하려면 5.2.3부터는 primaryKeys()를 사용해서 복합키기반 도큐먼트선택이 가능함
+		public MongoItemWriterBuilder<T> primaryKeys(List<String> primaryKeys) {
+			this.primaryKeys = List.copyOf(primaryKeys);
+			return this;
+		}
+	단 이때 지정한 필드들의 조합이 반드시 단일도큐먼트를 유니크하게 식별할수있어야함
+
+  4.MongoTransactionManager
+    몽고아이템라이터의 벌크인서트에서 하나의 작업이 실패하면 후속작업이 실행되지않는다는건,바꿔말하면 이미 성공한데이터들은 남아있게됨
+	즉 트랜잭션이 되지않는다는거
+	
+	만약 이때 이미 성공한애들을 롤백하려면 MongoTransactionManager를 스텝의 트랜잭션매니저로 별도구성해줘야함
+	단 이때 주의할점은
+	  MongoDB의 버전이 4.0이상이어야하고,
+	  샤드클러스터나 레플리카셋환경에서만 지원함,즉 단일몽고에서 지원하징낳음
+	  이건 자동빈등록안되니까 수동구성해야함
+	이런 문제가 있음
+	
+	만약 단일환경일경우엔 파일라이터에서 쓰던 버퍼링을 사용해서 처리할순있음
+	그렇지만 이건 위험도를 감소시키는거지 이미 쓰여진 데이터를 원자적으로 롤백해주진못함
+	또한 MongoTransactionManager를 빈으로 정의할땐 배치메타데이터 트랜잭션매니저와 분리를 해야해서 별도구성이 필요함
+
+  5.RedisItemReader
+    5.1부터 레디스전용 아이템리더와 라이터를 지원함
+	RedisItemReader는 scan을 사용하는 일종의 커서기반 아이템리더임
+	
+	그런데 스캔특성상 다른 커서랑 차이가 있음
+	scan은 조회대상키들의 목록만을 반환하고,실제값을 얻을땐 get명령이 필요함
+	이게 다른점임
+	또한 scan은 스트링타입전용명령이고,다른타입은 HSCAN, SSCAN, ZSCAN등을 사용한 커스텀아이템리더를 직접 구현해야함
+	
+	얘의 동작은
+	  초기화시점(open())에 scan을 최초호출해 커서를 생성함,커서엔 조회대상키목록이 담겨있고,그것도 전체가 아닌 일부키만 담겨있음
+	  read로 커서로부터 키를 하나씩 받아와서 get함
+	  커서의 키가 다 소모되면 추가스캔으로 새 키목록을 확보후 반복
+	이런식으로 동작함
+	이래서 문제가 있는데
+	  아이템 하나당 get 한번을 하기때문에 청크크기만큼 get이 날아감
+	    인메모리 db특성상 괜찮긴한데 네트워크왕복시간때문에 조회시간이 길어질수있고,레디스에도 부담
+	  레디스 특성상 scan이 중복된 키를 반환할수있고,이거처리는 어플리케이션에서 해야함
+	    즉 사소한 중복이 문제가 되지않거나(통계),별도의 중복처리방법이 없다면 반드시 멱등한 배치에서만 사용해야함
+	  재시작불가
+	    스캔은 순서를 보장하지않아서 재시작이 불가능함(order by 없으니까)
+	이런문제들이 있음
+	
+	얘의 구성은
+	  RedisTemplate  //핵심엔진
+	  Cursor //스캔의 결과물,키가 다떨어지면 내부적으로 추가스캔함
+	  ScanOptions //스캔할때 필요한 설정정보가 있음,key패턴이나 한번에 몇개가져올지등
+	이렇게 구성되고,실제 빌더는
+		RedisItemReader redisItemReader = new RedisItemReaderBuilder<String, AttackLog>()
+			.redisTemplate(template)
+			.scanOptions(ScanOptions.scanOptions()
+				.match("attack:*")  //키패턴
+				.count(10)  //가져올갯수
+				.build())
+			.build();	
+	이렇게 하면됨
+	단 여기서의 카운트는 힌트라서 엄격하지않음
+	
+	그리고 레디스템플릿을 기본제공해주는걸 써도되지만,json문자열형태를 객체로 변환할필요가 있다면 직접 생성해야함
+	Jackson2JsonRedisSerializer를 별도로 구성해줘야하기때문
+	그리고 match()는 저 패턴을 만족하는 모든 키를 대상으로 삼겠다는거
+	추가적으로 레디스아이템빌더는 재시작이 불가능하기때문에 이름이없음
+		
+	추가적으로 배치에서 청크지향처리를 할때,전체데이터에 대한 집계나 요약정보가 필요할땐 별도의 집계컴포넌트가 필요함
+	이떄 JobExecutionListener 를 상속받은 클래스를 만들어서 모으는식으로 집계나 요약정보를 생성할수있음
+	이걸 잡빌더에서
+		.listener(attackCounter)
+	로 등록하면됨
+	
+	그리고 RedisItemReader는 value만 반환하는데,만약 키의 값이 필요할경우가 있음
+	현재기준으로는 이걸 사용할수없지만 미래에 수정될예정같음
+
+  6.RedisItemWriter
+    이건 청크의 각 아이템을 하나하나 추가하거나 삭제함
+	별도의 최적화없이 단순히 한건씩 처리함
+	또한 얘도 String타입의 데이터만 쓰기를 지원함
+	얘의 빌더는
+		@Bean
+		public RedisItemWriter<String, AttackLog> deleteAttackLogWriter() {
+			return new RedisItemWriterBuilder<String, AttackLog>()
+					.redisTemplate(redisTemplate)
+					.itemKeyMapper(attackLog -> "attack:" + attackLog.getId())
+					.delete(true)
+					.build();
+		}
+	이렇게 됨
+	여기서 .delete(true)로 두면 삭제모드로 동작하고(키를 추출해 해당키를 삭제),
+	false로 두면 키를 추출해서 키로쓰고,AttackLog객체를 value로 삽입함
+
+  7.RepositoryItemReader
+    이건 레포지토리추상화를 가지고 동작하는 아이템리더임
+	근데 문제는 얘는 페이징방식으로 오프셋으로 동작함
+	그래서 데이터가 많아지면 성능이슈발생가능
+	얘는
+		public RepositoryItemReader<HackNote> reader() {
+		return new RepositoryItemReaderBuilder<HackNote>()
+				.name("hackNoteItemReader")
+				.repository(hackNoteRepository)
+				.methodName("searchNotesByMessageAndSentimentIsNull")
+				.arguments(List.of("PWN"))
+				.pageSize(10)
+				.sorts(Map.of("timestamp", Sort.Direction.DESC))
+				.build();
+		}
+	이렇게 레포지토리를 넣고 검색메서드를 넣어주고 파라미터넣고 페이징사이즈 넣고 정렬넣고 쓰면됨
+
+  8.RepositoryItemWriter
+    이건 라이터라서 기본적으로는 saveAll을 사용해서 벌크연산을 사용하고,
+	methodName()을 사용해 다른메서드를 사용할수있긴한데 이런경우엔 아이템마다 개별호출되니까 주의
+	가급적 기본값쓰는게나음
+	
+	빌더는
+		@Bean
+		public RepositoryItemWriter<HackNote> logWriter() {
+			return new RepositoryItemWriterBuilder<HackNote>()
+					.repository(hackNoteRepository)
+					.build();
+		}
+	진짜 레포만 넣으면되고,필요하다면 중간에  .methodName("save") 같은걸 넣어서 메서드지정하면됨
+	또한 이렇게 메서드가 진짜 있는지없는지와 파라미터(즉 시그니처)를 RepositoryMethodReference를 사용해서 검증할수있음
+	이때 프록시로 검증하기때문에 레포지토리가 final이 아니어야함
+	
+*3.위임 ItemWriter와 ItemReader	
 	
 	
 	

@@ -1458,12 +1458,86 @@
 	
 	
 5.배치 스탭
-*1.ItemStream	
+*1.ItemStream
+  ItemStream은 보통 청크지향처리 컴포넌트들과 파일기반라이터들이 구현하고,얘는
+	자원초기화 및 해제
+	메타데이터 관리 및 상태추적
+  을 담당함
+  
+  1.자원 초기화 및 해제
+    커서기반 아이템리더는 초기화시점에 커서를 생성하고 커서를 닫는건(해제) ItemStream이 담당함
+	초기화가 없으면 로직을 시작할수없고,해제가 없으면 메모리누수,커넥션풀누수,파일핸들누수가 생김
+	이렇게 자원을 초기화하고 해제하는 작업이 ItemStream 인터페이스의 open()과 close()메서드임
+	리더와 라이터들이 구현하니까,여기에 연결을 시작하는것과 닫는 코드를 넣어두면됨
 	
+	이 open/close메서드는 스탭이 시작할때 오픈을 호출하고,실행을 완료하면 클로즈를 호출함
+
+  2.메타데이터 관리 및 상태 추적
+    ItemStream은 배치 스탭의 실행정보를 관리(저장 및 복구)하는 역할도 함
+	배치는 항상 실패할수있고,그래서 우리는 처음부터 다시 처리하던가 실패한지점부터 다시 재시작해야함
+	이때 처음부터 다시하는건 너무 비효율적이니까,실패지점부터 재처리가 되는게 좋음
+	그래서 매 트랜잭션마다 현재실행상태를 메타데이터저장소에 저장하는데,이걸 ItemStream이 담당함
 	
+	ItemStream의 메타데이터 관리는
+	  open()//저장된실행정보 복원,작업을 실패한시점부터 이어서 실행할수있게 상태를 복원함
+	  update()//상태저장,현재작업이 어디까지 진행되었는지를 저장함
+	두가지 메서드로 관리함
 	
+	open()은 ExecutionContext를 입력으로 받는데,여기엔 이전스탭실행의 실행정보가 담겨있고,이걸 사용해 이전상태를 복원할수있음
+	만약 재시작이라면 여기에 이전실행정보가 있고,처음실행이라면 비어있는상태로 전달됨
 	
+	파일리더에서는 ExecutionContext에서 maxItemCount(몇개읽을건지)과 itemCount(이전에 몇개읽었는지)를 복원해서 사용함
+	그리고 itemCount만큼 jumpToItem()을 사용해 파일의 현재 읽기위치를 이동시킴
 	
+	jdbcCursorItemReader에서도 똑같이 maxItemCount와 itemCount를 가져오는건 동일하고,
+	jumpToItem()이 커서를 해당 위치로 즉시 이동시킴
+	추가적으로 사용중인 jdbc드라이버가 ResultSet.absolute()를 지원한다면
+	  JdbcCursorItemReaderBuilder.driverSupportsAbsolute(true)
+	설정으로 재시작 커서이동속도를 크게올릴수있긴한데
+	그러나 JdbcCursorItemReader는 ResultSet.TYPE_FORWARD_ONLY 고정이라 저걸 사용할수없음
+	그래서 false(기본값)을 유지하는게 좋고,만약 필요하다면 JdbcCursorItemReader의 openCursor()메서드를 오버라이드해야함
+	
+	false라면 moveCursorToRow()로 한줄씩 이동함(파일처럼)
+	커서가 아닌 JdbcPagingItemReader같은경우엔 바로 페이지번호 바꿔서 알아서 움직임
+	
+	update()도 ExecutionContext를 파라미터로 받고,여기다가 현재 실행정보를 저장함
+	update()는 매 트랜잭션의 커밋 직전에 호출되고,트랜잭션이 롤백되면 호출되지않음
+	얘는 
+	  currentItemCount//현재까지 읽은 데이터수
+	  maxItemCount//읽을수있는 최대 데이터갯수
+	를 저장함(오픈에서 사용할거 그대로)
+	
+  3.재시작불가사례:RedisItemReader
+    물론 레디스처럼 재시작을 지원하지않는 아이템리더도 있음
+	그런애들은 update메서드를 구현하지않고,오픈클로즈에서 자원관리하고 자원해제만 함
+
+  4.ItemStream의 위임 구조
+    위임을 할때 open(),close(),update()메서드는 받은 모든 리더의 해당메서드를 for문돌려서 실행시킴
+	이떄 스프링배치 5.2이전버전에선 위임받는 애들의 close중 하나에서 예외터지면 나머지애들이 클로즈되지않는 문제가 있었고,5.2.2에서 수정됨
+
+  5.다른 위임 패턴들의 ItemStream 구현
+    CompositeItemWriter, MultiResourceItemReader, MultiResourceItemWriter들도 이런식으로 ItemStream을 구현해서 위임함
+	단,ClassifierCompositeItemWriter는 ItemStream을 구현하지않아서 위임하지못함
+	그래서 이런경우엔 위임대상의 open(),update(),close()메서드를 배치스탭에서 직접 호출할수있게 별도구성을 해야함
+		@Bean
+		public Step systemLogProcessingStep() {
+			return new StepBuilder("systemLogProcessingStep", jobRepository)
+					.<SystemLog, SystemLog>chunk(10, transactionManager)
+					.reader(systemLogProcessingReader())
+					.writer(classifierWriter())
+					.stream(criticalLogWriter()) // ItemStream 구현체 직접 전달
+					.stream(normalLogWriter()) // ItemStream 구현체 직접 전달
+					.build();
+		}
+	이렇게 사용할 해당 위임대상들을 stream으로 직접 밀어줘야함
+	기본적으론 알아서 자동으로 체크하기때문에 할필요없는데,문제는 @StepScope를 사용할때임
+	이러면 stream을 떼버리면 npe가 터지는데,
+	배치동작로직상 프록시를 생성하는데,이때 생성된 프록시객체는 ItemStream인터페이스를 아예 구현하지않음
+	그래서 해당객체를 스탭의 관리대상 ItemStream에 포함시키지않아서 open(),close(),update()가 호출되지않음
+	
+	그래서ItemStream을 구현한 컴포넌트에 @StepScope를 적용할떈 반드시 구체클래스를 반환타입으로 잡아야함
+	
+*2.ItemProcessor 
 	
 	
 	

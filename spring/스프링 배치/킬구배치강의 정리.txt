@@ -1538,13 +1538,72 @@
 	그래서ItemStream을 구현한 컴포넌트에 @StepScope를 적용할떈 반드시 구체클래스를 반환타입으로 잡아야함
 	
 *2.ItemProcessor 
+  아이템프로세서는 비즈니스로직을 넣는곳이고,대부분은 그래서 직접 클래스를 만들어야함
+  단 아이템프로세서도 반드시 알아야할 기본동작원리들이 있음
+  
+  1.null 반환을 통한 데이터 필터링
+    ItemProcessor의 process메서드가 null을 반환할경우,해당 item은 itemWriter로 전달되는 청크에서 완전히 제외됨
+	이게 ItemProcessor를 통한 데이터필터링임
+	즉 그래서 아이템라이터에 전달되는 청크는,리더로부터 받은 청크보다 작거나 같음
+	
+	보통 유효하지않은 데이터를 제거하거나,처리가 불필요한데이터를 제외하거나,특정조건에 맞지않는 데이터를 제외할때 사용됨
+	
+	이런경우같은건 ValidatingItemProcessor라는 구현체가 이미 있음
+	이건 org.springframework.batch.item.validator.Validator를 사용해 데이터필터링을 수행함
+	저건 저 Validator 클래스 안에서 데이터가 검증을 만족하지못하면 ValidationException을 던지게 구현하면됨
+	그리고 주의점이,이걸쓸땐 
+		@Bean
+		public ItemProcessor<Command, Command> commandProcessor() {
+			ValidatingItemProcessor<Command> processor = 
+				new ValidatingItemProcessor<>(new CommandValidator());
+			processor.setFilter(true);  // ValidationException 발생 시 필터링 수행
+			return processor;
+		}	
+	이렇게 setFilter를 true로 해야함,기본값은 false인데 이러면 ValidationException을 잡지못하고 스탭으로 던져서 스탭이 터짐
+	그리고 중요한건 스프링의 Validator가 아닌 스프링배치의 Validator을 사용해야한다는것
+	물론 스프링의 Validator가 이미 있다면 그걸
+	  org.springframework.batch.item.validator.SpringValidator
+	를 사용해서 그대로 활용할수있는데,새로만든다면 타입을 신경써야함
+
+  2.데이터 검증을 통한 실패 처리
+    setFilter(false)를 두면,문제가 있는 데이터가 들어왔을때 아예 배치를 실패하게만들수도있음
+	이게 데이터검증을 통한 실패처리임
+	이게 좀 그렇다면,skip을 활용해서 몇개이상의 예외가 발생했을때만 터지게할수도있음
+
+  3.데이터 변환
+    ItemProcessor의 핵심은 데이터 변환임
+	리더에서 읽어온 원본 데이터는 그대로 쓰기힘든경우가 많고,이걸 가공하는게 ItemProcessor의 주요목적임
+	보통
+	  주문정보에서 정산에 사용할 데이터만 추출해서 정산객체생성
+	  레거시시스템의 데이터를 신규포맷으로 변환
+	이런걸 하는거임
+	
+	ItemProcessor의 타입을 보면
+	  ItemProcessor<I,O>
+	이렇게 리더에서 받을것과,라이터에 보내줄타입이 두개가 있고,저걸 맞춰주는게 ItemProcessor의 핵심업무임
+
+  4.데이터보강
+    읽어온데이터만으로 충분하지않고,외부시스템이나 db에서 추가정보를 가져와 기존데이터를 보강해야할때가 있음
+	보통 외부 api등으로 정보를 추가하거나 할때 사용됨
+	
+	문제는 외부시스템통신을 할땐 성능이슈가 발생할수있음
+	각 아이템마다 api호출을 하는데 ItemProcessor는 로직상 아이템별로 처리를 해서 호출횟수를 줄일수가 없음
+	그럴떈 ItemWriteListener의 beforeWrite에서 처리를 하는식으로 청크단위로 외부api통신을 묶어서 처리하는식으로 문제를 줄일수있음
+	
+	물론 ItemWriter에서 처리하는것도 생각해볼수있지만,라이터는 쓰기작업을 처리하는애라서 단일책임원칙이 깨짐
+
+  5.CompositeItemProcessor
+    이건 여러 위임대상 아이템프로세서를 순차적으로 실행하는 위임 ItemProcessor임
+	각 ItemProcessor는 순차적으로 실행되고,이전 ItemProcessor의 반환값이 다음 ItemProcessor의 입력으로 사용됨
+	
+	이걸 쓸땐 생성자에 위임대상 ItemProcessor들을 전달하거나,CompositeItemProcessorBuilder.delegates()를 사용할수있음
+	
+  6.ClassifierCompositeItemProcessor
+    이건 여러 ItemProcessor중 하나를 선택하는 방식임
+	이떄 주의할점은,이건 순서대로 하는게 아니니까 모든 ItemProcessor들의 타입이 입력과 출력이 리더출력,라이터입력으로 같아야함
 	
 	
-	
-	
-	
-	
-	
+*3.FaultTolerant	
 	
 	
 	

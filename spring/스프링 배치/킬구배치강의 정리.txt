@@ -1821,9 +1821,44 @@
 	
 	
 *4.스탭 해부	
+  상세내용은 스킵하고 쓸만한거만 적음
+  내부구현은 코드찾아가던가 다시강의보자
+  1.구성요소
+    청크지향스탭이든 테스크릿스탭이든 내부적으로는 태스크릿스탭으로 구현돼있음
+	태스크릿스탭은 우리가 내용물을 만든거고,청크지향스탭은 배치가 만들어둔 태스크릿스탭구현체를 사용하는거의 차이일뿐임
 	
+	하나의 객체가 여러타입의 Listener를 구현하는경우엔 리스너를 빌더에 넣으면
+	  "error: reference to listener is ambiguous" 
+	이런에러가 나는데,이러면 반환타입을 특정인터페이스로 넣어야함
+	이때 더 상위 인터페이스로 넣는게 좋음(더 넓은범위를 처리할수있는 타입으로)
+	이러면 내부에서 하위거도 구현했는지 확인하고 알아서 넣어줌
+	즉
+	  StepExecutionListener > ChunkListener > ItemListener
+	순으로 넣으면됨
+	물론 리더,라이터,프로세서에는 각각 따로 등록해야함
 	
+	배치의 읽기반복에는 RepeatTemplate를 내부적으로 사용하는데,얘는 CompletionPolicy라는 완료정책을 바탕으로 반복여부를 결정함
+	이건 RepeatStatus를 사용해서 반복여부를 결정함
+	청크기반도 결국 태스크릿이라서 이것도 마찬가지임
 	
+	ChunkProvider는 ItemReader를 호출하는 역할을 하고,ChunkProcessor는 ItemProcessor와 ItemWriter를 호출하는 역할을 함
+	SimpleChunkProvider에는 ItemReader와 chunkOperations(읽기반복실행조건체크)을 매개변수로 받고,
+	SimpleChunkProcessor에는 ItemProcessor와 ItemWriter를 매개변수로 받음
+	즉 읽기반복을 시키는건 ChunkProvider가 담당함
+
+  2.실행흐름추적
+    스탭은 StepHandler(구현체 SimpleStepHandler)가 실행시킴
+	얘는 StepExecution과 ExecutionContext를 생성하고,이를 바탕으로 Step의 execute를 실행함
+	또한 여기서 @StepScope에 해당하는 빈들을 받아오는데,이게 스탭이 생성되기전에 받아오기때문에 스텝에 스텝스코프를 붙이면안되는거
+	
+	그리고 스탭이 실행되면 가장먼저 스텝스코프를 활성화시키고,beforeStep을 실행시키고 itemStream의 open()을 호출한다음
+	doExecute로 스탭을 실행시킴
+	이 실행된 스탭에서 반복처리를 하고 트랜잭션을 실행한후에 우리가 넣은 스탭구현체를 돌리는거
+	이후에 각 실행마다 통계정보를 StepExecution에 누적하는식임
+	 
+	
+5.스프링 배치 정복	
+*1.Job과 메타데이터 저장소
 	
 	
 	

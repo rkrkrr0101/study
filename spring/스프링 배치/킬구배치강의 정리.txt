@@ -1859,6 +1859,334 @@
 	
 5.스프링 배치 정복	
 *1.Job과 메타데이터 저장소
+  배치를 작성할떈 반드시 중간에 배치가 죽어버렸을때를 대비해야함
+  이떄 필요한게
+    어떤작업이 실행되었는지 추적
+	어디까지 진행되었는지 상태저장
+	실패지점부터 재시작
+  이렇게 3가지 기능이 필요함
+  
+  1.메타데이터 저장소
+    그래서 배치는 저 3가지를 해결하기위해 메타데이터 저장소를 사용함
+	얘는 각 작업의 실행상태,처리항목수,실패지점등을 db에 기록하고 추적할수있음
+
+  2.배치의 핵심 도메인
+    1.JobInstance
+	  JobInstance는 Job의 논리적 실행단위를 나타냄
+	  Job이 설계도(클래스)라면 JobInstance는 실제 객체라고 할수있음
+	  
+	  즉 같은 잡이라도 잡파라미터에 따라서 다른 잡이 되고(보통 날짜시간등),잡의 이름도 그래서 넣는거임
+	  잡이름을 가지고 여러 잡중 하나를 선택할수있게되고,같은 잡 내에서 잡파라미터를 가지고 잡인스턴스를 구분하는식임
+	
+	2.JobParameters 
+	  JobParameters는 배치를 동적으로 실행하기 위한 용도만이 아니라,잡을 서로 다른 잡인스턴스로 구분하는 핵심요소기도 함
+	  즉 Job+JobParameters가 하나의 JobInstance를 결정함
+	
+	3.JobExecution 
+	  JobExecution은 잡의 실제 실행 시도를 나타냄
+	  JobInstance가 잡의 논리적인 실행을 나타낸다면,JobExecution은 잡이 실제로 실행된 이력을 나타내는거임
+	  
+	  JobInstance는 여러번 실행될수있음(실패등의 이유로)
+	  이걸 각 재시도를 구분하기위한 목적임
+	  
+	  JobExecution에 포함된 실행정보로는
+	    현재상태(BatchStatus):작업이 어떤상태인지(COMPLETED, FAILED, STOPPED등)
+		시작시간:Job이 실행을 시작한 시점
+		종료시간:Job이 실행을 종료한 시점
+		종료코드:Job실행의 최종 결과코드
+		실패원인:Job이 실패했을때 실패이유
+	  등이 들어있음
+	  
+	  이때 BatchStatus로는 여러 값을 가질수있는데,
+		COMPLETED: 배치 작업이 성공적으로 완료됨
+		STARTING: 배치 작업이 실행되기 직전 상태
+		STARTED: 배치 작업이 현재 실행 중인 상태
+		STOPPING: 배치 작업이 중지 요청을 받아 중지 진행 중인 상태
+		STOPPED: 배치 작업이 요청에 의해 중지된 상태
+		FAILED: 배치 작업이 실행 중 오류로 인해 실패한 상태
+		ABANDONED: 배치 작업이 비정상 종료되어 재시작할 수 없는 상태
+		UNKNOWN: 배치 작업의 상태를 확인할 수 없는 불확실한 상태	
+	  등이 있음
+	4.JobInstance의 재실행 제한
+	  배치는 완료된 JobInstance를 재실행할수 없게 제한함
+	  즉 배치는 잡을 실행할때마다 같은 JobInstance(Job+JobParamaters)의 실행이력(JobExecution)중
+	  BatchStatus가 COMPLETED인게 있는지를 검사함
+	  만약 존재한다면 예외를 뱉고 작업재실행을 거부하고,같은게 있어도 COMPLETED가 아니라면 다시 실행할수있음
+	
+	5.JobParametersIncrementer로 동일 작업 여러 번 실행하기
+	  그런데 작업에 따라서 같은걸 여러번 시도해야하는 작업들이 있음(멱등성이 보장되거나,덮어쓰기가 가능하거나 등)
+	  이럴떈 JobParametersIncrementer를 사용할수있음
+	  이건 JobParamaters에 쓸데없는값들을 추가,수정하여 같은잡을 여러번 실행하게 해주는 컴포넌트임
+	  
+	  대표적으로 RunIdIncrementer가 있음
+	  이건 run.id라는 파라미터값을 자동으로+1하는방식임
+	  이건
+		@Bean
+		public Job brutalizedSystemJob() {
+			return new JobBuilder("brutalizedSystemJob", jobRepository)
+					.incrementer(new RunIdIncrementer()) // 이 한 줄이 전부다💀
+					.start(brutalizedSystemStep())
+					.build();
+		}
+	  이런식으로 사용할수있음
+	  
+	  단 모든 JobParamater가 식별용도로 사용되는건 아니고,identifying 속성이 true인거만 식별용도로 사용됨
+	  기본값으로는 JobParamater는 다 identifying =true임
+	  이걸 false로 두는건 로깅수준제어,성능튜닝변수,출력경로지정등의 경우는 false로 두고 사용하게됨
+	
+	6.Job의 재실행 통제: restartable 설정
+	  기본적으로 잡은 실패했을때 재시작이 가능하지만,모든 잡이 재시작가능해야하는건 아님
+	  이런상황을 위해 preventRestart()메서드가 있음
+		@Bean
+		public Job brutalizedSystemJob() {
+		  return new JobBuilder("brutalizedSystemJob", jobRepository)
+				  .start(brutalizedSystemStep())
+				  .preventRestart() // 이 한 줄로 재시작을 막는다 💀
+				  .build();
+		}
+	  이걸 키면 설정된 잡이 재시작불가능하게 만듬
+	  이게 설정되면 어떤이유로든 실패후 같은파라미터로 다시 실행할수없으니,적용전에 이 작업을 재시작하면 안되는 명확한 이유가 있을떄만 추가해야함
+	  또한 RunIdIncrementer와 이걸 같이쓰면의미없으니까 주의해야함
+	
+	7.StepExecution
+	  StepExecution은 단일 스탭의 실행시도를 나타냄
+	  하나의 잡이 여러 스탭을 가질수있으니,하나의 jobExecution은 여러 StepExecution를 포함할수있음
+	  StepExecution은 스탭실행시 생성되고,해당스탭이 실제로 시작해야지만 생성됨
+	  즉 첫스탭이 실패하면 두번째스탭의 StepExecution은 생성되지않음
+	  이건 이런 정보들을 포함함
+		현재 상태: Step이 현재 어떤 상태인지를 나타내는 BatchStatus
+		읽기/쓰기 카운트: 성공적으로 읽거나 쓴 아이템의 수
+		커밋/롤백 카운트: 트랜잭션 처리 횟수
+		스킵 카운트: 청크 처리 중 건너뛴 아이템의 수
+		시작/종료 시간: Step 실행의 시간적 정보
+		종료 코드: Step 실행의 최종 결과 코드
+		예외 정보: 실패 시 발생한 오류에 대한 상세 정보
+	  여기서도 BatchStatus가 있음
+	
+	8.JobExecution과 StepExecution의 BatchStatus
+	  JobExecution의 최종 BatchStatus는 해당 JobExecution의 마지막 StepExecution의 BatchStatus값을 따라감
+	
+	9.실패와 재시작 시 StepExecution의 동작
+	  잡이 실패후 다시 실행될때 JobExecution이 새로 생성되는거처럼,스탭을 다시 실행할때도 새로운 StepExecution이 생성됨
+	  각 실행시도가 독립적으로 추적되어야하기때문
+	  또한 이때 실패한Job을 재시작할땐 실패한 Step부터 다시 시작된다는걸 알아야함
+	  즉 이미 성공한 Step은 재실행되지않아서 StepExecution이 생성되지않음
+	  
+	  StepExecution정보는 단순한 로깅 이상의 가치가 있음
+	  이걸 사용해서
+	    성능모니터링:각 스텝의 처리시간과 처리량을 분석해서 병목지점식별
+		오류패턴분석:특정데이터나 조건에서 반복적으로 오류발생하는부분을 파악
+		자원할당최적화:읽기/쓰기/처리비율을 분석해서 리소스할당조정
+	  을 할수있음
+	
+	10.ExecutionContext
+	  ExecutionContext는 배치작업의 상태정보를 저장하는 데이터컨테이너고,Map형태로 데이터를 저장하고 관리함
+	  특히 사용자정의데이터를 넣는데 사용됨
+	  또한 이것도 메타데이터 저장소에 영구저장됨
+	  
+	  ExecutionContext는 Job와 Step 두가지 범위가 있고,실제메타데이터 저장소에서도 물리적으로 분리되어 관리됨
+
+  3.배치 메타데이터 테이블 구조
+    배치 메타데이터 테이블은
+		BATCH_JOB_INSTANCE
+		BATCH_JOB_EXECUTION
+		BATCH_JOB_EXECUTION_PARAMS
+		BATCH_JOB_EXECUTION_CONTEXT
+		BATCH_STEP_EXECUTION
+		BATCH_STEP_EXECUTION_CONTEXT
+	이 6개의 테이블로 구성됨
+	
+	JobInstance는 BATCH_JOB_INSTANCE에 저장되고
+	이테이블은
+	  JOB_INSTANCE_ID  Job 인스턴스의 고유 식별자,PK    
+	  JOB_NAME         Job 이름. JobInstance 식별에 반드시 필요             
+	  JOB_KEY          JobParameters의 해시값,실제객체에는 존재하지않음                          
+	  VERSION          낙관적 락(Optimistic Lock) 버전.JobInstance의 경우 항상 0으로 유지됨                 	
+	이렇게 구성되어있음
+	즉 실제 JobInstance객체는
+	  JobInstance {
+	    Long id;             --> JOB_INSTANCE_ID (PK)
+	    String jobName;      --> JOB_NAME
+	    Integer version;     --> VERSION
+	  }
+	이렇게 구성됨
+	
+	JobExecution는 BATCH_JOB_EXECUTION 에 저장됨
+	  JOB_EXECUTION_ID  작업 실행의 고유 식별자,PK     
+	  VERSION           낙관적 락 버전                                
+	  JOB_INSTANCE_ID   연관된 JobInstance의 ID,FK      
+	  CREATE_TIME       JobExecution 생성 시간                       
+	  START_TIME        JobExecution 시작 시간                       
+	  END_TIME          JobExecution 종료 시간                       
+	  STATUS            JobExecution 현재 상태(BatchStatus)          
+	  EXIT_CODE         JobExecution 종료 코드                       
+	  EXIT_MESSAGE      JobExecution 종료 메시지(오류 포함)             
+	  LAST_UPDATED      마지막 업데이트 시간                            	
+	이렇게 구성되고,JOB_INSTANCE_ID가 외래키로 등록되어있고,이건 1:N관계로 한 JOB_INSTANCE_ID엔 여러 JobExecution이 존재할수있음
+	실제 객체는
+	  JobExecution {
+	  	Long id;                            --> JOB_EXECUTION_ID (PK)
+	  	JobParameters jobParameters;        --> BATCH_JOB_EXECUTION_PARAMS 테이블에 저장
+	  	JobInstance jobInstance;            --> JOB_INSTANCE_ID (FK)
+	  	Collection<StepExecution> stepExecutions; --> BATCH_STEP_EXECUTION 테이블 레코드
+	  	BatchStatus status;                 --> STATUS
+	  	LocalDateTime startTime;            --> START_TIME
+	  	LocalDateTime createTime;           --> CREATE_TIME
+	  	LocalDateTime endTime;              --> END_TIME
+	  	LocalDateTime lastUpdated;          --> LAST_UPDATED
+	  	ExitStatus exitStatus;              --> EXIT_CODE
+	  	ExecutionContext executionContext;  --> BATCH_JOB_EXECUTION_CONTEXT 테이블에 저장
+	  	List<Throwable> failureExceptions;  --> EXIT_MESSAGE
+	  	Integer version;                    --> VERSION
+	  }
+	이렇게 구성됨
+	
+	JobParameters는 BATCH_JOB_EXECUTION_PARAMS 테이블에 저장됨
+	  JOB_EXECUTION_ID  작업 실행의 ID,FK      
+	  PARAMETER_NAME    파라미터 이름                          
+	  PARAMETER_TYPE    파라미터 타입                          
+	  PARAMETER_VALUE   파라미터 값                           
+	  IDENTIFYING       JobInstance 식별에 사용 여부            
+	이런식으로 구성됨,이떄 특이점은 JOB_INSTANCE_ID가 아닌,JOB_EXECUTION_ID을 참조한다는것
+	이건 IDENTIFYING이 N,즉 false인거때문임
+	이거의 객체는
+		JobParameters {
+		  Map<String, JobParameter> parameters;  
+			
+		}
+		JobParameter {
+		  T value;                    --> PARAMETER_VALUE
+		  Class<T> type;              --> PARAMETER_TYPE
+		  boolean identifying;        --> IDENTIFYING
+		}
+	이런식으로 표현됨
+	
+	StepExecution은 BATCH_STEP_EXECUTION 에 저장되고
+		 STEP_EXECUTION_ID  StepExecution 고유 식별자,PK    
+		 VERSION            낙관적 락 버전                                
+		 STEP_NAME          Step 이름                                  
+		 JOB_EXECUTION_ID   연관된 JobExecution의 ID,FK    
+		 CREATE_TIME        실행 레코드 생성 시간                           
+		 START_TIME         StepExecution 시작 시간                     
+		 END_TIME           StepExecution 종료 시간                     
+		 STATUS             StepExecution의 현재 상태(BatchStatus)       
+		 COMMIT_COUNT       커밋 횟수                                   
+		 READ_COUNT         읽은 아이템 수                                
+		 FILTER_COUNT       필터링된 아이템 수                             
+		 WRITE_COUNT        쓴 아이템 수                                 
+		 READ_SKIP_COUNT    읽기 건너뛴 수                                
+		 WRITE_SKIP_COUNT   쓰기 건너뛴 수                                
+		 PROCESS_SKIP_COUNT 처리 건너뛴 수                                
+		 ROLLBACK_COUNT     롤백 횟수                                   
+		 EXIT_CODE          StepExecution 종료 코드                     
+		 EXIT_MESSAGE       StepExecution 종료 메시지                    
+		 LAST_UPDATED       마지막 업데이트 시간                            
+	이렇게 저장됨
+	이떄 JOB_EXECUTION_ID를 FK로 사용해서 StepExecution이 어떤 JobExecution에 속하는지를 나타냄
+	객체로는
+	  StepExecution {
+	    Long id;                      --> STEP_EXECUTION_ID (PK)
+	    JobExecution jobExecution;    --> JOB_EXECUTION_ID (FK)
+	    String stepName;              --> STEP_NAME
+	    BatchStatus status;           --> STATUS
+	    long readCount;               --> READ_COUNT
+	    long writeCount;              --> WRITE_COUNT
+	    long commitCount;             --> COMMIT_COUNT
+	    long rollbackCount;           --> ROLLBACK_COUNT
+	    long readSkipCount;           --> READ_SKIP_COUNT
+	    long processSkipCount;        --> PROCESS_SKIP_COUNT
+	    long writeSkipCount;          --> WRITE_SKIP_COUNT
+	    long filterCount;             --> FILTER_COUNT
+	    LocalDateTime startTime;      --> START_TIME
+	    LocalDateTime createTime;     --> CREATE_TIME
+	    LocalDateTime endTime;        --> END_TIME
+	    LocalDateTime lastUpdated;    --> LAST_UPDATED
+	    ExecutionContext executionContext; --> BATCH_STEP_EXECUTION_CONTEXT 테이블에 저장
+	    ExitStatus exitStatus;      --> EXIT_CODE
+	    List<Throwable> failureExceptions; --> EXIT_MESSAGE
+	    Integer version;            --> VERSION
+	  }
+	이렇게 표현됨,또한 객체에선 StepExecution이 JobExecution을 직접참조,즉 양방향참조를 하고있음
+	
+	ExecutionContext은 
+	JOB의 경우는 BATCH_JOB_EXECUTION_CONTEXT 테이블에,
+	STEP의 경우는 BATCH_STEP_EXECUTION_CONTEXT 테이블에 저장됨
+	둘다 비슷하게 저장됨
+	JOB은
+	  JOB_EXECUTION_ID JobExecution의 ID,PK, FK
+	  SHORT_CONTEXT    직렬화된 ExecutionContext의 문자열 버전        
+	  SERIALIZED_CONTEXT 전체 컨텍스트, 직렬화된 형태                  
+	스텝은
+	  STEP_EXECUTION_ID  StepExecution의 ID,PK, FK
+	  SHORT_CONTEXT      직렬화된 ExecutionContext의 문자열 버전        
+	  SERIALIZED_CONTEXT 전체 컨텍스트, 직렬화된 형태                    
+	이렇게 저장됨
+	이때 직렬화문자열이 2500자보다 짧으면 SHORT_CONTEXT에 저장되고,SERIALIZED_CONTEXT는 null로 설정됨
+	만약 2500자보다 길다면 SHORT_CONTEXT에는 잘린버전(2492자정도)이 저장되고,전체내용은 SERIALIZED_CONTEXT에 CLOB형태로 저장됨
+	이 ExecutionContext의 객체는
+	  ExecutionContext {
+	  	Map<String, Object> map;  --> SHORT_CONTEXT, SERIALIZED_CONTEXT
+	  }	
+	이렇게 표현됨
+
+  4.Job Squad	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	

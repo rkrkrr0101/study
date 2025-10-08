@@ -2369,14 +2369,44 @@
 	가급적 두번째를 하는게 비용면에서 싼경우가 많음
 
   14.ExitCode
+    보통 배치는 cicd도구나 스케줄링도구등을 통해 실행하는경우가 많은데,얘네들은 프로세스의 종료코드를 확인해 작업의 성공여부를 판단하고 후속조치를 취함
+	보통 실제운영환경에서는 jar을 실행시키는식으로 동작함
+	  java -jar kill-batch-system-0.0.1-SNAPSHOT.jar --spring.batch.job.name=brutalizedSystemJob chaos=true,java.lang.Boolean
+	이때 실행완료후 echo $?를 찍어보면 프로세스exit코드가 출력됨(0은 정상종료)	
+	그런데 이때 System.exit()를 사용하지않으면 정상종료가 아니라도 0이 뜨게되니 배치를 실행할때 이걸로 감싸는건 필수임
+	  System.exit(SpringApplication.exit(SpringApplication.run(KillBatchSystemApplication.class, args)));
+	이렇게
+	
+	이 exitcode는 JobExecutionExitCodeGenerator가 기본적으로 생성함
+	  COMPLETED = 0
+	  STARTING = 1
+	  STARTED = 2
+	  STOPPING = 3
+	  STOPPED = 4
+	  FAILED = 5
+	  ABANDONED = 6
+	  UNKNOWN = 7
+	이렇게 Job의 statusCode에 따라서 다른 숫자를 던짐
+	일반적으로는 이정도로 사용해도되지만,특정실패유형에 따라 다른 종료코드를 반환하거나,추가적인 정보를 주거나 할순없고,그래서 ExitStatus를 사용할수있음
+	
+  15.ExitStatus	
+    ExitStatus는 고정값인 BatchStatus와 달리 문자열 기반이라 자유롭게 정의,확장이 가능함
+	그래서 예외유형에 따라 다른 커스텀 종료상태를 정의할수있고,거기에 맞는 종료코드를 매핑할수있음
+        } catch (IllegalStateException e) {
+            contribution.setExitStatus(new ExitStatus("SKULL_FRACTURE", e.getMessage()));
+            throw e;	
+	이건 이렇게 contribution에 세팅하고 던지면되는데,보통 예외를 잡거나,특정 조건을 만족할때 넣거나 할수있음
+	그리고 JobExecutionExitCodeGenerator대신 커스텀 ExitCodeGenerator를 사용하면됨
+	
+	ExitCodeGenerator 구현체는 ExitCodeGenerator는 당연히 구현해야하지만 JobExecutionListener도 같이 구현하면 좋음
+	커스텀 ExitCode를 만들고,
+	afterJob을 오버라이드해서 ExitStatus를 가져와서 이걸 정수형종료코드로 변환하면되기때문
+
+  16.순수 스프링배치 CommandLineJobRunner 
+    스킵
 	
 	
-	
-	
-	
-	
-	
-	
+*3.REST API를 통한 Job 실행과 JobOperator
 	
 	
 	

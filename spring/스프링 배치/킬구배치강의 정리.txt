@@ -2905,18 +2905,90 @@
 *5.병렬스탭과 AsyncItemProcessor	
   병렬스탭은 병렬스탭쓸바에 그냥 잡을 여러개 실행시키면되고,만약 c스탭이 a,b스탭의 결과물을 다 가져야한다고 해도 그냥 a,b잡을 돌리고나서 완료되면 c잡을 돌리면됨
   어지간하면 쓸일없으니 생략
+  
+  seda패턴은 reader과 processor이 writer보다 훨씬 빠를때,리더와 프로세서가 라이터를 기다리는 비효율을 해결하기위한 패턴임
+  이건 기존 단일멀티스테드스텝을 생산자와 소비자라는 독립적인 스탭으로 분할하고,그사이에 중간버퍼를 배치해서 두 스텝을 디커플링하는것
+  메시지큐쓰는느낌으로 분리시킨후 중간버퍼를 브로커로 써서 각각돌리는느낌
+  근데 이건 써보면 별로 효율적이지않아서 잘 사용되진않음
+  
+  
+  AsyncItemProcessor는 병목지점이 프로세서일떄,이걸 비동기로 처리하는 프로세서임
+  이건 읽기는 빠른데,프로세서가 병목일때,프로세서와 라이터를 비동기로 잡아서 메인스레드가 다음아이템을 즉시 처리할수있게 하는것
+  즉 읽기쓰레드는 하나로 잡아서 계속 읽기를 하고,프로세서 스레드를 여러개로 잡아서 각각 일을 한후 writer를 돌리는것
+  
+  이건
+    1. AsyncItemProcessor는 위임된 ItemProcessor를 감싸고, 처리 작업을 별도 스레드 풀에 위임한다
+	2. 각 아이템 처리 결과는 Future 객체로 즉시 반환된다 (완료되지 않은 상태)
+	3. AsyncItemWriter는 모든 Future 처리가 완료될 때까지 대기한 후, 실제 결과값을 위임된 Writer에 전달한다
+  이렇게 일반적인 위임프로세서의 형태로,모든 작업이 완료될떄까지 기다린후 Writer이 처리하는식
+  
+  얘는 청크지향방식을 유지하면서도 ItemProcessor만을 병렬화해서,청크단위 트랜잭션안전성은 유지됨
+  
+  이떄 주의할건
+    적절한 크기설정:청크가 너무작으면 비동기하는의미가없고,너무크면 메모리사용량이 증가함
+	TaskExecutor구성:스레드풀크기는 처리속도와 시스템리소스간의 균형을 고려해야함
+	  일반적으로 코어+1개의 스레드가 적절함
+	Future 처리:AsyncItemProcessor는 Future<T>를 반환하므로, 스텝 구성시 제네릭 타입에 주의해야 한다.
+	  AsyncItemWriter는 자동으로 Future.get()을 호출해 실제 결과값을 추출함
+	제약사항:AsyncItemProcessor는 제출 순서대로 Future를 반환하지만, 실제 처리는 병렬로 진행되므로
+	  개별 아이템의 처리 완료 순서는 보장되지 않는다. 그러나 AsyncItemWriter가 원래 순서대로 재배열한다.
+  즉 AsyncItemWriter는 모든 Future의 처리가 완료될떄까지 대기하고,실제결과를 위임된 ItemWriter에 전달함
+  즉 애는 비동기처리가 아닌,Future의 결과를 동기적으로 수집하는 역할을 함
+  
+  AsyncItemProcessor는 프로세서가 주 병목일때 성능향상이 크고,청크지향의 트랜잭션안전성은 그대로 유지됨
+  또한 구현이 단순함
+  단점으로는 메모리사용량이 증가하고(Future를 다 받아야하니까),스텝의 일부만 병렬화함(프로세서+라이터)
+  
+  얘는 원격청킹과 경쟁하는데,원격청킹보단 이게 더 복잡도관리가 쉬움
+  대신 원격청킹의 경우 메모리한계를 여러 컴퓨터를 사용하는걸로 벗어날수있고
 	
 	
+7.스프링 배치 테스트
+*1.E2E테스트
+  배치테스트를 할땐
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.batch:spring-batch-test'
+	testImplementation 'com.h2database:h2'
+  의 의존성을 추가해야함(h2는 상황따라)
+  
+  또한 h2를 쓸거면 기본설정을 좀 해줘야하고(기본테이블생성등),
+    spring.batch.job.enabled: false
+  로 배치 자동실행도 막아주는게좋음
+  
+  e2e테스트는 배치잡을 처음부터 끝까지 실행하면서,모든 컴포넌트가 제대로 연동되는지를 검증함
+  배치에서는 e2e테스트가 웹보다 좀 더 중요하다고 볼수있음
+  
+  e2e테스트를 할떈 @SpringBatchTest를 사용하면 배치테스트에 필요한 핵심 유틸리티들이 자동으로 준비됨
+	JobLauncherTestUtils: Job 실행 및 Step 개별 실행을 위한 유틸리티
+	JobRepositoryTestUtils: Job 실행 이력 생성 및 정리 등 JobRepository 관련 유틸리티
+	StepScopeTestExecutionListener: @StepScope 빈 테스트 지원
+	JobScopeTestExecutionListener: @JobScope 빈 테스트 지원	
+  즉 저걸 붙이고 이 4가지를 di받을수있음
+
+  1.JobLauncherTestUtils
+	이건 잡 전체를 실행하거나,개별스텝만 골라 실행할때 사용됨
+	이걸로 잡파라미터를 생성할땐
+	  JobParameters jobParameters = jobLauncherTestUtils.getUniqueJobParametersBuilder()
+        .addString("filePath", tempDir.toString())
+        .toJobParameters();
+	이렇게하면되고,잡을 실행할땐
+	  JobExecution jobExecution = jobLauncherTestUtils.launchJob(jobParameters);
+	이렇게하면됨
 	
+	이떄 getUniqueJobParametersBuilder를 사용하면,자동으로 고유한 잡파라미터를 생성해줌(random이라는 키에 랜덤값을넣어서)
+	또한 어플리케이션컨텍스트안에 잡이 여러개라면,테스트할 잡인스턴스를 직접 지정해줘야함
+	  jobLauncherTestUtils.setJob(inFearLearnStudentsBrainWashJob);
+	잡이 만약 하나라면 자동으로 잡이 등록됨
+
+  2.개별스텝 테스트
+    두개이상의 스텝으로 이뤄진 배치잡을 테스트할땐,각각 따로 테스트하는게 더 견고한 테스트가 됨
+	이걸 할땐
+	  JobExecution jobExecution =
+            jobLauncherTestUtils.launchStep("inFearLearnStudentsBrainWashStep", jobParameters);
+	을 사용하면됨(또한 이것도 내부적으로 랜덤파라미터를 생성해서 중복실행방지를 막음)
+	이후 JobExecution의 StepExecution을 사용해서 검증을 하면됨
 	
-	
-	
-	
-	
-	
-	
-	
-	
+*2.단위테스트	
 	
 	
   

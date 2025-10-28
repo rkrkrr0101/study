@@ -2989,6 +2989,133 @@
 	이후 JobExecution의 StepExecution을 사용해서 검증을 하면됨
 	
 *2.단위테스트	
+  (마지막에서 StepScopeTestUtils만 봐도됨)
+  배치의 단위테스트는 아이템리더,프로세서,라이터등의 개별컴포넌트의 동작을 검증함
+  이건 일반적인 스프링 유닛테스트에서는 그냥 di받아서 테스트하면되지만,배치에서는 StepScope등 스코프들때문에 불가능함
+  스코프빈은 스텝실행이후에 생성되기때문
+  
+  그래서 배치는 @SpringBatchTest를 사용해서 테스트를 돌릴수있게함
+  이건 테스트인스턴스 초기화단계에서 각각 잡익스큐션과 스텝익스큐션을 자동으로 생성하고,이걸 활용해 배치스코프를 활성화하고,
+  완료이후에는 배치스코프를 정리해서 @StepScope와 @JobScope가 있는 빈을 테스트환경에서 정상적으로 사용할수있게해줌
+
+  즉 @SpringBatchTest를 추가하기만 하면 배치스코프빈을 @Autowired로 di받아서 쓸수있다는거
+  
+  1.배치스코프빈에 JobParamaters설정하기
+    또한 테스트클래스에 정의된 getStepExecution을 탐지/호출해서 테스트상황에 맞는 커스텀 StepExecution을 사용할수있게도 해줌
+	즉 테스트클래스에 getStepExecution이 있다면,이걸 감지해서 커스텀StepExecution을 생성해준다는것(JobExecution도 마찬가지)	
+	잡파라미터도 JobExecution안에 포함된 필드니까,잡익스큐션세팅에 넣어두면되긴함
+	
+	그런데 이것저것만들기 귀찮아서 쓰는게 MetaDataInstanceFactory임
+	이건 JobInstance, JobExecution, StepExecution 등의 Spring Batch 메타데이터 객체들을 간편하게 생성할수있는,
+	스프링배치테스트의 유틸리티임
+	또한 잡레포지토리등의 의존없이도 잡익스큐션등을 만들수있음
+		public StepExecution getStepExecution() {
+			writeTestDir = Files.createTempDirectory("write-test");
+
+			// JobParameters 생성
+			JobParameters jobParameters = new JobParametersBuilder()
+					.addString("filePath", writeTestDir.toString())
+					.addLong("random", new SecureRandom().nextLong())
+					.toJobParameters();
+			
+			// MetaDataInstanceFactory로 StepExecution 간편 생성
+			return MetaDataInstanceFactory.createStepExecution(jobParameters);
+		}
+	이렇게 쓰면됨
+	
+	그리고 테스트가 아닌 실제로직에서는,ItemStream의 open과 close를 배치스텝이 자동으로 호출해줬지만,
+	단위테스트에선 실제스텝을 실행하는게 아니기때문에 우리가 직접 ItemStream의 메서드들을 호출해줘야함
+		brainwashedVictimWriter.open(new ExecutionContext());
+		brainwashedVictimWriter.write(new Chunk<>(brainwashedVictims));
+		brainwashedVictimWriter.close();
+	이렇게
+	
+	만약 getStepExecution()을 사용하는게,테스트메서드별로 서로 다른 JobParamater가 필요하다면 문제가 생김
+	또한 getStepExecution호출시에는 @TempDir필드의 초기화때문에 별개의 필드를 사용해야하는 문제가있음
+	
+	그래서 사용되는게 StepScopeTestUtils임
+	이것도 StepScopeTestExecutionListener처럼 별도의 스텝실행없이 스코프를 활성화해주고,해당테스트만의 독립적인 스텝익스큐션을 쓸수있음
+		// 테스트 메서드 내에서 직접 커스텀 StepExecution 생성
+		StepExecution stepExecution = MetaDataInstanceFactory.createStepExecution(jobParameters);
+
+
+		// StepScopeTestUtils에 stepExecution 전달
+		StepScopeTestUtils.doInStepScope(stepExecution, () -> {
+			// StepScope 빈 호출
+			return null;
+		});
+	이런식으로 스텝익스큐션을 생성하고,StepScopeTestUtils.doInStepScope로 람다로 넣어주면됨
+	마찬가지로 잡스코프빈도 테스트를 동일하게 할수있음(JobScopeTestUtils.doInJobScope())
+	
+	즉
+	    @Test
+		void shouldWriteBrainwashedVictimsToFileCorrectly() throws Exception {
+			// Given
+			List<BrainwashedVictim> brainwashedVictims = createBrainwashedVictims();
+
+			JobParameters jobParameters = new JobParametersBuilder()
+					.addString("filePath", tempDir.toString()) // 이제 @TempDir 사용 가능
+					.addLong("random", new SecureRandom().nextLong())
+					.toJobParameters();
+			StepExecution stepExecution = MetaDataInstanceFactory.createStepExecution(jobParameters);
+
+
+			// When
+			// StepScopeTestUtils 활용
+			StepScopeTestUtils.doInStepScope(stepExecution, () -> {
+				brainwashedVictimWriter.open(new ExecutionContext());
+				brainwashedVictimWriter.write(new Chunk<>(brainwashedVictims));
+				brainwashedVictimWriter.close();
+				return null;
+			});
+
+
+			// Then
+			verifyFileOutput();
+		}
+		// StepScopeTestUtils 사용으로 @TempDir 직접 접근 가능, 더 이상 Path 파라미터 불필요
+		private void verifyFileOutput() throws IOException {
+			Path expectedFile = Paths.get("src/test/resources/expected_brainwashed_victims.jsonl");
+			Path actualFile = tempDir.resolve("brainwashed_victims.jsonl");
+
+			List<String> expectedLines = Files.readAllLines(expectedFile);
+			List<String> actualLines = Files.readAllLines(actualFile);
+
+			Assertions.assertLinesMatch(expectedLines, actualLines);
+		}
+	이런식으로 하면됨
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	
 	
   

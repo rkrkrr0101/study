@@ -1,0 +1,45 @@
+mvvm패턴은
+  모델:엔티티+서비스+레포지토리
+  뷰모델:컨트롤러+dto
+  뷰:화면UI
+로 분리하는 패턴임
+추가적으로 라이브러리를 사용하지않으면 헬퍼클래스가 값이 변했는지와 버튼이벤트가 발생했는지등을 알려줘야하지만,라이브러리쓰면 신경안써도됨
+
+뷰는 로직이 전혀 들어가면 안되는,진짜 단순 ui임
+
+뷰모델은 오직 뷰에 관련된 로직만 들어가야함
+즉 뷰의 입력을 모델로 토스하고,받은 리턴을 뷰용 속성으로 변환하는일만 함
+
+모델은 실제 로직이 들어감,즉 엔티티,서비스,레포지토리등 db조회랑 모든일은 여기서 일어남
+
+핵심은 뷰모델은 모델은 직접 생성하지않고 di받는다는것
+그리고 받은 모델을 호출만 함(컨트롤러임)
+
+
+CommunityToolkit.Mvvm를 사용할때는,
+모델계층은 신경쓸거없고,서비스레이어를 인터페이스를 구현하는식으로 해두는게 좋다정도만 알면됨(뷰모델 약의존)
+뷰모델에서는
+  반드시 뷰모델클래스는 partial이어야함
+  ObservableObject를 상속받아야함
+을 지키고,어노테이션으로 처리하면됨
+	[ObservableProperty] //롬복처럼 getset을 만들어줌
+    [NotifyCanExecuteChangedFor(nameof(LoginCommand))] //이필드의 값이 변할때마다 LoginCommand가 실행가능한지를 다시 체크해라(CanExecute)
+    private string _userId;
+	
+	[RelayCommand(CanExecute = nameof(CanLogin))] //자동으로 ICommand LoginCommand 속성을 생성(현재메서드명+Command),
+    private void Login()                          //CanLogin은 해당이름의 메서드와 바인딩,저걸 통과해야 이걸 실행할수있음(밸리데이션)
+    {
+	  ...
+	}
+뷰에서는 만들던대로 만들고 바인딩만 해주면됨
+	<TextBlock Text="사용자 ID"/>
+	<TextBox Text="{Binding UserId, UpdateSourceTrigger=PropertyChanged}"  //뷰모델의 _userId와 바인딩
+			 Margin="0,5,0,15"/>
+
+	<TextBlock Text="비밀번호"/>
+	<TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"  //뷰모델의 _password와 바인딩
+			 Margin="0,5,0,15"/>
+
+	<Button Content="로그인" 
+			Command="{Binding LoginCommand}"   //뷰모델의 Login과 연동(RelayCommand가 붙은 메서드)
+			Height="40"/>

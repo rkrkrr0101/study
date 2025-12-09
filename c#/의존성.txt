@@ -1,0 +1,12 @@
+Microsoft.Extensions.DependencyInjection
+Entity Framework Core
+  MySql.EntityFrameworkCore
+  Microsoft.EntityFrameworkCore.Sqlite
+CommunityToolkit.Mvvm
+xUnit+Moq
+
+
+
+
+
+프로젝트 우클릭-게시-로컬폴더-배포모드(자기한정적)-단일파일생성

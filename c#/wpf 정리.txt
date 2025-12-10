@@ -78,4 +78,82 @@
   
 3.일반적인 컴포넌트 1
 *1.Grid  
+  그리드는 가장 일반적인 레이아웃관리자이자 관리요소임
+  각 윈도우에는 최소 하나의 그리드가 있어야하고,그안의 모든것들은 그리드안에 들어있어야함
+  
+  그리드도 백그라운드색,커서,isEnabled등 기본속성은 다 있음
+*2.Button
+  버튼도 기본속성들은 다 있고,
+    <Button Name="Abc">
+  로 이름을 지정할수있음
+  
+  HorizontalContentAlignment="Center"로 텍스트 가로 위치조절가능
+  VerticalContentAlignment="Center"로 텍스트 세로 위치조절가능
+
+*3.Label
+  라벨은 그냥 텍스트임
+  이것도 이름지정할수있고 할수있는거 다 할수있음
+  ToolTip에 값 입력하면 마우스오버했을때 텍스트띄울수있음
+
+*4.TextBox
+  텍스트박스는 텍스트를 넣을수있는 박스임
+  텍스트박스는 유저가 그 안의 텍스트를 건드릴수있음(즉 복사가 가능,레이블은 불가능)
+  기본설정은 똑같고
+  
+  CaretBrush로 텍스트안에서 I모양 깜빡이는 그거 추가하고 색도 변경할수잇음(현재 텍스트위치 말하는 그거)
+  TextWapping로 텍스트가 여러줄가게할지 한줄로 가게할지를 정할수있음(줄바꿈)
+  AcceptsReturn으로 엔터를 허용해서 다음줄로 넘기게 할수있음
+  VarticalScrollBarVisibility="Auto"로 세로줄이 길때 스크롤바를 추가할수있음
+  HorizontalScrollBarVisibility="Auto"로 가로줄이 길때 스크롤바를 추가할수있음
+  CharacterCasing으로 대소문자고정을 할수있음
+  IsReadOnly로 읽기전용설정가능
+  IsUndoEnabled로 실행취소가능
+  MaxLength로 텍스트최대길이 설정가능
+
+*5.ComboBox
+  콤보박스는 여러 선택지중 하나를 선택하는 박스임
+  콤보박스에 아이템을 추가할땐 ComboBoxItem을 가지고 추가할수있음(콤보박스태그안에 추가하면됨)
+  또 콤보박스에도 텍스트박스처럼 선택도되고 텍스트를적게할수도있고(IsEditable),선택은 되지만 적진못하게(IsReadOnly)할수도있음
+  기본값을 표시할수도있음(SelectedIndex="0")
+  
+  IsDropDownOpen을 true로 두면 드롭다운메뉴가 창을 열자마자 자동으로 열려있음
+
+4.MDI와 SDI
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   

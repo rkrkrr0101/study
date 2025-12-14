@@ -119,29 +119,100 @@
   IsDropDownOpen을 true로 두면 드롭다운메뉴가 창을 열자마자 자동으로 열려있음
 
 4.MDI와 SDI
+*1.MDI와 SDI란?
+  SDI는 단일창 프로젝트(계산기등)고,MDI는 다중 창 프로젝트(워드,sql서버등)임
+  즉 한 창 내에서 끝나면 SDI,여러 창을 뽑을수있으면 MDI임
+  기본적으로는 SDI고,MDI로 변경할땐 프로젝트 우클릭해서 add에서 new Window하면됨
+  그리고 App.xaml에서 StartUpUri값을 변경하면 기본창을 변경할수있음
+
+5.디자인 심화 1
+*1.탭 순서
+  IsTabStop은 true일때 탭키로 이동이 가능해짐
+  TabIndex는 움직이는 순서임
+  
+*2.컴포넌트 그룹핑
+  컴포넌트들을 그리드등에 넣어서 전체를 묶어서 사용할수있음
+
+*3.회전
+  컴포넌트에 RenderTransform으로 시작하는것들로 회전을 시킬수있음(복잡하니까 쓸때 검색)
+              <Button  Grid.Row="1" Grid.Column="1"   Content="sss" >
+                <Button.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform></ScaleTransform>
+                        <SkewTransform></SkewTransform>
+                        <RotateTransform Angle="-30"></RotateTransform> //회전각도
+                        <TranslateTransform></TranslateTransform> //회전점 X="30" Y="-30" 이런식으로 회전중심점 지정가능
+                    </TransformGroup>
+                </Button.RenderTransform>
+            </Button>
+  대충 이런식으로 회전을 시킬수있음
+
+*4.도큐먼트 아웃라인
+  vs에서 현재 모든 컴포넌트를 볼수있는 설정
+  라이더엔 없는듯
+
+*5.그룹 정렬
+  vs에서 현재 마우스로 정렬하는설정
+  라이더랑 상관없는듯
 
 
+6.C#코딩시작
+*1.이벤트란?
+  이벤트는 특정 동작에 의해 발생하는 콜백함수임(대표적으로 클릭)
+  이벤트는 xaml.cs파일에 작성하게됨
+  라이더에서는 Click=까지 작성하면 자동으로 메서드생성창이 뜸(모든이벤트 똑같을듯)
 
+*2.이벤트사용법
+  윈도우의 메시지박스를 띄우려면
+    System.Windows.MessageBox.Show("abc");
+  이렇게 쓰면됨
+  
+  해당 창의 이름을 바꿀땐
+    this.Title="abc";
+  이렇게하면됨
+  
+  그룹(그리드)레벨에서 Enabled같은 속성을 바꾸면 안의 모든것들이 영향받음
+  이때 주의점은 개별로 변경했던거도 같이 묶여버린다는것
 
+7.디자인 응용 2
+1.마진
+  마진을 가지고 해당컴포넌트의 위치를 지정할수있음(윈폼에서의 xy픽셀값이라고 볼수있음)
+  특이한점은,상하좌우 4개가 있고,0이면 반영하지않는다는것
+  이건 정확한 중심점을 찾는게 아닌,해당 컴포넌트와 해당방향의 끝까지의 픽셀수이기때문에,3개이상의 마진을 등록한후에 창크기를 늘리면,
+  컴포넌트 크기도 변동됨(마진은 고정되어있기때문에,대신 컴포넌트의 크기가 바뀌는것)
+  
+  이걸 활용해서 반응형으로 화면을 만들수있음
+  또한
+	HorizontalAlignment=
+	HorizontalAlignment=
+  를 사용해서 정렬을 할수있고,해당 영역을 전부 차지하게만들수도있음(Stretch)
+  단 이떈 ,Width나 Height의 해당하는걸 삭제해야함
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+8.이미지와 파일열기
+*1.이미지 컴포넌트
+  이미지 컴포넌트는 Image를 사용하면됨
+  패널같은 컴포넌트는 Rectangle를 사용하면됨,단 이건 그룹핑을 해주는게 아닌,그냥 꾸미기요소임
+  
+  이미지는 Source로 경로,Stretch로 늘리기선택,StretchDirection으로 늘리기방향을 선택할수있음
+  
+*2.코드로 이미지로드
+  코드로 이미지를 로드할땐
+    this.이미지컴포.Source=new BitmapImage("경로");
+  이렇게하면됨
+  경로는 uri로 하드코딩할수도있고,
+    System.AppDomain.CurrentDomain.BaseDirectory+파일이름;
+  로 현재 실행경로를 넣을수도있음
+  
+*3.파일열기
+  파일을 열떈
+    Microsoft.Win32.OpenFileDialog ofd=new Microsoft.Win32.OpenFileDialog();
+	ofd.Filter="Picture|*.jpg;*.png|Text|*.txt" //"이름|확장자1;확장자2|이름2|확장자3"
+	ofd.showDialog()
+  로 파일선택상자를 열수있음(필터는 선택,없으면 전체파일로 나옴)
+  이후에
+    ofd.FileName
+  등으로 선택한 결과를 받아서 사용할수있음(동기식으로 동작하니까,파일다이얼로그가닫히기전까진 멈춰있음)
+  이때 파일이 선택됐는지를 if로 걸러서 사용하는게좋음
 
 
 

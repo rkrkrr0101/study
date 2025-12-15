@@ -215,8 +215,35 @@
   이때 파일이 선택됐는지를 if로 걸러서 사용하는게좋음
 
 
-
-
+9.메모장실습
+*1.실습
+  Menu 컴포넌트를 추가하면 메뉴를 추가할수있음
+  MenuItem으로 메뉴내용을 추가할수있음
+  MenuItem안에 MenuItem을 추가하는걸로 하위메뉴를 만들수있음
+  MenuItem속성에 IsCheckable을 추가하면 체크박스로 쓸수있음
+  Separator로 구분선을 만들수있음
+  
+  또한 한쪽방향으로 적응형으로 늘어나는게 싫으면 해당축의 하나의 연결을 빼면됨(상하,좌우중)
+  
+  단축키를 지정할떈 해당메뉴의 Header에 _Edit 이렇게 밑줄치고 대문자첫자가 단축키로 들어감
+  그러면 알트+해당키누르면 메뉴가 클릭됨
+  
+  창닫을떈 this.close();로 닫을수있음
+  또한 Application.Current.Shutdown();으로도 닫을수있음
+  
+  Microsoft.Win32.SaveFileDialog로 파일을 저장하는 창을 열수있음(오픈파일다이얼로그랑 똑같이 하면됨)
+  이러면 경로가 저장이 되는데,
+    System.IO.File.WriteAllText(sf.FileName,현재텍스트변수,Encoding.UTF8)
+  이렇게 저장할수있음
+  이때 null같은건 걸러주는게좋음
+  읽기도 같은방식으로 하면됨(OpenFileDialog,ReadAllText)
+    
+  특정 메뉴가 체크되어있을땐 
+    WrapButt.isChecked==true
+  이런식으로 가져오면됨
+  텍스트박스에 래핑을 지정할땐
+	this.textbox1.TextWrapping=TextWapping.Wrap
+  으로 지정하면됨(이때 가로스크롤바도 같이 없애는게 좋음)
 
 
 

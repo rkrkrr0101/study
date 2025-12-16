@@ -245,11 +245,83 @@
 	this.textbox1.TextWrapping=TextWapping.Wrap
   으로 지정하면됨(이때 가로스크롤바도 같이 없애는게 좋음)
 
+10.wpf 리소스
+*1.윈도우 리소스
+  리소스는 어플리케이션 내부및 외부에서 값과 속성을 공유하는방법임
+  즉 내부(윈도우리소스)에서보면 해당범위 내에서 전체적으로 속성을 공유하는(폰트등) 방법임(강제가 아님,해당값에 대해 변수로 선언하고 가져다쓴다에 가까움)
+  외부(어플리케이션리소스)에서는 서로 다른 윈도우간의 값이나 속성을 공유할떄 유용함
+  
+  윈도우리소스는 윈도우태그안에
+    <Window.Resources>
+	  공유속성
+	  <SolidColorBrush x:Key="buttonBackground" Color="#FFFFFF00"/>
+	  <System:Double x:Key="all_ButtonHeight">45</System:Double>  //이렇게 숫자는 변수처럼 선언하면됨
+    </Window.Resources>
+  이런식으로 선언하고
+    <Button Background="{DynamicResource buttonBackground}"
+  이런식으로 사용하면됨
 
-
-
-
-
+*2.어플리케이션 리소스
+  어플리케이션 리소스는 App.xaml에 <Application>태그사이에 적어서 전역변수처럼 쓸수있음
+    <Application.Resources>
+      ..공유속성
+	  <SolidColorBrush x:Key="all_buttonBackground" Color="#FFFFFF00"/>
+	</Application.Resources>
+  이렇게 똑같이 쓰면됨
+  사용도 똑같음
+    <Button Background="{DynamicResource all_buttonBackground}"
+  이렇게쓰면됨
+  
+*3.코드로 리소스사용하기
+  리소스를 찾을땐
+    object ob=this.TryFindResource("리소스명") ; //없으면 null들어있음
+  이렇게 받아서 null,타입검사하고 가져다가 쓸수있음
+  Double넣을땐 타입캐스팅해서 넣어야함
+  
+  윈도우리소스를 저장할땐(현재 있는 리소스의 값을 변경할땐)
+    this.Resources["리소스명"]=값
+    this.Resources["더블리소스명"]=(Double)30
+  이렇게 넣으면됨
+  저렇게 타입캐스팅하기싫고 try박기 복잡해보여서싫으면
+    dounle doubleValue
+    Boolean r=double.TryParse(값,out doubleValue);
+  이렇게해도됨(성공이면  true,실패면 false가 r에 들어옴)
+  
+  어플리케이션 리소스를 저장할땐
+    Application.Current.Resources["리소스명"]=값
+  이렇게 사용하면됨
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
 
 

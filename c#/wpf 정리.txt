@@ -258,7 +258,7 @@
 	  <System:Double x:Key="all_ButtonHeight">45</System:Double>  //이렇게 숫자는 변수처럼 선언하면됨
     </Window.Resources>
   이런식으로 선언하고
-    <Button Background="{DynamicResource buttonBackground}"
+    <Button Background="{DynamicResource buttonBackground}">
   이런식으로 사용하면됨
 
 *2.어플리케이션 리소스
@@ -291,22 +291,85 @@
     Application.Current.Resources["리소스명"]=값
   이렇게 사용하면됨
   
+
+11.메모 프로젝트
+*1.패널
+  패널은 여러 종류가 있음
+  캔버스패널을 사용하면 그 안에 포함된애들을 그룹핑할수있음(가장 단순한 패널)
+  이건
+    <Canvas>
+	  ..내부요소들
+    </Canvas>
+  이 사이에 넣으면됨
+  
+  도크패널은 패널을 사용해서 가로나 세로로 섞어가며 정렬할때 유용함
+  이건
+    <DockPanel>
+      ..
+	  <Button Dock="left">
+	</DockPanel>
+  로 사용하면됨
+  그리고 안에 들어가는거에서 Dock속성을 지정해주면됨
+  또한 해당방향에서의 크기를 지정해주면됨
+  그리고 마진연결하는것도 잊으면안됨
+  그리고 DockPanel에서 LastChildFill속성을 켜주면,마지막으로 들어온애가 해당정렬에서의 남은칸을 전부 잡아먹음(빈칸제거)
+  보통 도킹패널안에 캔버스패널을 채우는방식으로 자주 사용됨
+  
+  패널의 투명도를 지정할땐 Opacity값을 35정도로 두면 반투명하게됨
+  
+  스택패널은 그안에 들어있는 항목들을 한줄로 정렬하는 패널임
+    <StackPanel Orientation=Horizontal>
+	  내부요소
+    </StackPanel>
+  Orientation=Horizontal는 방향지정이고
+  스택패널은 패널로 사용할때도 많지만,이미지버튼같은 컴포넌트를 만들때도 자주 사용됨
+  버튼안에 스택패널을 넣고 이미지랑 라벨로 꾸민후에 버튼에 클릭이벤트를 주는 방식
+  
+*2.라디오버튼
+  라디오버튼은 checked이벤트를 사용해서 접근하면됨 
+  
+*3.설정저장
+  프로젝트명.Properties.Settings.Default.변수명 으로 설정을 저장할수있긴함
+  이건 Properties - Settings.settings에서 값을 등록해두고(작은db같은느낌) 저걸로 부르고 저장하고 할수있음
+  정확하겐 %AppData%의 local에 json으로 저장해서 읽고쓰는듯
+  일반적으론 db쓰는게 나아보이긴하고,작은프로그램일땐 쓸만할듯
   
   
+*4.원만들기
+  <Border>에 CornerRadius값을 조정하는걸로 원이나 그런걸 만들수있음 (200,200,200,200이면 원)
+  그리고 Border태그안에 뭘 넣을수있음(테두리있는 패널이라고 볼수있음)
   
+*5.스타일
+  특정 컴포넌트의 속성을 전부 묶어서 사용하고싶다면,어플리케이션리소스같은 리소스에
+    <Style x:Key="image_button" TargetType="Button">
+	  <Setter Property="FontSize" Value="20"/>
+	  <Setter Property="Background" Value="Yellow"/>
+	</Style>
+  이런식으로 묶어서 image_button같은 변수명으로 사용할수있음
+  사용도
+    <Button Style="{DynamicResource image_button}"/>
+  이런식으로 하면됨
+  이건 같은타입에서만 적용할수있음 당연하지만
   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+*6.트리거
+  트리거를 사용하면 컴포넌트에 애니메이션 효과를 추가할수있음
+  트리거는 스타일 안에 존재하고,즉 리소스내부에 있어야함
+  트리거는
+    프로퍼티 트리거
+	데이터 트리거
+	이벤트 트리거
+  가 있고,가장 흔한건 프로퍼티트리거임
+  트리거는 프로퍼티와 밸류로 구성됨
+  이건 특정 속성이 변경을 유발함(마우스오버같은 프로퍼티를 만족 하면 그걸로 트리거땡기는식)
+      <Style x:Key="image_button" TargetType="Button">
+	    <Setter Property="FontSize" Value="20"/>
+	    <Setter Property="Background" Value="Yellow"/>
+		<Style.Triggers>
+		  <Trigger Property="IsMouseOver" Value="True">
+		    <Setter Property="FontSize" Value="30"/>
+		  </Trigger>
+		</Style.Triggers>
+	  </Style>
   
   
   

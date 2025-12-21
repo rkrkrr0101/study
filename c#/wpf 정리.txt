@@ -371,20 +371,131 @@
 		</Style.Triggers>
 	  </Style>
   
+*7.서브창
+  해당경로의 윈도우를 생성하고,쇼다이얼로그하면됨
+  
+*8.이미지열고 사용하기
+  오픈다이얼로그로 이미지를 받았으면 
+    BitmapImage bm=new BitmapImage();
+    FileStream fs=new FileStream(오픈다이얼로그변수.FileName,FileMode.Open);
+	
+	bm.BeginInit();
+	bm.CacheOption=BitmapCacheOption.OnLoad;
+	bm.StreamSource=fs;
+	bm.EndInit();
+	//bm사용코드
+	this.abc_image.Source=bm;
+	fs.Dispose();
+  이런식으로 하면됨
+  이러고 bm을 이미지로 사용하면됨
+  
+*9.툴바
+  <ToolBar>을 사용하면 쉽게 워드같은데의 상단 메뉴바를 만들수있음
+  
+*10.뷰이벤트
+  EditingCommands를 사용하면 쉽게 코드에서 wpf에 접근할수있음
+    EditingCommands.명령.Execute(객체(null가능),대상)
+    EditingCommands.AlignLeft.Execute(null,rtf_element)
+  
+*11.그룹박스
+  그룹박스로 안을 묶어두면 그안을 한번에 키고끌수있음
   
   
   
+12.일반적인 컴포넌트 2
+*1.Slider 
+  슬라이더는 볼륨조절같은거 할때 쓰는 그거맞음 
+    <Slider>
+  로 사용하면되고,최소값(minimum),최대값,방향(Orientation)등의 설정이 있음
+  또한 틱당 변화폭(tickFrequency),마우스클릭시 변화폭(LargeChange),최소변화폭(SmallChange)등의 설정이있음
+  
+  슬라이더의 값이 변화할때 이벤트 발생시키는건 ValueChanged이벤트를 사용하면됨
+  
+*2.ProcessBar
+  프로그레스바는 진행도바임
+    <ProcessBar>
+  로 사용할수있고
+  기본적으로는 게이지가 차는식으로 진행되지만,Islndeterminate속성이 true면 진행상황을 알수없을때 나오는 그게 나옴
+  저기에 값을 계속 더해가는식으로 진행도를 표시하면됨
+
+*3.CheckBox
+  체크박스는 그냥 체크박스임
+  isChecked로 확인하면됨
+  
+
+
+13.바인딩
+*1.바인딩 슬라이더
+  바인딩을 사용하면 코드를 사용하지않고 변화점을 서로 바인딩할수있음
+  바인딩은
+    바인딩소스:값을 읽어올요소
+	바인딩유형:바인딩의 유형(일방통행,쌍방통행,역방향일방통행)
+	바인딩대상:값이 변경되는 요소
+  으로 구성됨
+  바인딩객체에서 일방통행은 한쪽의 변화만 뿌리는거고,쌍방통행은 양쪽중 한쪽이 변하면 다른한쪽도 같이변하는거(볼륨)
+  
+  바인딩은 해당 객체의 해당값에 
+    {Binding 해당 속성,ElementName=해당컴포넌트,Mode=바인딩유형,StringFormat=출력포멧}
+    <TextBox Text="{Binding Value,ElementName=abcSlider,Mode=OneWay,StringFormat=\{0:F0\}}"/>
+  이런식으로 사용하면됨
+  또한 양방향을 할땐 모드를 twoWay로 바꿔도되고,양쪽을 단방향으로 둘다 만들어도됨
+
+*2.바인딩 체크박스
+  체크박스가 선택되면 특정 그룹박스등의 활성화등을 조절할때도 바인딩을 사용하면 편함
+  이땐 일방통행으로 보통 설정하고
+    isEnabled="{Binding IsChecked,ElementName=abcCheckBox,Mode=OneWay}"
+  이렇게 똑같이하면됨
+
+*3.바인딩 라벨
+  라벨에 바인딩할떄도 거의 똑같은데,Text가 아닌 Content에 넣으면됨
+  여기서 신경써야할건,StringFormat이 동작하지않으니까 ContentStringFormat에 원하는 출력형식을 지정해줘야함(라벨쪽에서 하드코딩으로 지정)
+
+14.리스트뷰
+*1.리스트뷰
+  리스트뷰는 리스트박스와 비슷하지만 열이 더 많음
+  보통 리스트뷰는 리스트뷰안에 그리드뷰를 넣는식으로 사용됨
+  그리드뷰없이 <ListViewItem>을 사용해서 직접 값을 넣어도됨
+  
+  그리드뷰를 사용하면 컬럼과 로우를 나눠서 사용하기좋음
+  그리드뷰를 쓸땐 <GridView>안에 <GridViewColumn>을 넣어서 컬럼을 만들면됨
+  각 컬럼별로 값을 할당할땐 리스트안의 값을 나타내는 클래스를 만들고,
+  추가할곳에서 해당 클래스로 리스트를 만든다음,리스트를 채우고,리스트뷰의 ItemsSource를 해당 리스트로 등록하면됨
+  이러면 기본값으로는 이름매칭해서  같은이름으로 채우는듯
+  수동으로 설정할땐,GridViewColumn에
+    <GridViewColumn Header="abcd" DisplayMemberBinding="{Binding 해당속성명}" >
+  으로 매핑하면되는듯
+  이때 출력형식설정은 저번이랑똑같이 StringFormat을 이용하면됨
+  
+  이미지 출력은 GridViewColumn.CellTemplate의 DataTemplate안에 Image태그에서 Source="{Binding 경로}"를 사용하면됨
   
   
-  
-  
-  
-  
-  
-  
-  
-  
-  
+  리스트뷰안에 이미지버튼같이 여러컴포넌트를 한컬럼에 넣고싶을땐,리스트뷰아이템안에 StackPanel을 사용해서 넣으면됨
+  코드로 넣을땐 ListViewItem을 생성하고,스택패널을 생성한후 스택패널을 채우고(sp.Children.Add(...))
+  리스트뷰아이템에 content를 스택패널로 지정해주면됨
+    
+*2.리스트뷰 이벤트
+  리스트뷰안의 아이템을 선택했을때(또는 선택이 변경됐을때)의 이벤트는
+    abcListView_SelectionChanged
+
+
+15.MVVM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

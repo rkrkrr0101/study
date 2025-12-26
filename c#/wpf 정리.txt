@@ -543,7 +543,59 @@
 	this.dataGrid.ItemsSource=dbc.Workers.ToList();
   그리고 데이터그리드는 자동적으로 아이템소스의 모든값에 해당하는 칼럼을 생성하는게 기본값인데,
   AutoGenerateColumns를 false로 둬서 해결할수있음
-    
+  
+  데이터그리드의 현재 선택된값을 가져올땐
+    var a=this.abcDataGrid.SelectedItem;
+	MyEntity me=(MyEntity)a;
+  이렇게 캐스팅해서 가져오면됨
+  
+*5.사용법
+  기본적으로는 mvvm을 따라서 버튼을 누르면 뷰모델에서 해당 버튼클릭에 대한 서비스메서드로 연결하는방식을 쓰는게좋음
+  단일조회는
+    var myEntityEdit=dbc.엔티티클래스.Single(x=>x.id==sel_id)//단일조회메서드,람다는 조회조건임
+  다중조회는
+    var myEntityList = dbc.엔티티클래스
+                      .Where(x => x.Age >= 20) // 1. 조건 설정 (여러 개가 걸릴 수 있음)
+                      .ToList();					  // 2. 리스트로 변환하여 가져오기
+  이렇게 하고,만약 비동기처리가 필요하면 ToList대신 ToListAsync()를 사용하면됨(메서드가 async일때)
+  저장은 엔티티를 만들고
+    dbc.엔티티클래스.Add(추가할엔티티객체);
+    int saveCount=dbc.SaveChanges();//저장횟수를 리턴,즉 성공실패확인용
+  이렇게 하면됨
+  
+  업데이트는 람다표현식으로 하면됨
+    var myEntityEdit=dbc.엔티티클래스.Single(x=>x.id==sel_id)//단일조회메서드,람다는 조회조건임
+	if(myEntityEdit!=null){
+	  myEntityEdit.name="newName";
+	}
+	dbc.MyEntity.Update(myEntityEdit);
+	int saveCount=dbc.SaveChanges();//저장횟수를 리턴,즉 성공실패확인용
+  이렇게 하면됨
+  
+  삭제는
+    var myEntityEdit=dbc.엔티티클래스.Single(x=>x.id==sel_id)//단일조회메서드,람다는 조회조건임
+	dbc.Workers.Remove(myEntityEdit)
+	int saveCount=dbc.SaveChanges();//저장횟수를 리턴,즉 성공실패확인용
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,0 +1,38 @@
+인텔리제이 설정-tool에서 ktlint를 찾고
+밑에 룰셋링크중 컴포즈룰셋으로 진입
+https://mrmans0n.github.io/compose-rules/ktlint/#using-with-ktlint-cli-or-the-ktlint-unofficial-intellij-plugin
+이후 인텔리제이플러그인의 릴리즈페이지로 접근해서
+https://github.com/mrmans0n/compose-rules/releases
+에 가서 지금 쓰는 버전과 맞는버전을 찾아서 다운로드
+
+이후 rulesets jars에 해당 다운로드된 jar파일 추가
+
+
+
+
+프로젝트 루트레벨 .editorConfig에서(없으면 만들기) 다음내용 추가
+
+	root = true
+
+	[*.{kt,kts}]
+	# 기본 ktlint 룰 활성화 (선택사항)
+	ktlint_standard_no-wildcard-imports = disabled
+
+	# Compose 룰 활성화
+	# (플러그인에 JAR를 넣었더라도, 여기서 error로 설정해줘야 작동합니다)
+	ktlint_compose_naming_check = error
+	ktlint_compose_content_emitter_returning_values = error
+	ktlint_compose_modifier_missing = error
+	ktlint_compose_modifier_reused = error
+	ktlint_compose_modifier_without_default = error
+	ktlint_compose_multiple_emitters_check = error
+	ktlint_compose_mutable_params_check = error
+	ktlint_compose_parameters_ordering_check = error
+	ktlint_compose_preview_naming_check = error
+	ktlint_compose_remember_missing_check = error
+	ktlint_compose_unstable_collections_check = warning
+	ktlint_compose_viewmodel_forwarding_check = error
+
+	ktlint_function_naming_ignore_when_annotated_with = Composable
+
+이후 ide 재시작

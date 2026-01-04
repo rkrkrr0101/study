@@ -17,6 +17,8 @@ https://github.com/mrmans0n/compose-rules/releases
 	[*.{kt,kts}]
 	# 기본 ktlint 룰 활성화 (선택사항)
 	ktlint_standard_no-wildcard-imports = disabled
+	#인텔리제이 코드스타일->클래스생성자에 어노테이션붙었을때 클래스 들여쓰기되는거 방지해줌
+	ktlint_code_style = intellij_idea
 
 	# Compose 룰 활성화
 	# (플러그인에 JAR를 넣었더라도, 여기서 error로 설정해줘야 작동합니다)

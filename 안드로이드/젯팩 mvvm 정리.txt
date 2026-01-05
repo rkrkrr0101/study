@@ -633,7 +633,7 @@
 	} 
   이러면 navController가 바뀌는거랑상관없이 재사용하거나 테스트가 더 쉬워짐
   즉 최종적인 구조는    
-	호스트(컨트롤러,그래프(화면컴포저블들,NavigationAction))
+	호스트(컨트롤러,그래프(화면컴포저블들(화면ui),NavigationAction))
   이런식으로,화면컴포저블들과 액션들의 결합도를 제거하고,세부사항이 퍼져나가지않게 한곳에 몰아둔후,
   그래프(실질적으로는 호스트)에서 액션과 화면들을 결합하는식으로 세부사항을 분리한것
   이러면 화면에선 눌렀다는 이벤트만 상위로 던지면되고,이동로직이 전혀섞이지않게됨
@@ -645,11 +645,112 @@
   추가적인 팁으로 백스택을 없애서 해당화면을 뒤로가기로 못가게할수도있음
     navController.navigate("route") { popUpTo("home") { inclusive = true } }
   이렇게
+
+
+    
+  
+*12.리스트 화면 만들기-플로팅버튼(FAB)
+  스캐폴드는 머터리얼 라이브러리와 함께 사용되는 컴포저블함수로,이걸사용해서 쉽게 디자인 레이아웃구조를 구현할수있음
+  플로팅버튼같은걸 추가하기도 편함
+  이건 즉 미리 뼈대를 라이브러리에서 만들어뒀고,우리는 해당버튼등에 해당하는 컴포저블함수(컴포넌트)를 만들어서 넣어주기만 하면되는거
+  즉 해당값이 있어야하는 위치(플로팅버튼은 오른쪽밑등)를 미리 위치를 잡아두고,우리는 거기에 넣기만하면됨
+  이건
+	@Composable
+	fun ListScreen(
+		modifier: Modifier = Modifier,
+		navigateToTaskScreen: (taskId: Int) -> Unit,
+	) {
+		Scaffold(
+			modifier = modifier,
+			content = {},
+			floatingActionButton = {
+				ListFab(onFabClicked = navigateToTaskScreen)
+			},
+		)
+	}
+	@Composable
+	fun ListFab(
+		modifier: Modifier= Modifier,
+		onFabClicked: (taskId: Int) -> Unit,
+	) {
+		FloatingActionButton(
+			modifier = modifier,
+			onClick = { onFabClicked(-1) }) {
+			Icon(
+				imageVector = Icons.Filled.Add,
+				contentDescription = "Add Button",
+				tint = Color.Black,
+			)
+		}
+	}
+  이런식으로 사용됨(Scaffold안에 컨트롤p로 넣을수있는 매개변수를 확인한후 넣으면됨)
+  만약 contentDescription처럼 스트링을 여러군데서 똑같이쓰는데 하드코딩하기싫고,어디 한군데다 모아두고싶다면(중복제거),
+  res의 value에 strings.xml에 값을 추가한후
+    <string name="add_button">Add Button</string>
+  이걸 불러다가 쓸수도있음
+    contentDescription = stringResource(R.string.add_button)
+  이렇게
+  
+  modifier는 컴포저블 함수들에게 패널같이 큰단위변화를 하위에 누적시키기위해 사용됨
+  
+  만들어진 화면의 미리보기가 필요할경우(ide에서)
+    @Composable
+	@Preview
+	private fun ListScreenPreview() {
+		ListScreen(navigateToTaskScreen = {})
+	}
+  를 만들어두면 화면에 변수를 넣어서 미리볼수있음
   
   
+*13.리스트 화면 만들기-앱 바
+  앱바는 그 앱상단의 바를 말함,버튼들있거나 검색되거나 하는 그거
+  이것도 스캐폴드에 있고,컴포저블함수만들어서 넣어주면됨
+      Scaffold(
+        modifier = modifier,
+        topBar = { ListAppBar() },
+		...
+	  }
+  이렇게
   
+  앱바는
+    @OptIn(ExperimentalMaterial3Api::class)
+	@Composable
+	fun DefaultListAppBar(modifier: Modifier = Modifier) {
+		TopAppBar(
+			modifier = modifier,
+			title = {
+				Text(text = "Tasks")
+			},
+
+			colors = TopAppBarColors(
+				containerColor = MaterialTheme.colorScheme.primary,
+				scrolledContainerColor = MaterialTheme.colorScheme.primary,
+				navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+				titleContentColor = MaterialTheme.colorScheme.onPrimary,
+				actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+			),
+		)
+	}
+  이런식으로 넣으면됨
+  만약 앱바의 버튼을 눌렀을때 앱바를 교체(조회를 위해 버튼누르면 조회바로 변경해야할때)해야할때는,각각 앱바를 만든다음,교체시켜주면됨
   
+  그리고 res/values/themes에 라이트모드랑 다크모드에 대한 설정이 이미 다 들어가있고,이걸 가지고 여기서 수정하면됨
+
+
+
+
+
+
+
+
+
+
+
+
+
   
+*13.리스트 화면 만들기-  
+*13.리스트 화면 만들기-  
   
   
   

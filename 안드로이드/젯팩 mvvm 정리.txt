@@ -692,6 +692,28 @@
   이렇게
   
   modifier는 컴포저블 함수들에게 패널같이 큰단위변화를 하위에 누적시키기위해 사용됨
+  모디파이어는 하위로 갈수록 자신만의 Modifier을 계속 새로 만들어나가야함
+	@Composable
+	fun PriorityItem(priority: Priority, modifier: Modifier = Modifier) {
+	Row(
+		modifier = modifier,
+		verticalAlignment = Alignment.CenterVertically,
+	) {
+		Canvas(modifier = Modifier.size(16.dp)) {
+			drawCircle(color = priority.color)
+		}
+		Text(
+			modifier = Modifier
+				.padding(start = 12.dp),
+			text = priority.name,
+			style = Typography.titleMedium,
+			color = MaterialTheme.colorScheme.onSurface,
+		)
+	  }
+	}
+  이런식으로 매개변수로 받은 모디파이어는 최상단에서 한번만쓰고,그 하위에서는 자기만의 모디파이어를 생성해서 써야함
+  이래야 중복적용등의 문제가 안생기고,예측가능한방향으로 처리할수있음
+	  
   
   만들어진 화면의 미리보기가 필요할경우(ide에서)
     @Composable
@@ -735,22 +757,63 @@
   만약 앱바의 버튼을 눌렀을때 앱바를 교체(조회를 위해 버튼누르면 조회바로 변경해야할때)해야할때는,각각 앱바를 만든다음,교체시켜주면됨
   
   그리고 res/values/themes에 라이트모드랑 다크모드에 대한 설정이 이미 다 들어가있고,이걸 가지고 여기서 수정하면됨
+  여기서 lightColorScheme와 darkColorScheme에 색상세트를 정의해둔다음,앱테마에서 isSystemInDarkTheme()로 수정하면됨 
 
 
-
-
-
-
-
-
-
-
-
-
-
+*14.리스트 화면 만들기-앱 바 액션 추가  
+  앱바에 actions를 추가할수있는데,이건 앱바에 버튼을 추가하는거
+  새로운 아이콘이미지를 추가하고싶을땐,res/drawable에 벡터에셋을 추가한후,거기서 클립아트에서 원하는 아이콘을 검색해서 넣고 저장하면됨
+  그리고 가져다쓸땐
+	Icon(
+		painter = painterResource(id = R.drawable.ic_filter_list),
+		contentDescription = "Sort Tasks"
+	)
+  이렇게 가져다쓰면됨
   
-*13.리스트 화면 만들기-  
-*13.리스트 화면 만들기-  
+  드롭다운메뉴를 추가할땐,해당메뉴가 열려있는지 닫혀있는지를 저장해둘 변수를 만들어야함
+    var expanded by remember { mutableStateOf(false) }
+  근데 이러면 by에서 에러가 뜰텐데,import를 수동으로 추가해줘야함
+    import androidx.compose.runtime.getValue
+    import androidx.compose.runtime.setValue
+  그리고 열고닫기위해 각각 버튼을 누를때마다 저걸 바꿔주면됨
+    IconButton(onClick = { expanded = true }) {//누르면 true로
+      Icon(
+        painter = painterResource(id = R.drawable.ic_filter_list),
+        contentDescription = "Sort Tasks",
+      )
+    }
+    DropdownMenu(expanded = expanded, onDismissRequest = { //onDismissRequest는 메뉴를 닫았을때의 이벤트임,여기선 변수false
+        expanded = false
+    }) {
+        DropdownMenuItem(
+            onClick = {  //누르면 메뉴변수변경후 클릭이벤트진행
+                expanded = false
+                onSortClick(Priority.LOW)
+            },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = "Sort by")
+                    PriorityItem(priority = Priority.LOW)
+                }
+            },
+        )
+    }
+  젯팩컴포즈는 선언형이기때문에,변수를 컨트롤하는거만으로 해당 상태에서의 변화가 자동으로 일어남
+
+*15.리스트 화면 만들기-검색바 디자인
+  검색바는 텍스트필드안에 아이콘,플레이스홀더,지우기버튼으로 구성됨
+  디자인에서는 특별한건 없는듯
+	keyboardOptions = KeyboardOptions(
+		imeAction = ImeAction.Search,
+	),
+	keyboardActions = KeyboardActions(
+		onSearch = {
+			onSearchClick(text)
+		},
+	),
+  로,해당 컴포넌트를 누를때 키보드를 띄우고,키보드의 검색버튼을 누를때 이벤트를 연결할수있다정도?
+
+*16.리스트 화면 만들기-검색바 기능
   
   
   

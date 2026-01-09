@@ -814,6 +814,84 @@
   로,해당 컴포넌트를 누를때 키보드를 띄우고,키보드의 검색버튼을 누를때 이벤트를 연결할수있다정도?
 
 *16.리스트 화면 만들기-검색바 기능
+  앱바의 버튼을 누르면 바가 바뀌게하려면,이넘클래스를 만든다음 뷰모델에서 그걸 관찰하고있으면됨
+    val searchAppBarState = mutableStateOf(SearchAppBarState.CLOSED)
+	val searchTextState = mutableStateOf("") //검색택스트바에 적힌택스트상태
+  그리고 메인액티비티에서 뷰모델선언을 한다음,이걸 해당 화면 컴포저블에 넘겨주면됨(즉 네비게이션에서 컴포저블-화면-앱바까지 매개변수나 뷰모델타고 내려가면됨)
+  메인액티비티에서
+	private val sharedViewModel: SharedViewModel by viewModels()
+	SetupNavigation(navController, sharedViewModel)
+  네비게이션세팅에서
+    listComposable(
+        navigateToTaskScreen = screen.task,
+        sharedViewModel = sharedViewModel,
+    )
+  컴포저블에서
+	ListScreen ( navigateToTaskScreen= navigateToTaskScreen, sharedViewModel = sharedViewModel )
+  그리고 화면에서는 뷰모델의 이벤트를 컴포넌트에 넣어주고,컴포넌트에선 그 이벤트를 람다로 받아서 연결만해두면됨
+	@Composable
+	fun ListScreen(
+		sharedViewModel: SharedViewModel,
+		navigateToTaskScreen: (taskId: Int) -> Unit,
+		modifier: Modifier = Modifier,
+	) {
+		val searchAppBarState: SearchAppBarState by sharedViewModel.searchAppBarState
+		val searchTextState: String by sharedViewModel.searchTextState
+
+		Scaffold(
+			modifier = modifier,
+			topBar = {
+				ListAppBar(
+
+					searchAppBarState = searchAppBarState,
+					searchTextState = searchTextState,
+					onSearchTextChange = {
+						sharedViewModel.searchTextState.value = it
+					},
+					onSearchClick = {},//이거 밑에거처럼 뷰모델의 함수를 실행만 하는역할
+					onSearchCloseClick = { sharedViewModel.searchCloseClick() },
+					onSearchTriggerClick = { sharedViewModel.updateSearchAppBarState(SearchAppBarState.OPENED) },
+					onSortClick = {},
+					onDeleteAllClick = {},
+				)
+			},
+		)
+  컴포넌트에선
+	@Composable
+	fun ListAppBar(
+		searchAppBarState: SearchAppBarState,
+		searchTextState: String,
+		onSearchTextChange: (String) -> Unit,
+		onSearchClick: (String) -> Unit,
+		onSearchCloseClick: () -> Unit,
+		onSearchTriggerClick: () -> Unit,
+		onSortClick: (Priority) -> Unit,
+		onDeleteAllClick: () -> Unit,
+		modifier: Modifier = Modifier,
+	) {
+		when (searchAppBarState) {
+			SearchAppBarState.CLOSED -> {
+				DefaultListAppBar(onSearchClick = onSearchTriggerClick, onSortClick, onDeleteAllClick)
+			}
+
+			SearchAppBarState.OPENED -> {
+				SearchAppBar(
+					text = "",
+					onTextChange = onSearchTextChange,
+					onCloseClick = onSearchCloseClick,
+					onSearchClick = onSearchClick,
+				)
+			}
+
+			SearchAppBarState.TRIGGERED -> {}
+		}
+	}
+  이렇게 이벤트를 받아서 연결만하는거임(ui와 로직의 분리)
+  즉 로직은 뷰모델까지만 허용하고,그밑에는 뷰모델의 함수를 호출하는거까지만 허용함
+  또한 뷰모델의 사용도 해당 화면까지만 허용하고,그밑에서는 그냥 람다를 받는거만 허용하는식
+  
+  그런데 이렇게하면 화면의 프리뷰를 쓸수없어지는데,이건 힐트뷰모델이라는걸 사용해서 우회할수있음
+  
   
   
   

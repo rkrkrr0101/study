@@ -898,8 +898,48 @@
   즉 weight가 없는애들이 먼저 자리를 차지한다음,남는걸 갈라먹는거
   
   
-  
-  
+*18.모든 태스크 표시-데이터베이스 옵저빙
+  기본적으로 jpa처럼 얘도 엔티티로 선언해두면 자동으로 테이블이 만들어짐
+
+  화면에 뷰모델에서 값을 조회할때,db를 거친다면 LaunchedEffect등 이펙트 핸들러를 사용해서 가져와야함(일회성조회일때)
+    LaunchedEffect(key1 = true) {
+        sharedViewModel.getAllTasks()
+    }
+  그리고 화면에 db에서 조회한 긴 리스트를 표시할떈 LazyColumn을 사용하면됨(스크롤 가능한 리스트 컨테이너)
+  이건 리사이클러뷰를 대체함
+  이건 현재 화면에 맞춰 스크롤된건 버리고 새로 스크롤한걸 만드는방식으로 메모리사용량을 일정하게 맞춤
+  이건
+	@Composable
+	fun ListContent(
+		toDoTasks: List<ToDoTask>,          // 1. 보여줄 데이터 리스트
+		paddingValues: PaddingValues,       // 상단바만큼의 패딩
+		modifier: Modifier = Modifier,      // 2. 외부에서 스타일 조정을 위한 수정자
+		navigateToTaskScreen: (taskId: Int) -> Unit, // 3. 클릭 이벤트(화면 이동) 처리 함수
+	) {
+		LazyColumn(contentPadding = paddingValues) { // 4. 스크롤 가능한 리스트 컨테이너,패딩은 스케폴드를 쓸떄 상단바에 가려지지않게 그 간격
+			items(
+				items = toDoTasks,          // 5. 리스트 데이터 연결
+				key = { task -> task.id },  // 6. 고유 키 설정 (성능 최적화 핵심)
+			) { task ->                     // 7. 개별 아이템 그리기 (여기서 it은 task 변수로 명명됨)
+				TaskItem(
+					toDoTask = task,        // 8. 개별 데이터를 하위 컴포넌트에 전달
+					navigateToTaskScreen = navigateToTaskScreen, // 9. 클릭 이벤트 전달
+				)
+			}
+		}
+	}
+  이런식으로 사용됨
+  그리고 이걸 스캐폴드에서
+          content = { innerPadding ->
+            ListContent(
+                toDoTasks = allTask,
+                navigateToTaskScreen = navigateToTaskScreen,
+                paddingValues = innerPadding,
+            )
+        },
+  이렇게 사용하면됨
+
+  	
   
   
   

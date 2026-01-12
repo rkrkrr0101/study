@@ -939,7 +939,88 @@
         },
   이렇게 사용하면됨
 
-  	
+*19.모든 태스크 표시-빈 콘텐츠 표시
+  LazyColumn에서 빈칸도 표시할땐(db와 연결은 됐는데 값이없거나,db와 연결되기 직전(init등)에 칸채우기),빈컨텐츠화면을 만들고 조건에따라 이걸표시하게할수있음
+    @Composable
+	fun ListContent(
+		toDoTasks: List<ToDoTask>,
+		paddingValues: PaddingValues,
+		modifier: Modifier = Modifier,
+		navigateToTaskScreen: (taskId: Int) -> Unit,
+	) {
+		if (toDoTasks.isEmpty()){
+			EmptyContent()
+		}else{
+			DisplayTasks(toDoTasks = toDoTasks,
+				paddingValues = paddingValues,
+				navigateToTaskScreen = navigateToTaskScreen,
+			)
+		}
+
+	}
+  이렇게
+  기본적으로 컴포저블은 선언형이니까 이렇게하면,toDoTasks가 비어있을땐 빈화면이,
+  변경이 생기면 디스플레이태스크가 표시되고,toDoTasks에 변동이 생기면 알아서바뀜
+  
+  추가적으로
+  modifier에 size를 사용하면,width와 height를 같이쓰는효과(대체)가능
+  
+
+*19.모든 태스크 표시-리퀘스트스테이트 생성
+  앱이 처음실행될때 빈화면이 뜨는 이유는,해당뷰모델의 기본값이 이 빈값이고,이걸 채우는데까지 시간이 걸리기때문
+  그래서 현재 실행상태클래스를 만든다음,해당상태도같이 갱신하게해서 상태가 완료일때만 표시하면됨
+	sealed class RequestState<out T>{
+		object Idle: RequestState<Nothing>()
+		object Loading: RequestState<Nothing>()
+		data class Success<T>(val data: T): RequestState<T>()
+		data class Error(val error: Throwable): RequestState<Nothing>()
+	}
+  이렇게 상태를 만든다음,이걸 뷰모델의 값을 가져오는곳에 랩핑하면됨(기본은 idle)
+    private val _allTasks = MutableStateFlow<List<ToDoTask>>(emptyList())
+  이걸
+    private val _allTasks = MutableStateFlow<RequestState<List<ToDoTask>>>(RequestState.Idle)
+    val allTasks: StateFlow<RequestState<List<ToDoTask>>> = _allTasks
+
+    fun getAllTasks() {
+        _allTasks.value = RequestState.Loading
+        try {
+            viewModelScope.launch {
+                repository.getAllTasks.collect {
+                    _allTasks.value = RequestState.Success(it)
+                }
+            }
+        } catch (e: Exception) {
+            _allTasks.value = RequestState.Error(e)
+        }
+    }
+  이런식으로 RequestState로 싼다음,가져오는데서 예외처리해주면됨
+  받는쪽에서도
+      if (toDoTasks is RequestState.Success) {
+        if (toDoTasks.data.isEmpty()) {
+            EmptyContent()
+        } else {
+            DisplayTasks(
+                toDoTasks = toDoTasks.data,
+                paddingValues = paddingValues,
+                navigateToTaskScreen = navigateToTaskScreen,
+            )
+        }
+      }
+  이런식으로 처리하면됨
+
+
+
+
+
+
+
+
+
+
+
+
+*18.모든 태스크 표시-데이터베이스 옵저빙
+*18.모든 태스크 표시-데이터베이스 옵저빙  	
   
   
   

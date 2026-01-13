@@ -1009,18 +1009,30 @@
   이런식으로 처리하면됨
 
 
+*20.태스크화면-태스크앱바 만들기
+  컴포저블이동에서 해당 url의 아규먼트를 받고싶을땐
+      composable(
+        route = TASK_SCREEN,
+        arguments = listOf(
+            navArgument(TASK_ARGUMENT_KEY) {
+                type = NavType.IntType
+            },
+        ),
+    ) { abc ->
+        val taskId = abc.arguments!!.getInt(TASK_ARGUMENT_KEY) //이렇게        
+    }
+  저렇게 받을수있고
+  뭐 다른건 별내용없는듯
+
+
+*20.태스크화면-태스크앱바 만들기2
+  기본적으로 네비게이션으로 값을 던져줄땐 기본형값으로 던져줘야함(객체 대신 id등으로)
+  그리고 db에서 그걸가지고 재검색하는식으로 동작해야함
 
 
 
 
-
-
-
-
-
-
-*18.모든 태스크 표시-데이터베이스 옵저빙
-*18.모든 태스크 표시-데이터베이스 옵저빙  	
+	
   
   
   

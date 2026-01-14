@@ -1029,10 +1029,34 @@
   기본적으로 네비게이션으로 값을 던져줄땐 기본형값으로 던져줘야함(객체 대신 id등으로)
   그리고 db에서 그걸가지고 재검색하는식으로 동작해야함
 
+*21.태스크화면-선택한 태스크 가져오기
+  태스크를 가져오는거처럼 로직에 관련된건 뷰모델에서 처리해야함
+  단일조회할때도 안드로이드 특성상 비동기로 땡겨오고,선언적으로 처리해야하기때문에 변수를 감시하는형태로 이뤄져야함
+    private val _selectTask: MutableStateFlow<ToDoTask?> =MutableStateFlow(null)
+    val selectTask: StateFlow<ToDoTask?> =_selectTask
+
+    fun getSelectTask(taskId: Int) {
+        viewModelScope.launch {
+            repository.getSelectedTask(taskId = taskId).collect { task ->
+                _selectTask.value = task
 
 
-
-	
+            }
+        }
+    } 
+  이렇게 사이드이펙트를 사용하는식으로 동작하게됨
+  그런데 딱봐도 문제가 많아서
+	화면 진입 시 데이터가 로드되어야 한다면: (가장 흔한 케이스)
+	  (SavedStateHandle + stateIn)사용,보통 디테일화면에서 사용되기때문에 뷰모델 생성시점에서 스트림을 연결하는방식
+	클릭할 때마다 데이터가 바뀌어야 한다면:
+	  flatMapLatest을 사용하세요.
+	실시간 데이터 감지가 필요 없다면:
+	  suspend를 사용하세요.(레포지토리조회함수를 suspend함수로 생성후 collect를 사용하지않기)
+  같은방식을 주로 사용함
+  
+  그리고 받는쪽에서는
+	val selectTask by sharedViewModel.selectTask.collectAsState()
+  이렇게 받으면됨
   
   
   

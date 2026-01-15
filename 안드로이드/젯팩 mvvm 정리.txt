@@ -1058,9 +1058,24 @@
 	val selectTask by sharedViewModel.selectTask.collectAsState()
   이렇게 받으면됨
   
+*22.태스크화면-드롭다운메뉴  
+  딴건 다 했던거고,만약 특정조건일때 아이콘을 돌린다든가 하는 애니메이션이 필요하면
+    val angle: Float by animateFloatAsState(
+      targetValue = if(expanded) 180f else 0f
+    )
+  이렇게 선언하고
+	IconButton(
+		modifier = Modifier
+			.rotate(angle) //여기
+			.weight(1.5f),
+		onClick = { expanded = true },
+	) {
+		Icon(imageVector = Icons.Filled.ArrowDropDown, contentDescription = "drop down")
+	}
+  이렇게 가져다두면됨
+  어짜피 선언형이니까 값만 바뀌면 알아서 바뀜
   
-  
-  
+*23.태스크화면-태스크 컨텐츠  
   
   
   

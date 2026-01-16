@@ -693,6 +693,7 @@
   
   modifier는 컴포저블 함수들에게 패널같이 큰단위변화를 하위에 누적시키기위해 사용됨
   모디파이어는 하위로 갈수록 자신만의 Modifier을 계속 새로 만들어나가야함
+  즉 컴포저블에서 모디파이어를 받았다면,최상위 컴포저블에서만 받은 모디파이어를 사용하고,그 밑에서는 자기만의 모디파이어를 생성해서써야함
 	@Composable
 	fun PriorityItem(priority: Priority, modifier: Modifier = Modifier) {
 	Row(
@@ -1076,7 +1077,12 @@
   어짜피 선언형이니까 값만 바뀌면 알아서 바뀜
   
 *23.태스크화면-태스크 컨텐츠  
+  TextField는 말그대로 텍스트를 입력할수있는 컴포넌트임
+  얘는 OutlinedTextField와 FilledTextField로 구성되는데,둘다 기능은 같고 디자인적 측면에서만 다름
+  OutlinedTextField는 사각형전부가 선이 그어진형태고,FilledTextField는 바닥에만 선이 그어진형태임
   
+  HorizontalDivider를 사용하면 중간에 빈칸을 채워넣을수있음(패딩으로 사용할수있는 컴포넌트임)
+    HorizontalDivider(modifier = Modifier.height(4.dp))
   
   
   

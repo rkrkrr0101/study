@@ -1084,8 +1084,19 @@
   HorizontalDivider를 사용하면 중간에 빈칸을 채워넣을수있음(패딩으로 사용할수있는 컴포넌트임)
     HorizontalDivider(modifier = Modifier.height(4.dp))
   
-  
-  
+*24.태스크화면-동적 컨텐츠 표시 
+  모든 변경로직(람다)등은 다 뷰모델단에서 있어야하고,뷰레벨에선 람다로밖에 받을수없음
+  그리고 특정값을 받아야한다면 뷰모델에서 특정값을 옵저빙할수밖에없고
+    val title: String by sharedViewModel.title
+  그래서 뷰모델에서 id,title같이 변경해야한다면,뷰모델에 함수를 만들고 그걸 호출해야함
+    onTitleChange = { sharedViewModel.updateTitle(it) },
+  그런데 해당값을 가져오지않으면 값을 갱신할수없으니,값을 가져오는걸 LaunchedEffect로 가져와야함
+        LaunchedEffect(key1 = selectTask) {
+            if (selectTask != null || taskId == -1) {
+                sharedViewModel.updateTaskFields(selectTask)
+            }
+        }  
+  이건 해당 컴포저블을 호출하기전에 미리 호출해서 갱신하고,그다음에 사용할 컴포저블을 호출하면됨(보통 화면호출직전에 가져오는듯,즉 화면호출하는 컴포저블위에 두면됨)
   
   
   

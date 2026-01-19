@@ -1091,15 +1091,126 @@
   그래서 뷰모델에서 id,title같이 변경해야한다면,뷰모델에 함수를 만들고 그걸 호출해야함
     onTitleChange = { sharedViewModel.updateTitle(it) },
   그런데 해당값을 가져오지않으면 값을 갱신할수없으니,값을 가져오는걸 LaunchedEffect로 가져와야함
-        LaunchedEffect(key1 = selectTask) {
-            if (selectTask != null || taskId == -1) {
+        LaunchedEffect(key1 = selectTask) {//비동기동작으로 인한 경쟁상태버그막기,그래서 id대신 태스크를 키로 삼음
+            if (selectTask != null || taskId == -1) { //비동기동작으로 인한 경쟁상태버그막기
                 sharedViewModel.updateTaskFields(selectTask)
             }
         }  
   이건 해당 컴포저블을 호출하기전에 미리 호출해서 갱신하고,그다음에 사용할 컴포저블을 호출하면됨(보통 화면호출직전에 가져오는듯,즉 화면호출하는 컴포저블위에 두면됨)
+  그런데 컴포즈는 비동기적으로 동작해서,해당 key값을 가져오기전에 먼저 실행될수있어서,그걸 막는코드를 넣는게좋음
   
   
+*25.crud-타이틀길이제한
+  모든 로직은 뷰모델단에 넣어야한다는내용,별거없음
+  물론 밸리데이션같은건 뷰모델보다 하위의 서비스레이어등에 넣어야겠지만,ui에 넣는건 절대아니다라는내용임
+  타이틀길이제한은 어짜피 선언형이니 if로 해당값을 넘어가면 갱신안되게해버리면끝임
+    fun updateTitle(newTitle: String) {
+        if (newTitle.length < 20) {
+            this.title.value = newTitle
+        }
+    }  
+
+*26.crud-필드 밸리데이션
+  가장 간단하게 하는방법은 그냥 뷰모델에 밸리데이션필드 함수를 만든다음 그걸 사용해서 ui로직에 그걸 호출하는 로직을 만드는거임
+  작은앱에선 이렇게 할수있음
+    Scaffold(
+        topBar = {
+            TaskAppBar(selectTask = selectTask, navigateToListScreen = { action ->
+                if (action == Action.NO_ACTION) {
+                    navigateToListScreen(action)
+                } else {
+                    if (sharedViewModel.validateFields()) {
+                        navigateToListScreen(action)
+                    } else {
+                        displayToast(context)
+                    }
+                }
+            })
+        },  
+		...
+  그런데 만약 좀 규모가 큰앱이라면 ui에서 저렇게 if쓰는걸 분리하고싶어질거임
+  이럴경우엔 이벤트드리븐방식으로 채널을 만들고,이벤트를 만든다음,ui에선 이벤트를 감지하는식으로 해결할수있음
+    LaunchedEffect(key1 = true) {
+        sharedViewModel.uiEvent.collect { event ->
+            when (event) {
+                is SharedViewModel.UiEvent.NavigateToList -> {
+                    navigateToListScreen(event.action)
+                }
+                is SharedViewModel.UiEvent.ShowToast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+	...
+	TaskAppBar(
+                selectTask = selectTask,
+                // ✅ [수정 2] 복잡한 로직 제거 -> 뷰모델에게 "처리해줘"라고 넘김
+                navigateToListScreen = { action ->
+                    sharedViewModel.handleDatabaseAction(action)
+                }
+    )
+  이렇게
+  보면 코드가 좀 많이 많아지긴함,대신 ui쪽에서의 로직을 제거할수있음
+  이게 좀 더 권장아키텍처에 가깝긴함(https://gemini.google.com/share/f6934b2ceb17)
   
+  그리고 context는
+    val context = LocalContext.current
+  이렇게 가져올수있음
+  이걸사용해서 토스트같은걸 던질수있음
+
+
+
+
+*27.crud-태스크 추가 
+  기본적으로 이벤트는 중앙(뷰모델)로,상태는 바깥(ui)으로 흐르게하는게 좋음
+  뷰모델에서는 그냥 함수만 개방해놓고
+    fun handleDatabaseAction(action: Action) {
+        when (action) {
+            Action.ADD -> addTask()
+            Action.UPDATE -> updateTask()
+            Action.DELETE -> deleteTask()
+            Action.DELETE_ALL -> deleteAllTask()
+            Action.UNDO -> UndoTask()
+            else -> {}
+        }
+    }
+  화면에서는 그냥 뷰모델의 함수를 호출만 하면되는거임
+    Scaffold(
+        topBar = {
+            TaskAppBar(selectTask = selectTask, navigateToListScreen = { action ->
+                when (action) {
+                    Action.NO_ACTION -> navigateToListScreen(action)
+                    Action.ADD, Action.UPDATE -> {
+                        if (sharedViewModel.validateFields()) {
+                            sharedViewModel.handleDatabaseAction(action)
+                            navigateToListScreen(action)
+                        } else {
+                            displayToast(context)
+                        }
+                    }
+                    else -> {}
+                }
+            })
+        },  
+		...
+  물론 여기선 ui에서 로직이 들어가긴했지만,이것도 UI Event(One-shot Event) 패턴을 사용해서 걷어낼수있음
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*25.crud-타이틀길이제한 
+*25.crud-타이틀길이제한 
   
   
   

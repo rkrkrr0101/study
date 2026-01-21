@@ -78,11 +78,160 @@
 	}
   )   
   
-*3.구성변경 및 상태지속성  
+*3.구성변경 및 상태지속성
+  구성변경이벤트란,사용자가 화면을 회전하거나 테마를 변경하는등의 상황에서 일어나는 이벤트임
+	화면회전
+	테마변경
+	언어변경
+	폰트변경
+	시스템앱킬(강제종료)
+  등의 상황에서 발생함
+  이상황에서는 remember로 상태를 저장해도 저장이 되지않게됨
+  그래서 사용되는게 rememberSaveable임
+  이건 그냥 remember대신 그자리에 넣고쓰면됨
+    var count by rememberSaveable{
+	  mutableStateOf(0)
+	}
+  이렇게
+  단,이건 인트,스트링,더블등 기본형만 저장이 됨,그래서 객체같은건 id만 기억하는식으로 보통 사용하고
+  데이터클래스같은건 custom saver을 만들어서 사용해야함
+  이건 Saver로 형태를 지정해두고 그걸 rememberSaveable(stateSaver=해당형태)하는식으로 사용함
+    val UserSaver:Saver<User,Any>=Saver(
+	  save={user->listOf(user.name,user.age)},
+	  restore={list->
+	    val name=list[0] as String
+		val age=list[1] as Int
+		User(name,age)
+	  }
+	)
+    var user by rememberSaveable(stateSaver=UserSaver){
+	  mutableStateOf(User("abc",15))
+	}
+  이런식으로 사용하게됨
+  이러면 구성변경시에도 해당값을 유지할수있음
+  
+  다른방법으로는 ViewModel을 사용할수있음
+  뷰모델속의 상태들은 구성변경후에도 계속 유지됨
+  우리는 그냥 거기에 상태를 선언하고 초기화만 해두면됨
+  보통 세터는 잠궈두고,거기에맞는 함수노출해서 그걸사용함(상태변경의 캡슐화)
+    class abcViewModel:ViewModel(){
+	  var count by mutableStateOf(0)
+	    private set
+	  fun increment(){
+	    count++
+	  }
+	}
+	@Composable
+	fun CounterScreen(){
+	  val viewModel:CounterViewModel=viewModel()
+	  val count=viewModel.count
+	  
+	  Button(onClick={viewModel.increment()})
+	}
+  대충 이런식으로 사용하게됨
+  
+  모든상태는 최상위레벨에서 초기화되고 사용되어야함
+  또한 그곳에서 뷰모델을 초기화해야함
+  뷰모델은 재구성과 구성의 영향을 받지않아서,remember을 사용할필요가없음(프로세스종료시에만 삭제)
+  
+  프로세스종료시에도 값을 저장하고싶다면,savedStateHandle을 사용할수있음
+    class abcViewModel:ViewModel(
+	  private val savedStateHandle:SavedStateHandle
+	){
+	  var count by mutableStateOf(savedStateHandle.get<Int>("count") ?:0)
+	    private set
+	  fun increment(){
+	    count++
+		savedStateHandle["count"]=count
+	  }
+	}  
+  이런식으로 db처럼 외부에 저장한값을 불러오고,아니면 기본값을 설정하는식으로 사용됨
+  이건 사용자가 이전에 무슨화면에서 종료했는지를 기억한다음,그걸 다시불러오거나 할때 사용됨
+  이건 채널방식으로 유용하긴하지만,모든 상태에 대해 이렇게하면안되고,꼭 이렇게 해야하는것만 하는게좋음
+  그리고 만약 이렇게 여러 상태를 저장해야한다면,그냥 제네릭확장함수만들어서 넣어두면편함
+    fun <T> SavedStateHandle.mutableStateOf(
+	  key:String,
+	  default:T,
+	):MutableState<T>{
+	  val state=mutableStateOf(this[key]?:default)
+	  return object:MutableState<T> by state{
+	    override var value:T
+		  get()=state.value
+		  set(value){
+		    state.value=value
+			this@mutableStateOf[key]=value
+		  }
+	  }
+	}
+  이렇게
+  
+  또한 데이터클래스를 사용해서 뷰모델속의 데이터들을 묶어두는것도 도움이됨
+  즉 remember대신 기본적으로 뷰모델에서 상태를 저장하는게 나음
+  ui쪽에서는 ui만
+  
+*4.이벤트와 UDF(단방향데이터흐름)
+  보통 이벤트는 이런식으로 만들고 사용됨
+    sealed class UiEvent{
+	  data class ShowSnackBar(val message:String):UiEvent()
+	  data class NavigateTo(val screen:Screen):UiEvent()
+	  data class RequestPermission(val permission:String):UiEvent()
+	}
+  sealed은 안붙여도되긴하지만,보통 클린아키텍처적으로 쓰려고 붙이는편임
+  이렇게 이벤트클래스를 만들어둔다음,뷰모델에서 이벤트채널을 만들고,해당이벤트를 추가할때 사용하는 함수를 만드는식
+    class MyViewModel:ViewModel(){
+	  var state by mutableStateOf(ScreenState());
+	    private set
+		
+	  private val _events=Channel<UiEvent>() //이벤트 채널(일회용이니까 채널사용)
+	  val events=_events.receiveAsFlow()
+	  
+	  fun showSnackBar(message:String){ //채널에 이벤트를 추가할때 호출,스낵바를 보여달라고 호출하는느낌임(캡슐화)
+	    viewmodelScope.launch(Dispatchers.Main){
+		  _events.send(UiEvent.ShowSnackBar(message))
+		}
+	  }
+	}
+  이렇게 이벤트를 큐에 추가하고,컴포저블함수에서 이벤트를 처리하는방식
+  뷰모델에는 ui관련로직을 추가하면안됨,그래서 실제로 ui관련을 직접 처리하지말고,해당하는 이벤트만 보내고,함수이름은 캡슐화해두는것
+  처리는
+    @Composable
+	fun MyScreen(){
+	  val viewModel:MyViewModel=viewModel()
+	  
+	  LaunchedEffect(Unit){
+	    viewModel.events.collect{event->
+		  when(event){
+		    is UiEvent.ShowSnackBar ->{...}
+		    is UiEvent.NavigateTo ->{...}
+			else ->{...}
+		  }
+		}
+	  }
+	}
+  이런식으로 처리하게됨
+  LaunchedEffect로 이벤트를 계속 받으면서,해당하는이벤트가 들어오면 바로 해당로직을 실행시키는방식
+  
+  상태는 바깥으로(아래로) 흐르고,이벤트는 안으로(위로) 흐름
+  상태는 현재 ui를 설명하는 데이터묶음임
+  이건 뷰모델에서 컴포저블,하위컴포저블로 흐름(ui,즉 바깥으로)
+  즉 상태는 뷰모델과,최상위 컴포저블(screen)에서 모든 상태를 정의하고,그 하위 컴포저블들은 그런 상태를 합성등으로 가져오는식으로 의존하게됨
+  
+  이벤트는 사용자가 어떤 행동을 트리거하면,이벤트를 등록하고 이를 뷰모델에 알림(뷰모델의 이벤트채널에 이벤트를 추가)
+  그리고 그 이벤트에 반응하기위해 ui에서는 뷰모델의 채널을 관찰하고있음
+  
+  요약하면,상태는 뷰모델과 최상위컴포저블에서 가지고(보통 상태보유는 뷰모델이 하고),그게 흘러서 버튼같은 하위컴포저블로 흘러들어가는것
+  같은 상태에 의존하는 컴포저블들은 데이터나 같은상태가 변경될때마다 다시 렌더링됨
+  또한 사용자가 이벤트를 수행하면 즉시 뷰모델의 이벤트채널에 추가되고,선택적으로 상태를 변경시키고,
+  이벤트를 수신하는쪽에서 이벤트를 컨슘하고 토스트같은 작업을 진행함
+  
+  그래서 상태는 뷰모델에서 하위로 나가니까 아래로 흐른다는거고,
+  이벤트는 하위에서 발생해서 뷰모델채널에 추가되니까 위로흐른다는거임
+  
+  보통 이벤트는 큰단위로 구분해서 사용함,UiEvent,LoginEvent 이런식으로 sealed클래스묶음을 만들어서 사용하는식
+  이거단위별로 채널을 만들고 구독시키면됨
   
   
-  
-  
+*5.상태 호이스팅  
   
   
   

@@ -296,9 +296,60 @@
   
   추가적으로 젯팩컴포즈엔 마진이 없고 패딩만 존재함
 
+*7.Lazy 컴포넌트
+  레지컴포넌트는 큰 데이터를 효율적으로,즉 지연렌더링으로 표시하는 컴포넌트들임
+  이건 말그대로 테이블전체를 한번에 표시하고 가지고있는게 아닌,화면에 실제로 보이는것들만 렌더링하는거
+  리사이클러뷰에서 발전한거 맞음
+  
+  이걸 쓰는이유는
+    성능
+	간편성
+	유연성
+  이 있음
+  리사이클러뷰보다 엄청나게 편해졌고,유연성도 높으면서 성능은 그대로임
+  
+  이건 보통 LazyColumn이나 LazyRow를 사용하고,이건
+    LazyColumn{
+	  items(
+		items=users,
+		key={it.id}
+	  ){user->
+		Text(text=user.name)
+	  }	  
+	}
+  이런식으로 사용하게됨
+    LazyColumn{
+	  userList
+	    .groupBy{it.date}
+		.forEach{(date,users)->
+		  item{
+		    Text(text=date)
+		  }	  
+	      items(
+		    items=users,
+		    key={it.id}
+		  ){user->
+	        Text(text=user.name)
+	      }
+		}
+	}  
+  여기서 forEach내에서 item을 사용하면 하나만 표시되고,items를 사용하면 그 리스트를 다쓸떄까지 사용함
+  즉 제목과 테이블을 뽑을때 씀
+  이경우엔 그룹바이로 묶은다음 그걸 표시하는식으로 사용함
+  
+  items대신 itemsIndexed도 있는데,이건 인덱스값을 사용해야할때 사용함(람다값으로 인덱스도 받을수있음)
+  
+  레지컴포넌트에서 중요한건 key파라미터임
+  이건 
+    items(key={it.id})
+  이런식으로 지정하는데,이건 해당 리스트내부에서 유니크한값을 사용해야함(해당 리스트에서만 유니크하면됨,보통 id쓰면되긴함)
+  이걸 사용하지않아도 동작이 되긴하는데,이경우 추가,삭제,순서변경등을 하면 문제가 생기니,항상 넣는게 좋음
+  또한 키가 중복될경우에도 문제가 생기니 조심
+  
+  레이지로우와 컬럼말고도,LazyVerticalGrid나 LazyHorizontalGrid등 여러가지가 있음
+  또한 FlowColumn과 FlowRow는 항목의 갯수에 따라 화면에 표시될 항목크기등을 조절하거나,새행으로 넘기거나 할수있음
 
-
-
+*8.remember과 derivedStateOf의 차이점
 
 
 

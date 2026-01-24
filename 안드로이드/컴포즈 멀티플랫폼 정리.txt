@@ -350,14 +350,137 @@
   또한 FlowColumn과 FlowRow는 항목의 갯수에 따라 화면에 표시될 항목크기등을 조절하거나,새행으로 넘기거나 할수있음
 
 *8.remember과 derivedStateOf의 차이점
+  remember은 보통 재구성할때 값을 기억하기위해 사용되고,remember에 키를 넣을수도있음
+    val abc=remember(keyValue){
+	  keyValue.length>3
+	}
+  여기서 key는 종속성을 의미하고,그상태가 의존하는걸 말함(여기선 abc가 keyValue를 의존)
+  이러면 keyValue의 상태가 변경될떄마다 이걸 다시실행함
+  remember은 기본적으로 값캐싱도구인데,키를 추가하면 키가 바뀔때만 다시 계산하는거
+  이건 키가 변경될때만 무거운연산을 시키고싶을때 사용됨
+  
+  derivedStateOf는 상태변환기이자 리컴포지션필터로,다른상태객체들로부터 새로운 상태를 만들어내는데,
+  이때 결과값이 실제로 변할때만 ui에 변경되었다고 알림
+  즉 상태가 아무리 자주 바뀌더라도 결과가 같다면 리컴포지션을 발생시키지않음(매우 자주 변하는값을 둔하게 만들어서 리컴포지션횟수를 줄이고싶을떄 사용하기좋음)
+  보통 드래그나 스크롤같은 매우 빠르게 변하는값을 기반으로 불리언값이나 특정값을 도출할때 사용함
+  예를들면 맨위로가기버튼을 첫번쨰아이템이 안보일때만 나타나게 한다거나
+	val showButton by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0
+        }
+    }  
+  즉 remember(key)는 연산비용을 최적화하고,key값이 변경될때만 재계산하고싶을때 사용하고(무거운객체생성,복잡한로직계산),
+  derivedStateOf는 리컴포지션횟수를 최적화하고,내부참조 state가 변경될때만 재계산하고싶을때 사용함(스크롤에따른 ui변경,폼유효성검사)
+  둘다 똑같이 쓸수있지만,상황에 맞는걸 선택해야함
 
 
+*9.슬롯 기반 api
+  슬롯기반 레이아웃이란 미리 정해진 자리들이 있는,템플릿 레이아웃임
+  스케폴드같은거
+  스케폴드는 탑바,바텀바,플로팅액션버튼과 컨텐츠자리를 제공함
+  또 다른건 NavigationDrawer이 있음
+  이건 스와이프나 버튼을 눌렀을때 왼쪽이나 오른쪽에 나타나는 메뉴를 말함
+  이런거말고도 많이 있는데,필요할때 찾아쓰면됨
+  
+  이런 템플릿들은 어짜피 맨날 쓰는방식이 똑같으니까 쓰면 편함
 
+*10.프리뷰
+  프리뷰는 앱을 실행하지않고 구성요소가 어떻게 보일지 확인하는거임
+    @Preview
+	@Composable
+	fun abc(){
+	  테스트컴포저블(값)
+	}
+  이렇게쓰면됨
+  또한 쉽게 프리뷰를 만들수있다면,테스트만들기도 쉬워짐(강의존이 없고 내부상태가 없다는거니까)
+  
+  또한 테마설정도 쉬움
+    @Preview(uiMode=Configuration.UI_MODE_NIGHT_YES)
+  이렇게하면 다크모드가 되고
+    @Preview(uiMode=Configuration.UI_MODE_NIGHT_NO)
+  이렇게하면 일반모드가됨
+  또한 width,height설정도 쉬움
+  이렇게 여러설정으로 여러개를 만들어볼수도있음
+	
+*11.지역 컴포지션
+  컴포즈는 중첩된 ui트리안에 중첩된 ui트리를 가질수있음
+  또한 각 컴포넌트들은 각자의 파일에 따로 흩어져있고(또한 여러 패키지에),각 컴포넌트들은 재사용이 쉽게 스테이트리스로 구성해야함
+  
+  지역컴포지션은 컴포지션 계층구조에 값을 암묵적으로 제공하는 메커니즘임(보통 테마지정,스타일지정,인증등 의존성공유에 잘 사용됨)
+  즉 명시적으로 제공하지않아도 로컬컴포지션을 활용해서 같은값을 얻을수있음
+  그래서 앱 전체에서 인증상태가 필요할때,모든 계층구조에 해당 상태를 전달하는대신,로컬컴포지션을 활용하여 이걸 받아갈수있음
+  이건
+	// 값이 자주 변할때 사용
+	val LocalActiveUser = compositionLocalOf<User> { error("No User found!") }
 
+	// 자주 변경되지 않는 데이터 (테마 등)에 적합,보통 이거사용하게됨
+	val LocalAppTheme = staticCompositionLocalOf { Color.Blue }
+  이런식으로 선언할수있고(싱글톤 선언한다고 생각하면됨)
+  이거만 있는 kt파일을 만들던가,해당 데이터클래스랑 같은곳에 위치시킨후,다른 provider이 공급할곳에서 임포트해서 쓴다고 생각하면됨
+  이런식으로 상위컴포지션에서 하위컴포지션중 공급할곳을 저거로 감싸주고(저안에있는애들은 다 받아볼수있음) 
+	@Composable
+	fun MyApp() {
+		val user = User("AndroidDev", 30)
+		
+		// LocalActiveUser에 user 객체를 바인딩
+		CompositionLocalProvider(LocalActiveUser provides user) {
+			// 이 내부의 모든 컴포저블은 user 데이터에 접근 가능
+			UserProfile()
+		}
+	}
+  current를 사용해서 가장 가까운 프로바이더가 제공한값을 읽음
+	@Composable
+	fun UserProfile() {
+		// 매개변수로 받지 않았지만 접근 가능
+		val user = LocalActiveUser.current
+		Text(text = "Hello, ${user.name}")
+	}
+  대충 범위를 내가 지정할수있는 변수라고 생각하면될듯?전역변수쓰긴싫은데 다 합성시키긴 싫을때 사용하면될듯	
+  스코프를 내가 지정할수있으니까
 
-
-
-
+*12.사이드이펙트
+  사이드이펙트란 컴포저블함수의 범위밖에있는것에 영향을 주는 모든걸 말함
+    로깅
+	토스트,스낵바
+	라이프사이클 옵저빙
+	코루틴으로 데이터가져오기
+  등
+  컴포저블은 데이터가 변경될때마다 리컴포지션되는데,그래서 일반적인 함수처럼 내부에서 api호출을 하거나 타이머를 돌리면 예상치못한 동작이 발생할수있음
+  그래서 안전하게 사이드이펙트를 일으킬수있는 api를 컴포즈가 제공함
+  여기엔
+    LaunchedEffect:컴포지션시작시 코루틴실행,키값이 바뀌면 기존작업을 취소하고 재시작
+	rememberCoroutineScope:버튼클릭등 이벤트핸들러 내부에서 코루틴을 실행할때 사용
+	DisposableEffect:리소스해제나 정리처럼 정리가 필요할떄 사용
+	SideEffect:컴포지션이 완료될때마다 실행,보통 외부상태동기화를 위해 사용
+	rememberUpdatedState:이펙트내부에서 오래걸리는 작업을 해야하는데,중간에 바뀐 최신값을 참조해야하지만 재시작은 하기싫을때 사용
+  가 있음
+  보통 Effect가 붙으면 일회용작업,state는 상태기억,감시,상태파생이 대부분
+    LaunchedEffect:특정상태가 변했을때 비동기작업(네트워크통신,스낵바표시등)을 해야할때 사용
+		@Composable
+		fun MyScreen(state: MyState) {
+			// state.isLoading이 true가 될 때마다 실행
+			LaunchedEffect(state.isLoading) {
+				if (state.isLoading) {
+					// 비동기 로직 수행
+				}
+			}
+		}
+	DisposableEffect:컴포저블이 화면에서 사라지거나(onDispose사용시 컴포저블이 사라질때 발동),키값이 변경될때 특정작업을 마무리해야할때 사용
+		@Composable
+		fun SensorScreen() {
+			DisposableEffect(Unit) {
+				// 센서 리스너 등록
+				onDispose {
+					// 센서 리스너 해제 (메모리 누수 방지)
+				}
+			}
+		}
+	SideEffect:외부상태 동기화나 로깅할때 사용(리컴포지션 횟수셀때도 자주사용됨)
+	
+  컴포저블은 가급적 순수함수로 구성되어야하지만,외부와 상호작용해야하는경우가 있는데 그럴때 사용됨
+  컴포저블은 순수함수로 유지하고,사이드이펙트는 이펙트api내부에서 분리시키는방식
+  또한 LaunchedEffect을 사용할떈 key를 적절히 설정해서 무분별한 재실행을 막아야하고,
+  비동기작업은 반드시 코루틴스코프내에서 처리해서 ui가 멈추면안됨
 
 
 

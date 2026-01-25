@@ -482,10 +482,86 @@
   또한 LaunchedEffect을 사용할떈 key를 적절히 설정해서 무분별한 재실행을 막아야하고,
   비동기작업은 반드시 코루틴스코프내에서 처리해서 ui가 멈추면안됨
 
-
+*13.애니메이션
+  젯팩컴포즈에선 애니메이션도 선언적인 방식으로 동작시킴
+  즉 애니메이션은 상태변화를 통해 애니메이션을 동작시키고,
+  컴포즈는 상태가 변경되면 이전값에서 새값으로 애니메이션을 적용하는방법을 계산함
+  
+  컴포즈는 이미 애니메이션 컴포저블함수들을 만들어뒀고,그걸 가져다쓰면됨
+  visible을 통해 에니메이션을 넣고싶을땐
+    AnimatedVisibility(
+	  visible=조건상태변수,
+	  enter=slideInVertically(),//true될때 어떤식의 애니메이션 표시
+	  exit=fadeOut(),//false될때 어떤식의 애니메이션
+	){
+	  보여질 컴포저블함수
+	}
+  여러 애니메이션을 합치는것도 가능하고,자식의 애니메이션을 Modifier로 별도로 설정해줄수도있음
+    Modifier.animateEnterExit(enter=... , exit=...)
+  이렇게
+  
+  가시성기반애니메이션 말고도(이건 나올때랑 사라질때만쓰는거),그냥 해당 값에대한 모든 애니메이션을 관리하는건 AnimatedContent임
+    AnimatedContent(
+	  transitionSpec={
+	    slideInVertucally{height->height} //슬라이드인
+		  + fadeIn() togetherWith
+		slideOutVertically{height->height} //슬라이드아웃
+		  +fadeOut()
+	  }
+	){ targetCount->
+	   Text(
+	     text="$targetCount",	
+	   )
+	}
+  이런식으로 하면 각각에 맞는 애니메이션을 추가할수있음
+  여기서도 Modifier.animateEnterExit을 사용해서 자식레벨에서 바꿀수있고,
+    Modifier.animateContentSize().height(if(조건)3.dp else 5.dp)
+  이런식으로 조건에따른 컨텐츠사이즈조절도 가능함
+  
+  또한 LazyColumn같은애들한테도 애니메이션넣기쉬운데,그냥
+    LazyColumn{
+	  items(abcList,ket={it.id}){
+	    Row(Modifier.animateItem()){
+		  ...
+		}
+	  }
+	}
+  이런식으로 처리할수있음
+  
+  값기반애니메이션도 있는데,이건 animate값타입AsState()함수들임
+  즉 이런건 값을 기반으로 애니메이션을 만들수있음
+   val rotation by animateFloatAsState(
+     targetValue=if(조건) 0f else 180f,
+     label="rotation"
+   )
+  이렇게 선언해둔후
+    Box(
+	  Modifier
+	    .rotate(degrees=rotation)
+	)
+  이렇게 사용할수있음
+  이러면 조건에 따라 값이 천천히 변해서 선언적으로 애니메이션이 됨(rotation값이 0에서 180으로 순차적으로 변하는거)
+  
+  무한으로 동작할 애니메이션은 infiniteTransition.animate값타입()을 사용할수있음
+  필요해지면 검색해보자,위랑 비슷한데,반복모드설정해두면 계속 값이 변하는거임
+  
+  
+  추가적으로,데이터의 상태를 나타내는 클래스(RequestState같은이름의)를 만들어두면 편함
+  이걸 사용하면 모든 타입을 제네릭으로 감싸서 리턴할수도있고,현재상태를 줄수도있음
+  또한 이 클래스에 대해 확장함수를 만들어서 현재 상태에 대한 애니메이션과 상태를 명시적으로 적어서쓸수있음
 
  
+*14.테마
+  젯팩컴포즈에선 테마를 만들기도 쉬움  
+  이거의핵심은 색상,폰트,shape를 정의하는 테마시스템이고,이걸기반으로 커스터마이즈할수있음
+  기본적으로 젯팩컴포즈엔 기본값이 들어가있고,이게 material3임
   
+  색상조합과,폰트조합,형태조합을 미리 만들어둔다음 이걸 갈아끼우는식으로 하면됨
+  
+  MaterialTheme는 로컬구성에 있는 값을 주는 특별한 객체임
+  앱어디서든 매개변수로 받지않고 싱글톤처럼 받을수있음
+  여기엔 미리 만들어둔값들도 있고,우리가 템플릿을 추가할수도있음
+  하드코딩으로 12dp하는것보다 이렇게 만들어둔값을 쓰는게 일관수정도 편함
   
   
   

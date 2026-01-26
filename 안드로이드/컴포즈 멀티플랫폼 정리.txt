@@ -1,4 +1,4 @@
-1.젝팩컴포즈 기본
+1.젯팩컴포즈 기본
 *1.젯팩컴포즈 소개
   스킵
 *2.상태 및 재구성
@@ -561,7 +561,131 @@
   MaterialTheme는 로컬구성에 있는 값을 주는 특별한 객체임
   앱어디서든 매개변수로 받지않고 싱글톤처럼 받을수있음
   여기엔 미리 만들어둔값들도 있고,우리가 템플릿을 추가할수도있음
-  하드코딩으로 12dp하는것보다 이렇게 만들어둔값을 쓰는게 일관수정도 편함
+  하드코딩으로 12dp하는것보다 이렇게 만들어둔값을 쓰는게 일괄수정도 편함
+  
+2.프로젝트세팅 
+*1.프로젝트 세팅 
+  kmp.jetbrains.com을 사용하면 start.spring.io처럼 쉽게 프로젝트를 만들수있음
+  이렇게 만들어진 프로젝트를 열떈 그냥 압축파일해제하고 그폴더를 잡고 열면됨
+  그리고나서 왼쪽 탐색창의 프로젝트를 안드로이드모드로 바꿔주면됨
+  
+  이폴더에서 composeApp/src에 코드가 들어가고,여기에서 commonMain이 공통소스고,안드로이드메인과 ios메인은 각각 자기플랫폼꺼임
+  즉  commonMain에 적는 코드는 전체에 공유되고,여기에서 코드를 거의 다 작성하면됨
+  이아래의 kotlin밑에 com.어쩌구같은 곳에서 시작하면되고,platform파일이 있을텐데,이걸 액츄얼이라고 부르고,각각 실제구현을 작성하고,
+  빌드시에 각각 다른걸 갈아끼우는식으로 동작시킬수있음(결제처럼 양쪽이 달라야하는경우에 사용)
+  즉 안드로이드 ios 다 이게 있는걸 확인할수있음
+  
+  그리고 ktlint ktlint-compose-0.5.3-all.jar 룰셋에 추가하고 .editorsetting추가하고 껏다켜기
+  
+*2.종속성추가 
+  기본적인 종속성은 컴포즈앱의 빌드그래들에 설정할수있음 
+  각각 os에 맞게 따로따로 종속성설치도 가능하고,commonMain에 있는건 양쪽다 설치됨
+  
+  그런데 여기보단 gradle에 libs.versions.toml에서(버전카탈로그) 관리하는게좋음
+  이런거처럼 여러모듈이 있는경우엔 이렇게 중앙에서 버전관리를 해두는게 좋기때문
+  
+  종속성은 버전에
+    serialization = "1.9.0"
+	koin = "4.2.0-beta2"
+	navigation3 = "1.0.0"
+	navigation2 = "2.9.1"
+	navigation3ViewModel = "2.10.0"
+	navigation3Adaptive = "1.3.0-alpha05"
+	dateTime = "0.7.1"
+	sqldelight = "2.2.1"
+	swipeableKmp = "1.0.3"  
+  사용할 버전을 나열해주고 
+  라이브러리에
+    kotlinx-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+    kotlinx-date-time = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "dateTime" }
+    
+    navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
+    navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+    navigation3-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "navigation3ViewModel" }
+    navigation3-adaptive = { group = "androidx.compose.material3.adaptive", name = "adaptive-navigation3", version.ref = "navigation3Adaptive" }
+    navigation2 = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version.ref = "navigation2" }
+    
+    koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+    koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+    koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
+    koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
+    koin-navigation3 = { module = "io.insert-koin:koin-compose-navigation3", version.ref = "koin" }
+    
+    sqldelight-android = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+    sqldelight-ios = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+    sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+    
+    swipeable-kmp = { module = "com.stevdza-san:swipeable-kmp", version.ref = "swipeableKmp" }
+  이렇게 추가하고 플러그인에
+    serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+	sqlDelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+  추가하면됨
+  직렬화라이브러리,네비게이션,koin(의존성주입),sqlDelight(db접근,멀티플랫폼이라 room대신쓰는거,룸써도 최신버전에선 되긴함)임
+  swipeable-kmp는 얘가 만든라이브러리 틈새광고임
+  
+  그리고 sqlDelight쓸거면 안드스튜디오 설정에서 플러그인(sqlDelight)도 설치하는게좋음
+  
+  이렇게 버전설정을해뒀으면 적용하면되는데,프로젝트레벨 빌드그래들에 플러그인2개를 추가해주고
+      alias(libs.plugins.serialization) apply false
+      alias(libs.plugins.sqlDelight) apply false
+  컴포즈앱의 빌드그래들에서 플러그인을 추가해주고
+    alias(libs.plugins.serialization)
+    alias(libs.plugins.sqlDelight)
+  디펜던시에서 안드로이드메인에 추가
+	implementation(libs.koin.android)
+
+	implementation(libs.sqldelight.android)
+
+	implementation(libs.navigation3.runtime)
+	implementation(libs.navigation3.ui)
+	implementation(libs.navigation3.viewmodel)
+	implementation(libs.navigation3.adaptive)  
+  원래는 commonMain에 둬야하지만,버전문제때문에 일단 여기에 두는거
+  commonMain에는
+	implementation(libs.kotlinx.serialization)
+	implementation(libs.kotlinx.date.time)
+
+	implementation(libs.koin.core)
+	implementation(libs.koin.compose)
+	implementation(libs.koin.compose.viewmodel)
+	implementation(libs.koin.navigation3)
+
+	implementation(libs.swipeable.kmp)
+
+	implementation(libs.sqldelight.coroutines)
+  추가,기본적인것들이 들어있음
+  ios메인에는
+    implementation(libs.sqldelight.ios)
+  추가
+  
+  이러면 일단 Collection is empty. 에러가 날텐데,컬렉션이 없어서 그런거
+  바로 db쓸거아니면 sqldelight관련 의존성 제거하고 테스트하던가 해도되고,아니면 db설정하면됨
+  
+3.앱만들기
+*1.네비게이션3 세팅  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   
   

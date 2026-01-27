@@ -663,9 +663,145 @@
   
 3.앱만들기
 *1.네비게이션3 세팅  
+  네비게이션이란 탐색경로와 백스택(이동이력)을 관리하는걸 말함
   
+  네비게이션을 쓸땐 모든 네비게이션관련내용을 저장할 패키지를 만들어두는게좋음
+  그리고 그안에 
+    sealed class Screen{}
+  을 만들고,여기서 사용할 화면들을 object나 data class로 선언하고 Screen을 받으면됨(그 ui이벤트할떄 하던거처럼 인터페이스화하는거)
+  인수가 없으면 object,있으면 data class를 쓰면됨
+	@Serializable //객체직렬화,네비게이션3에선 문자열로 안던지고 이거끼우고 객체를 던지는식으로 경로를 조정함
+	sealed class Screen {
+		@Serializable
+		object Home : Screen()
+		@Serializable
+		data class Task(
+			val id: String? = null,//로직상 널허용
+		) : Screen()
+	}
+  이렇게
+  이 상태패턴은 외부에서 Screen의 상속을 막고,여기서만 클래스를 만들수있게해서 이안에있는것만 들어올수있다는걸 보장해줌
+  또한 각 상태에 필요한 고유데이터를 묶어서 관리하기도 쉽고,when쓸때도 모든 하위클래스처리를 컴파일러가 확인해줌
+  객체직렬화가 되어있으면 네비게이션을 문자열경로가 아니라 객체를 던지는식으로 처리함 요즘음
+    navController.navigate("task/100")//옛날방식
+    navController.navigate(Screen.Task(id = "100"))//요즘방식
+  이렇게
   
+  그리고 Navigator클래스를 만들고,여기에 백스택변수를 만들면됨
+    val backStack: SnapshotStateList<Screen> = mutableStateListOf(Screen.Home)
+  이렇게 SnapshotStateList을 사용해야 컴포저블스코프내에서 관측할수있음
+  일반리스트를 쓰면 ui가 바뀌어도 업데이트되지않음
+  이렇게 백스택을 쓰면,화면들이 여기에 순서대로 겹쳐져있는느낌으로 동작하고,제일위에있는거만 현재 실행중인 화면이 됨
   
+  그리고 이동함수와 돌아가는 함수를 만들면됨
+    fun navigateTo(screen: Screen) {
+        backStack.add(screen)
+    }
+    fun navigateBack() {
+        backStack.removeLastOrNull()
+    }
+  이렇게
+  
+  그리고나서 내비게이션그래프만 만들면됨
+  여기엔 우리가 갈수있는 모든 목적지구성요소가 들어있음
+  현재버전기준으로는 ios에서는 내비게이션을 쓸수없어서,expect로 만들고 각각 안드와 ios에서 구현을 해줘야함
+    @Composable
+	expect fun NavGraph()
+  이렇게 commonMain에 만들고,알트엔터로 구현생성하면됨
+  
+  그리고 NavDisplay를 사용해서 그래프를 만들면됨
+    @Composable
+	actual fun NavGraph(navigator:Navigator) {
+		NavDisplay(
+			backStack = navigator.backStack,  //백스택
+			onBack = { navigator.navigateBack() },//뒤로가기할때 사용할 함수
+			entryProvider = entryProvider {  //사용할 모든 화면들
+				entry<Screen.Home> { //각화면들
+				                      //화면구현컴포저블클래스 넣으면됨
+				}  
+				entry<Screen.Task> { 
+				                       //화면구현컴포저블클래스 넣으면됨
+				}
+			},
+
+		)
+	}
+  이렇게
+
+*2.koin di 프레임워크
+  이건 그냥 di라이브러리임
+  처음에 세팅에서 유의해야할건 빌드그래들에서 안드로이드 디펜던시에
+    implementation(libs.koin.android)
+  이게 들어가야한다는거정도(위에서 세팅할떄 들어있음)
+  
+  이거도 의존성세팅용 패키지는 하나 만드는게좋고
+  모듈을 만들고 이걸 init에서 키면됨
+  
+  모듈을 만들떄 싱글톤생성하려면
+    val koinModule = module {
+      singleOf(::Navigator) //이건 최신방식
+	  //single(Navigator(get()))//이건 예전방식,get을 쓰면 스프링처럼 알아서 끼워주고,명시적으로 넣을수도있음
+    }
+  이렇게 생성하면되고
+  매번 생성하려면
+    factoryOf(::GetUserUseCase)
+  이렇게하면됨
+  등록할떈
+	fun initKoin(
+		config: (KoinApplication.() -> Unit)? = null,  //수신객체지정함수
+	) {
+		startKoin {
+			config?.invoke(this)
+			modules(koinModule)
+		}
+	}
+  이렇게 등록하면됨
+  
+  안드로이드와 ios메인에 각각 initKoin을 실행시켜줘야하는데,이건
+  ios는
+    fun MainViewController() = ComposeUIViewController(
+      configure = { initKoin() },
+    ) { App() }
+  이렇게 메인뷰에 configure에서 실행시켜주면되고
+  
+  안드로이드는 Application을 상속한 클래스를 만들고,여기서 onCreate의 마지막에 initKoin을 실행시켜주면됨
+	class MyApplication : Application() {
+		override fun onCreate() {
+			super.onCreate()
+			initKoin(config = { androidContext(this@MyApplication) })//안드로이드 컨텍스트 추가
+		}
+	} 
+  그리고 AndroidManifest.xml에서 application에
+    android:name=".MyApplication"
+  을 추가해서 저거로 부팅하겠다는걸 선언해주면됨
+  이러면 의존성라이브러리 설정은 끝났음
+  
+  그리고 의존성을 받을땐 여러방법이 있는데,
+  필드로 받는건(보통 컴포저블들은 이렇게 받을수밖에없음)
+    val navigator = koinInject<Navigator>()
+  이렇게 받으면 해당 타입클래스가 koin에 등록되어있다면 그걸줌(보통 싱글톤일테니)
+  생성자로 받는건,해당클래스에 val로 의존성을 받게하고
+    class MyViewModel(val repository: MyRepository) : ViewModel()
+  넣는건 모듈에서 넣으면됨
+    viewModel { MyViewModel(get()) }
+  이렇게 넣거나,
+    viewModelOf(::MyViewModel)
+  이렇게 리플렉션으로 넣으면 알아서 생성자를 분석해서 주입해줌(파라미터가 많아도 알아서해줘서 편함)
+  
+  즉 모듈에서 어떻게 조립할지를 선언한후 init를 하면 주입된상태로 생성되어있는거
+  
+  추가로 인터페이스주입(여러클래스중 하나 택일주입)을 할떈 bind를 사용해서 현재타입을 감출수있음
+    // ThemeServiceImpl을 만들되, 외부에서는 ThemeService 타입으로 쓰겠다.
+    singleOf(::ThemeServiceImpl) { bind<ThemeService>() }  
+  생성자에서는 인터페이스를 적으면됨
+    class MainViewModel(val themeService: ThemeService) : ViewModel()
+  이렇게
+  
+  그런데 컴포저블함수들은 클래스가 아니기떄문에,필드주입을 받아야함(KoinInject,KoinVoewModel())
+  그렇다고 모든 컴포저블함수에서 필드주입을하면 개판나니까 최상위에서 주입한다음 아래로는 전달만 하는 상태 호이스팅을사용하는게 좋음
+  보통 스크린 함수에서만 주입받고,하위 컴포넌트들은 매개변수로 받아서 사용하는식
+  
+*3.마테리얼 테마 색상 생성  
   
   
   

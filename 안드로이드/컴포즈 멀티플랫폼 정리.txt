@@ -801,13 +801,64 @@
   그렇다고 모든 컴포저블함수에서 필드주입을하면 개판나니까 최상위에서 주입한다음 아래로는 전달만 하는 상태 호이스팅을사용하는게 좋음
   보통 스크린 함수에서만 주입받고,하위 컴포넌트들은 매개변수로 받아서 사용하는식
   
-*3.마테리얼 테마 색상 생성  
+*3.마테리얼 테마 색상 생성 
+  마테리얼3에는 기본색,보조색등 다양한 기본 색상토큰들이 이미 들어있음 
+  그리고 우리가 추가할수도있음,그런데 직접 만드는건 복잡해서,외부사이트를 통해 쉽게만들수있음
+    https://material-foundation.github.io/material-theme-builder/
+  여기 들어가면 색상을 선택하고,폰트를 고르면 거기에 테마를 명암비로 3개씩 만들어줌
+  라이트모드와 다크모드도 테스트할수있고 다운로드할수있음
+  그러면 theme.kt로 받을수있는데,그러면 압축파일안에 ui/theme폴더안에 테마,컬러,타입 3가지가 들어있음
+  이걸 우리쪽에다가 따로 패키지를 만들고 가져가서 쓸수있음
   
+  그리고 각 코틀린파일의 패키지경로 바꿔주고,색상과 테마 설정을 App에서 할수있음
+	@Composable
+	fun App() {
+		val colorScheme = if (isSystemInDarkTheme()) darkScheme else lightScheme
+			MaterialTheme(colorScheme) {
+				NavGraph()
+			}
+		}
+	}
+  이렇게 하면됨
   
+*4.ToDoTask모델 클래스  
+  그냥 엔티티클래스 만드는거
+    val id: String = Uuid.random().toHexString(),
+  로 uuid자동생성가능하다는거정도?
+  대신 @OptIn(ExperimentalUuidApi::class) 붙여야함
   
+  그거말곤 그 클래스에서만 쓰는 클래스라면 그냥 같이두는게 낫다정도?
   
+*5.아이콘/이미지 리소스 추가  
+  기본적인 아이콘은 composeMain/composeResources/drawable에 벡터에셋을 추가한후,거기서 클립아트에서 원하는 아이콘을 검색해서 넣고 저장하면됨
+  그리고 가져다쓸땐
+	Icon(
+		painter = painterResource(id = R.drawable.ic_filter_list),
+		contentDescription = "Sort Tasks"
+	)
+  이렇게 가져다쓰면됨
+  만약 외부에서 받은거 쓰고싶으면,composeMain/composeResources에 벡터에셋을 추가하는건 똑같은데,이때 로컬파일을 첨부하면됨
   
+  그리고 리소스를 가져오는 유틸오브젝트를 만들고 연결하면됨
+	object Resource {
+		object Icon {
+			val BACK_ARROW = Res.drawable.arrow_back
+			val BLANK_BOX = Res.drawable.blank_box
+			val CHECK_BOX = Res.drawable.check_box
+		}
+
+		object Image {
+			val PAINTING_LIGHT = Res.drawable.painting_light
+			val PAINTING_DARK = Res.drawable.painting_dark
+		}
+	}
+  이렇게 만들어두면 편하게 가져다쓸수있음
+  아이콘과 이미지는 물리적으로는 똑같지만,논리적으로 분리되기때문에 따로두면좋음
+  만약 arrow_back처럼 이런 아이콘들이 인텔리센스에 안뜨면 실행함떙기면 리빌딩하면서 나올거임
   
+  그리고 아이콘들은 마테리얼심볼에서 찾을수도있음
+  
+*6.인포카드와 로딩카드 컴포넌트 만들기  
   
   
   

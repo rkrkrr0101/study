@@ -802,7 +802,10 @@
   보통 스크린 함수에서만 주입받고,하위 컴포넌트들은 매개변수로 받아서 사용하는식
   
 *3.마테리얼 테마 색상 생성 
-  마테리얼3에는 기본색,보조색등 다양한 기본 색상토큰들이 이미 들어있음 
+  마테리얼3에는 기본색,보조색등 다양한 기본 색상토큰들이 이미 들어있고,특정단위로 캡슐화를 해뒀음
+    MaterialTheme.colorScheme.surface
+  이렇게 사용하면 저걸 사용하는 모든곳의 색상을 통일시킬수있는거
+  
   그리고 우리가 추가할수도있음,그런데 직접 만드는건 복잡해서,외부사이트를 통해 쉽게만들수있음
     https://material-foundation.github.io/material-theme-builder/
   여기 들어가면 색상을 선택하고,폰트를 고르면 거기에 테마를 명암비로 3개씩 만들어줌
@@ -858,16 +861,76 @@
   
   그리고 아이콘들은 마테리얼심볼에서 찾을수도있음
   
-*6.인포카드와 로딩카드 컴포넌트 만들기  
+*6.인포카드와 로딩카드 컴포넌트 만들기 
+  사용할 컴포넌트들을 만들땐 프레젠테이션 패키지속에 컴포넌트 패키지를 만들고,그안에 만들어두는게좋음 
+  모디파이어는 컴포저블함수에서 파라미터로 받고,이걸 함수내의 최상위(보통 column,box,row등)에만 한번전달,
+  이후엔 밑에서는 자기만의 새 모디파이어 만들어야함
   
+  보통 column은 기본적으로
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+            .padding(all = 48.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) { ... } 
+  이런식의 세팅을 사용함(보통 이정도는 사용)	
   
+  CircularProgressIndicator을 사용하면 로딩을 표현할수있음(그 로딩할떄 중앙에 돌아가는 그거)
+	CircularProgressIndicator(
+		modifier = Modifier.size(26.dp),
+		strokeCap = StrokeCap.Round,//테두리모양
+		strokeWidth = 2.dp,          //테두리 두께
+	)
   
+*7.태스크카드 컴포넌트 만들기  
+  Card컴포저블 컴포넌트는
   
+  보통 modifier에도 clickable이 있고,컴포넌트 자체(마테리얼3)에도 onClick이 있는경우가 있는데,
+  이럴땐 보통 컴포넌트 자체 onClick에 넣는게 좋음
+  이게 더 깔끔하게 처리함
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp)), //모서리 자르기
+        onClick = { onClick(task.id) },
+		colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer, //카드 배경색
+            contentColor = MaterialTheme.colorScheme.onSurface,            //카드내부 텍스트나 아이콘 기본색
+        ),
+		elevation = CardDefaults.cardElevation(0.dp), //그림자,카드가 얼마나 바닥에서 떠있는지,0이면 바닥에 붙어있음
+    )   
+  그리고 카드의경우 CardDefaults.cardColors을 사용해서 색상을 쉽게 지정할수있음
   
+  텍스트의 스타일을 마테리얼3꺼를 사용해도 되지만,TextStyle을 사용해도됨
+	Text(
+		text = task.title,
+		style = TextStyle(
+			textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
+			fontWeight = FontWeight.Medium,
+			fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+		),
+		maxLines = 1,
+		overflow = TextOverflow.Ellipsis,
+	) //텍스트스타일,이건 textDecoration을 사용해서 취소선같은걸 넣을수있음
   
+	Text(
+		text = task.title,
+		style = MaterialTheme.typography.titleMedium,
+		maxLines = 1,                      //최대줄수,오버플로일어났을때 어케할지
+		overflow = TextOverflow.Ellipsis, //오버플로일어나면 생략(보여주지않음,그냥 밀리는거)
+	)//보통텍스트는 짧으니까 그냥 이거쓰면됨
+  이렇게
   
+  또한 텍스트가시성을 조절하고싶으면,모디파이어옵션을 추가하면됨
+		modifier= Modifier
+			.alpha(if(task.isCompleted) 0.5f else 1f),  
+  그리고 자주쓸거같으면 이걸 상수클래스화시켜두면 좋음
   
+  Color.Transparent는 알파를 0으로 만든값(기본배경색을 없애고싶을떄,투명이라고 보면됨)
   
+*8.페이크 레포지토리  
   
   
   

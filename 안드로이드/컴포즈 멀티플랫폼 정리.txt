@@ -931,11 +931,101 @@
   Color.Transparent는 알파를 0으로 만든값(기본배경색을 없애고싶을떄,투명이라고 보면됨)
   
 *8.페이크 레포지토리  
+  레포지토리 응답도 sealed class로 상태패턴으로 진행해서 받는게 좋음
+	sealed class RequestState<out T> {
+		data object Idle : RequestState<Nothing>()
+		data object Loading : RequestState<Nothing>()
+		data class Success<T>(val data: T) : RequestState<T>()
+		data class Error(val message: String) : RequestState<Nothing>()
+		fun isLoading(): Boolean = this is Loading  //현재 지금 상태 확인
+		fun isError(): Boolean = this is Error
+		fun isSuccess(): Boolean = this is Success
   
+		fun getSuccessData() = (this as Success).data  //데이터 받기,타입틀리면 예외
+		fun getSuccessDataOrNull() = if (this.isSuccess()) this.getSuccessData() else null
+		fun getErrorMessage() = (this as Error).message
+		fun getErrorMessageOrNull() = if (this.isError()) this.getErrorMessage() else null
+	}
+  그리고 상태가 바뀔떄 ui에 애니메이션같은걸 넣고싶으면 확장함수로 만들수있음
+  현재 객체를 보고 현재상태에 맞는 결과화면을 보여주는 함수를 만들면됨
+  이때 AnimatedContent을 사용하면 쉽게 애니메이션을 넣을수있고,이안에서 when으로 현재 state가 무엇인지 검사해서 해당하는 람다를실행하면됨
+	@Composable
+	fun <T> RequestState<T>.DisplayResult(
+		onSuccess: @Composable (T) -> Unit,
+		modifier: Modifier = Modifier,
+		backgroundColor: Color? = null,
+		onIdle: (@Composable () -> Unit)? = null,
+		onLoading: (@Composable () -> Unit)? = null,
+		onError: (@Composable (String) -> Unit)? = null,
+		transitionSpec: ContentTransform? = scaleIn(tween(durationMillis = 400)) +
+			fadeIn(tween(durationMillis = 800))
+			togetherWith scaleOut(tween(durationMillis = 400)) +
+			fadeOut(
+				tween(durationMillis = 800),
+			),
+	) {
+		AnimatedContent(
+			modifier = modifier
+				.background(color = backgroundColor ?: Color.Unspecified),
+			targetState = this,
+			transitionSpec = {
+				transitionSpec ?: (EnterTransition.None togetherWith ExitTransition.None)
+			},
+			label = "Content Animation",
+		) { state ->
+			Box(
+				modifier = Modifier.fillMaxWidth(),
+				contentAlignment = Alignment.Center,
+			) {
+				when (state) {
+					is RequestState.Idle -> {
+						onIdle?.invoke()
+					}
+
+					is RequestState.Loading -> {
+						onLoading?.invoke()
+					}
+
+					is RequestState.Error -> {
+						onError?.invoke(state.getErrorMessage())
+					}
+
+					is RequestState.Success -> {
+						onSuccess(state.getSuccessData())
+					}
+				}
+			}
+		}
+	} 
+  레포지토리는 일단 인터페이스를 만들고
+	interface TodoRepository {
+		fun createTask(task: ToDoTask): RequestState<Unit>
+		fun updateTask(task: ToDoTask): RequestState<Unit>
+		fun readSelectedTask(taskId: String): RequestState<ToDoTask>
+		fun readAllTasks(context: CoroutineContext): Flow<RequestState<List<ToDoTask>>> //다중조회시에는 코루틴에서 진행
+		fun removeTask(task: ToDoTask): RequestState<Unit>
+	}	  
+  이걸 구현하는 레포지토리를 만들면됨(진짜든 모킹이든)
+  추가적으로는 컴포저블에서는 mutableStateList는 관측가능하지만,mutableList는 관측할수없음
   
+  또한
+      override fun readSelectedTask(
+        taskId: String,
+    ): RequestState<ToDoTask> = try {
+        val existingTask = tasks.find { it.id == taskId }
+        if (existingTask != null) {
+            RequestState.Success(existingTask)
+        } else {
+            RequestState.Error(message = "no task id : $taskId")
+        }
+    } catch (e: Exception) {
+        RequestState.Error(message = "message:${e.message}")
+    }
+  이런코드가 될수있는이유는,즉 RequestState.Success와 RequestState.Error가 RequestState<ToDoTask>에 둘다 들어갈수있는 이유는
+  제네릭 공변성때문에 되는거
+  error은 out T로 공변성을 가지고있고,그래서 부모타입에 대입할수있음
   
-  
-  
+*9.홈화면에 모든 작업 표시  
   
   
   

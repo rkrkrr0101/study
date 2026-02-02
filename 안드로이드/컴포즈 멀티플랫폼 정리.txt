@@ -1106,8 +1106,13 @@
   
   
   
-  
-  
+*10.태스크화면
+  windowInsetsPadding으로 가상키보드등장에 맞춰서 패딩을 넣을수있고
+	modifier = Modifier
+		.windowInsetsPadding(WindowInsets.ime), // 키보드맞춰서 패딩
+  verticalScroll로 스크롤을 넣을수있음
+	modifier = Modifier.weight(1f)
+		.verticalScroll(rememberScrollState()),  
   
   
   

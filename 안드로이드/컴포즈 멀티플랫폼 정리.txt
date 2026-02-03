@@ -1115,8 +1115,20 @@
 		.verticalScroll(rememberScrollState()),  
   
   
-  
-  
+*11.태스크에 우선순위 추가
+  만약 모디파이어에 clip과 clickable을 둘다 추가할거라면,항상 clip를 먼저 추가하는게좋음
+  그리고 만약 조건에 따라 clickable을 추가하려면
+	modifier = modifier
+	  .clip(RoundedCornerShape(8.dp))
+	  .then(
+		if (onSelect != null) Modifier.clickable { onSelect(priority) } else Modifier,
+	  )
+  이런식으로 추가하면됨
+
+  만약 특정 이넘클래스의 전체를 순회할땐 
+    이넘클래스.entries.forEach{}
+  를 사용할수있음
+  즉 각 값별로(low,medium,high) 뭘 만들어야하거나(스피너나 선택지등),map같은거 돌릴떄 사용
   
   
   

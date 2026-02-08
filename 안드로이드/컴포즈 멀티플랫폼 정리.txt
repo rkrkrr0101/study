@@ -508,6 +508,9 @@
 		slideOutVertically{height->height} //슬라이드아웃
 		  +fadeOut()
 	  }
+	  contentKey = { state -> //이건 상태값이 바뀔때,이게 같으면 같은값으로 쳐서 새롭게 애니메이션 재생을 하지못하게 막음
+            state::class
+      },
 	){ targetCount->
 	   Text(
 	     text="$targetCount",	
@@ -971,6 +974,9 @@
 			transitionSpec = {
 				transitionSpec ?: (EnterTransition.None togetherWith ExitTransition.None)
 			},
+			contentKey = { state -> //이건 상태값이 바뀔때,이게 같으면 같은값으로 쳐서 새롭게 애니메이션 재생을 하지못하게 막음
+              state::class
+			},
 			label = "Content Animation",
 		) { state ->
 			Box(
@@ -1130,6 +1136,222 @@
   를 사용할수있음
   즉 각 값별로(low,medium,high) 뭘 만들어야하거나(스피너나 선택지등),map같은거 돌릴떄 사용
   
+  
+*12.태스크 뷰모델
+  뷰모델에서 값을 저장할땐 SavedStateHandle을사용하면됨
+  이건 뷰모델에서 시스템에서 프로세스를 종료해도 데이터를 안전하게 유지하고 복원하기위해 사용하는 도구임
+  이걸쓰면 백그라운드에서 앱이 죽어도,재시작시 이전상태를 복구할수있음
+  이건
+	class TaskViewModel(
+		private val repository: TodoRepository,
+		private val savedStateHandle: SavedStateHandle,
+	) : ViewModel() {
+  이렇게 di받은다음
+  저장은 이렇게
+    savedStateHandle["id"]=Task.id
+  받아올땐 이렇게 
+    val taskId = savedStateHandle.get<String>("id")//이때 String?임,null일수도있어서
+	val taskId: String? = savedStateHandle["taskId"] //둘중하나
+  하면됨
+  
+  그리고 컴포즈에서 상태를 관찰하고있어야할땐 뷰모델에서 StateFlow로 받고
+    val searchId = savedStateHandle.getStateFlow(키, 초깃값)  //
+    val searchId = savedStateHandle.getStateFlow("id", null)  //
+  ui에선 collectAsState()로 구독하면됨
+  저장은 똑같이
+    savedStateHandle["id"]=Task.id
+  이렇게하면되고
+  
+  현재 모든 키를 보고싶으면 
+    savedStateHandle.keys()
+  로 리스트를 뽑을수있음
+  
+  그리고 네비게이션을 할떈 SavedStateHandle을 사용하지않고,네비게이션을 사용함
+  SavedStateHandle은 단순히 시스템이 앱을 죽였다가 살렸을때 데이터를 보관하는용도임
+  
+  이렇게 네비게이션으로 값을 줄땐,뷰모델에서 id등 값을 받아서 상태를 채우는 함수를 만들고
+    fun loadData(taskId: String?) {
+		if (taskId != null) {
+		val existingTask = repository.readSelectedTask(taskId)
+		if (existingTask.isSuccess()) {...}
+	}
+  이걸 화면에서 1회 실행시켜서 값을 채우면됨
+	fun TaskScreen(
+		id: String?,
+		navigateBack: () -> Unit,
+		modifier: Modifier = Modifier,
+	) {
+		val viewModel = koinViewModel<TaskViewModel>() //뷰모델 di
+		val uiState by viewModel.uiState //상태받아오기
+
+		LaunchedEffect(key1 = Unit) {
+			viewModel.loadData(id)  //1회실행
+		} 
+		...
+	}		
+  만약 애니메이션을 슬라이드로 바꾸고싶다면 이렇게하면됨	
+    transitionSpec = slideInVertically()+ fadeIn() togetherWith
+  		slideOutVertically()+ fadeOut() 
+  스낵바는 코루틴으로 싸서 던져야하고,스캐폴드에서 넣을수있음
+    val snackBarHostState = remember { SnackbarHostState() }  스낵바 불러오기
+    val scope = rememberCoroutineScope() //저장코루틴스코프선언
+	Scaffold(	 
+      snackbarHost = { SnackbarHost(snackBarHostState) },
+	  ...
+	)
+  로 위치를 넣을수있음
+  또한 스낵바를 날릴땐 코루틴을 사용해서 날려야함
+	onClick = {
+		viewModel.saveTask(
+			onError = {
+				scope.launch {
+					snackBarHostState.showSnackbar(it)
+				}
+			},
+		)
+	},
+  이렇게
+	
+*13.스와이핑 추가
+  자기가 만든 라이브러리 쓰래  
+  이거쓰면 그냥 Swipable에 넣으면됨
+  
+  저거말고 일반적으로 스와이프액션을 만들땐 SwipeToDismissBox을 사용해서 만들게됨
+  이건 스와이프 상태 및 동작을 감지하는 State(rememberSwipeToDismissBoxState),
+  스와이프시 뒤에 나타나는 배경인 BackgroundContent
+  실제 보여지는 컨텐츠인 Content로 구성됨
+  
+  state에 왼쪽오른쪽스와이프시 동작을 넣고,중간에 놓았을때 동작을 넣는식으로 만든다음,
+  백그라운드 ui를 만들고,실제컨텍츠컴포넌트를 넣으면됨
+  
+*14.작업완료 삭제 구현
+  그냥 뷰모델에서 레포지토리 연결해둔다음 그거 호출하는거
+  별거없음
+  
+  볼만한건 lerp()를 사용하면 두기지색상을 애니메이션으로 변경할수있음
+  보통 스와이프떄 색변하게하거나 할떄 사용함
+	lerp(
+		start = MaterialTheme.colorScheme.surfaceContainer, //시작색
+		stop = MaterialTheme.colorScheme.error, //최종색
+		fraction = progressState.coerceIn(0f, 1f), //변경방식,여기선 프로그레스상태를 사용
+	)  
+  
+*15.가로모드 구현  
+  기본적으로 반응형으로 하면 가로로 바꿔도 대충 볼만하게 나오긴함
+  아예 가로로 지원을 하고싶으면 두가지 서로 다른 패널을 표현할수있게 해야함
+  그러기위해선 네비게이션그래프를 통해 현재 화면방향에 맞춰 다른 화면이 표시되게해야함
+  
+  일단 그러려면 화면에 대한 방향정보를 받아와야함
+    val windowAdaptiveInfo = currentWindowAdaptiveInfo()  //현재 방향정보 받아오기
+    val directive = remember(key1 = windowAdaptiveInfo) {  //받은 방향정보 저장
+        calculatePaneScaffoldDirective(windowAdaptiveInfo)  //방향정보기반으로 분기탈떄 조건을 생성해줌(알아서 해줌)
+            .copy(horizontalPartitionSpacerSize = 0.dp)
+    }
+	val listDetailStrategy = 
+	  rememberListDetailSceneStrategy<Any>(directive = directive) //방향정보를 기반으로 내비게이션동작으로 변환
+  이런식으로 받을수있고
+  
+  NavDisplay(...)에 sceneStrategy = listDetailStrategy를 추가하고
+  entry들에 metadata = ListDetailSceneStrategy.listPane(...)속에 병렬로 띄울걸 올려주면됨
+	entry<Screen.Home>(
+		metadata = ListDetailSceneStrategy.listPane(  //이게 리스트화면인걸 알려줌
+			detailPlaceholder = {                     //만약 오른쪽에 띄울게 없을때,이안에있는걸 띄워줌
+				InfoCard(
+					lightModeIcon = Resource.Image.PEN_PAPER_LIGHT,
+					darkModeIcon = Resource.Image.PEN_PAPER_DARK,
+					message = "select",
+					containerColor = MaterialTheme.colorScheme.surfaceVariant,
+				)
+			},
+		),
+	) {  ...}
+	entry<Screen.Task>(
+		metadata = ListDetailSceneStrategy.detailPane(), //디테일 영역에 표시(오른쪽)
+	) {  ...}
+  이런식
+  
+  즉 windowAdaptiveInfo를 통해 화면크기를 판단하고,만약 홈에서 태스크를 호출했는데 태스크가 detailPane일경우,
+  화면크기가 크다면 홈을 그대로 유지하고 남은자리에 태스크를 띄우고,화면이 작다면 홈자리에 태스크를 덮어씌우는식
+  백스택은 그대로 리스트로 유지되지만,ListDetailSceneStrategy이 백스택을 보고 어디로 갈지 정해주는식임
+  즉 메타데이터기반 필터링이라고 생각하면됨
+  정확히는 백스택리스트에서 왼쪽이라는 메타데이터가 있는 최신거 하나,오른쪽이라는 메타데이터가 있는 최신거 하나 이런식으로 찾아서 표시하는식같음
+  
+  그래서 생기는 문제가,가로에서 세로로 바꾸었을때 뒤로가기를 하면 홈화면으로 가는게 아닌 이전 디테일쪽으로 가는문제가 생길수있음
+  이건 내비게이터에서 전용 네비게이션 함수를 만들면됨
+    fun navigateToTask(taskId: String? = null) {
+        if (backStack.lastOrNull() is Screen.Task) {
+            backStack[backStack.lastIndex] = Screen.Task(taskId)
+        } else {
+            backStack.add(Screen.Task(taskId))
+        }
+    }  
+  이건 태스크를 하나로만 유지하기위해서 사용됨(태스크가 여러개 쌓여서 뒤로가기했을때 홈이 나오지않는걸 방지)
+  즉 이걸 사용하면,태스크-홈-태스크가 아닌 홈-태스크-태스크 이런 상황을 방지해줌
+  그리고 이걸 내비그래프에서 해당화면이동할떄 쓰면됨
+  
+  그리고 가로모드에선 상단바가 자리만 차지하고 거슬리는데,이것도 화면을 인식해서 상단바를 표시하지않게할수도있음
+  이건 스캐폴드에서
+	topBar = {
+		BoxWithConstraints {
+			val isDualPane = maxWidth >= maxHeight
+			if(isDualPane){
+				TopAppBar(
+					title = { Text(text = "To Do") },
+					navigationIcon = {
+						IconButton(onClick = navigateBack) {
+							Icon(
+								painter = painterResource(Resource.Icon.BACK_ARROW),
+								contentDescription = "Back Arrow",
+							)
+						}
+					},
+				)
+			}
+		}
+
+	},
+  이런식으로 BoxWithConstraints로 가로세로 받아와서 if문으로 싸버리면됨
+  
+*16.검색구현
+  뷰모델에서
+    private var _searchQuery = MutableStateFlow<String?>(null)
+    val searchQuery: StateFlow<String?> = _searchQuery  
+  이런식으로 변수2개를 사용해 공개하는이유는,뷰모델만이 이 상태를 변경할수있게 하기위해서
+  즉 ui단에서의 뷰모델 호출이 아닌 다른방식의 변경을 막기위해서 그런것
+  
+  combine은 코틀린 코루틴에서 두개이상의 데이터 플로우를 하나로 합치는 연산자임
+  이거의 특징은 어느 한쪽이라도 값이 변경되면,가장 최신값들을 모아서 다시 계산함
+    val allTasks = combine(
+        repository.readAllTasks(), //전체검색
+        _searchQuery,              //검색키
+    ) { tasks, query ->
+        when (tasks) { //검색을 처리,내부적으로 처리함
+            is RequestState.Success -> {
+                val filteredTasks = tasks.data.let { list ->
+                    query?.let {
+                        if (query.isBlank()) {
+                            list
+                        } else {
+                            list.filter { it.title.contains(query, ignoreCase = false) }
+                        }
+                    } ?: list
+                }.sortedByDescending { it.priority.ordinal }
+
+                RequestState.Success(filteredTasks)
+            }
+
+            else -> tasks
+        }
+    }.stateIn( // 재구성시마다 db를 재조회하는걸 막아줌,한번 조회이후 그값을 저장하고있음,즉 검색이후 값을 저장하고,재구성마다 다시계산을 막음
+        viewModelScope, // 이
+        SharingStarted.WhileSubscribed(5000), // 5초후 수집중단
+        RequestState.Loading,
+    )  
+  그리고 ui에선 특정값을 트리거로 켰다껐다할떈 AnimatedContent로 컨텐츠를 싸주면 좀 더 예쁘게나옴
+	AnimatedContent(
+		targetState = searchBarOpen, //컨텐츠 열고닫는 변수
+	) { 컨텐츠내용 }
+  이런식
   
   
   

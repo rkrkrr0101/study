@@ -1353,11 +1353,40 @@
 	) { 컨텐츠내용 }
   이런식
   
+*17.우선순위 검색 추가
+  검색을 추가할땐  
+	val allTasks = combine(
+			repository.readAllTasks(),
+			_searchQuery, //단어검색
+			_priorityFilter, //우선순위검색
+		) { tasks, query, priority ->
+			when (tasks) {
+				is RequestState.Success -> {
+					val filteredTasks = tasks.data
+						.let { list ->
+							검색조건1
+						}
+						.let { list ->
+							검색조건2
+						}.sortedByDescending { it.priority.ordinal }
+
+					RequestState.Success(filteredTasks)
+				}
+				else -> tasks
+			}
+		}.stateIn( // 재구성시마다 db를 재조회하는걸 막아줌,한번 조회이후 그값을 저장하고있음
+			viewModelScope, // 이
+			SharingStarted.WhileSubscribed(5000), // 5초후 수집중단
+			RequestState.Loading,
+		) 
+  이런식으로 .let을 계속 쌓아가면서 직렬로 추가해주는느낌으로 하면됨
+  어짜피 and연산이라면 순서대로 하면 결과값이 똑같으니까
   
   
-  
-  
-  
+*18.ios 네비게이션
+  커먼메인에 코드는 다 있으니,ios쪽에서 내비게이션만 연결해주면됨
+  그런데 현재기준으로는 ios는 네비게이션2를 사용해야하는데,어짜피 이것도 3으로 올라올테니 스킵할래
+  어짜피 테스트도 못하고
   
   
   

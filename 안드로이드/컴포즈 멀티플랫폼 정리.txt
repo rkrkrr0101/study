@@ -1388,7 +1388,113 @@
   그런데 현재기준으로는 ios는 네비게이션2를 사용해야하는데,어짜피 이것도 3으로 올라올테니 스킵할래
   어짜피 테스트도 못하고
   
+*19.SQLDelight
+  sqldelight를 사용할떈 컴포즈앱의 빌드그래들에
+	sqldelight {
+	  databases {
+		create("db명") {
+			packageName.set("패키지명")
+		}
+	  }
+	}
+  을 추가해줘야함
+  그리고나서 커먼메인의 최상위에 sqldelight라는 패키지를 만든다음,그이후에 packageName.set에 적힌 경로를 그대로 만들어주면됨
+  com.stevdza_san라면 commonMain/sqlDelight/com/stevdza_san을 만들면됨
+  그리고 그안에 create에 적은 db명에 해당하는 파일을 생성하면됨
+    db명.sq
+  이렇게 만들면됨
+  그리고 sqlDelight플러그인이 인텔리제이에 깔려있는지 확인하고,빌드새로한번 해주는게좋음
   
+  
+  이안에는 사용할 sql명령어들을 넣어두는곳임
+	CREATE TABLE TaskTable (
+		id TEXT NOT NULL PRIMARY KEY,
+		title TEXT NOT NULL,
+		description TEXT NOT NULL,
+		isCompleted INTEGER NOT NULL,
+		priority TEXT NOT NULL,
+		created_at INTEGER NOT NULL DEFAULT 0,
+		updated_at INTEGER NOT NULL DEFAULT 0
+	);
+
+	insertTask:
+	INSERT INTO TaskTable (
+		id,
+		title,
+		description,
+		isCompleted,
+		priority,
+		created_at,
+		updated_at
+	)
+	VALUES (?, ?, ?, ?, ?, ?, ?);
+
+	updateTask:
+	UPDATE TaskTable
+	SET
+		title = ?,
+		description = ?,
+		isCompleted = ?,
+		priority = ?,
+		updated_at = ?
+	WHERE id = ?;
+
+	selectTaskById:
+	SELECT * FROM TaskTable
+	WHERE id = ?;
+
+	selectAllTasks:
+	SELECT * FROM TaskTable
+	ORDER BY created_at DESC;
+
+	deleteTaskById:
+	DELETE FROM TaskTable
+	WHERE id = ?;  
+  이런식으로 사용할 쿼리들을 넣어둔거
+  좀 sqlDelight는 room처럼 orm보단 마이바티스쪽에 가까움
+  현재기준으로는 룸도 kmp지원하니까 그냥 룸쓰는게 나아보이긴함
+  
+  일단 딜라이트를 쓸땐, 커먼메인에 데이터베이스드라이버팩토리 인터페이스를 만들고,이걸 안드로이드메인과 ios메인에서 구현해줘야함
+  안드로이드에선
+	class AndroidDatabaseDriverFactory(private val context: Context) : DatabaseDriverFactory {
+		override fun createDriver(): SqlDriver = AndroidSqliteDriver(TaskDatabase.Schema, context, "task.db")
+	}
+  이렇게하고 ios에서는
+	class IosDatabaseDriverFactory : DatabaseDriverFactory {
+		override fun createDriver(): SqlDriver = NativeSqliteDriver(TaskDatabase.Schema, "task.db")
+	}
+  이렇게하면됨
+  
+  그리고 koin에서 expect로 선언을 한다음
+    expect val targetModule:Module
+  안드로이드와 ios에서 이걸 구현하면됨
+  이건 안드로이드와 ios에서 di해야하는 대상이 다르기때문
+  이건
+    actial val targetModule=module{
+	  single<DatabaseDriverFactory>{IosDatabaseDriverFactory()}
+	}
+	actial val targetModule=module{
+	  single<DatabaseDriverFactory>{AndroidDatabaseDriverFactory()}
+	}
+  이렇게 그냥 선언하고 커먼에서는 받아서쓰는거
+  그리고 커먼의 KoinModule에서 startKoin안에
+    modules(koinModule,targetModule)
+  이렇게 모듈을 추가해주면됨
+  
+  이렇게 설정을 했으면,레포지토리를 만들면됨
+  인터페이스구현식으로 하는게 편하고,di로 드라이버팩토리를 받아서 그걸로 드라이버를 생성하면됨
+  이걸 데이터베이스(위에서 만든 db명.sq 이거) 생성할때 넣어주면됨
+  그리고
+    private val query=database.taskDatabaseQueries
+  로 아까 만들어둔 sql문장들을 꺼낼수있음
+  이걸 메서드에 넣어주면됨
+  
+  이때 try catch로 싸주는게좋고(db작업이니까),호출은 그냥 메서드호출하면됨
+  
+  그리고 읽기를 할떈 TaskTable로 리턴될텐데,이걸 우리가 만든 객체로 convert할수있는 확장함수를 만들면 편함
+  또한 전체읽기등을 할땐 코루틴컨텍스트가 필요할텐데,이것도 매개변수로 받아서 만들면됨
+  
+  사용이야 어짜피 di받아서쓰니까 똑같을거고,koin모듈에서 레포지토리 구현체를 생성할때 팩토리는 get()으로 받으면될거임
   
   
   

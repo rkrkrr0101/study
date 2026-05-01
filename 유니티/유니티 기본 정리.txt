@@ -1,0 +1,243 @@
+1.유니티 엔진 기초 및 2D 스크립팅 적응
+*1.설치
+  스킵
+*2.에디터 뷰 완벽 이해 (Scene, Game, Hierarchy, Inspector 창)
+  유니티 에디터의 화면은 6개의 핵심영역으로 나뉨
+  
+  Hierarchy 는 현재 씬에 포함된 모든 게임오브젝트를 계층구조로 보여줌
+  즉 현재 메모리에 로드되어서 동작중인 활성객체의 인스턴스트리라고 보면됨
+  그래서 어떤 오브젝트가 다른 오브젝트의 자식으로 들어가면 부모의 위치나 회전상태에 종속됨
+  빈프로젝트라면 기본적으로 메인카메라가 위치함
+  
+  Scene View는 게임오브젝트를 2d나 3d공간에 시각적으로 배치하고 선택,조작하는 실제 작업공간임
+  디자인타임의 샌드박스라고 보면됨,휠로 줌인줌아웃,휠버튼으로 드래그해서 시점이동이 가능
+  
+  Game View는 게임이 실행될때 실제 플레이어가 보게되는 최종화면을 보여줌
+  즉 런타임 클라이언트 출력화면이라고 생각하면됨
+  씬뷰가 개발자의 전지적 시점이라면,게임뷰는 메인카메라 오브젝트가 렌더링하는 결과물만을 보여줌
+  Aspect Ratio설정으로 16:9등 다양한 기기화면비에 맞춰 ui가 어떻게 보일지 미리 테스트할수있음
+  
+  Inspector는 하이어라키나 프로젝트창에서 선택한 오브젝트의 세부정보를 보여주고,설정을 변경할수있는 창임
+  객체의 상태뷰어 및 di컨테이너역할을 함
+  오브젝트를 클릭하면 해당 객체가 어떤 컴포넌트들을 달고있는지 나열되고,
+  c#스크립트의 변수들에 직접 값을 입력하거나 다른 오브젝트를 드래그드롭해서 참조를 주입할수있음
+  
+  project는 에셋,이미지,c#코드들의 파일위치를 보여주는 탐색기고,
+  console는 에러나 표준출력로그를 확인하는공간임
+  
+*3.C# 스크립트 생성 및 MonoBehaviour 생명주기 실습 
+  일반적인 c#콘솔앱은 Main()에서 프로그램이 시작되지만,유니티는 좀 다름
+  
+  유니티의 모든 오브젝트는 컴포넌트를 조립해서 만들어지고,우리가 작성하는 c#스크립트역시 하나의 커스텀 컴포넌트가 되어서 오브젝트에 부착(Attach)됨
+  프로젝트에서 크리에이트로 MonoBehaviour script를 생성하면되고,이때 주의할점은 파일명과 스크립트내부의 클래스명이 반드시 정확하게 일치해야함
+  그래야 엔진이 컴포넌트로 정상인식함
+  
+  스크립트는 MonoBehaviour를 상속받고있고,그래야 해당 스크립트를 하이어라키의 게임오브젝트에 컴포넌트로 붙일수있고,유니티의 생명주기이벤트를 수신할수있음
+  유니티엔진은 런타임중에 특정 타이밍마다 스크립트의 정해진 이름의 메서드를 자동으로 호출함(콜백)
+    Awake():스크립트 인스턴스가 로딩될때 단 한 번 호출됨,컴포넌트참조를 캐싱하거나 의존성주입할때 주로 사용됨
+	Start():Awake이후 첫 프레임이 업데이트되기 직전에 한번 호출됨,
+	  다른오브젝트들의 Awake가 모두 끝난상태라는게 보장되므로,외부오브젝트를 참조하는 초기화로직에 적합
+	Update():매 프레임마다 한번씩 호출됨,핵심 리퀘스트 루프로,사용자의 입력을 받거나,지속적인 타이머계산,위치이동등을 처리함
+	  프레임드랍이 생기면 호출간격이 불규칙해짐
+	FixedUpdate():프레임과 무관하게 고정된 시간간격으로 호출되고,물리엔진연산은 반드시 여기서 처리해야 충돌이나 기기성능에 상관없는 균일한 작업이 일어남
+	OnDestory():오브젝트가 파괴되거나 씬이 넘어갈때 호출됨,메모리해제나 이벤트구독해제등에 사용됨
+  이렇게 사용됨
+  
+  그냥 각 오브젝트의 콜백이벤트를 넣는방식이라고 생각하면될거같음
+  
+*4 Transform 컴포넌트 제어  
+  Transform은 가장 중요한 클래스중 하나로,이건 오브젝트의 공간적 상태를 담고있는 필수 데이터 구조체이자,부모-자식관계를 정의하는 노드임
+  유니티의 모든 오브젝트는 반드시 이 Transform을 기본적으로 가지고,절대 삭제할수없음
+  
+  쉽게말하면 오브젝트의 위치와 크기를 담은 기본속성이라고 보면됨
+  그러니까 당연히 없앨수없는거고,유니티에선 이런것도 컴포넌트로 관리한다 정도로 생각하면될듯(추상화)
+  
+  하이어라키에선 오브젝트들을 부모와 자식구조로 묶을수있는데,이때 중요한건
+    transform.position(절대좌표):게임월드 전체를 기준으로한 절대좌표
+	transform.localPosition(상대좌표):부모오브젝트를 기준으로한 상대좌표
+  임,그래서 핸드라는 부모오브젝트안에 카드1,카드2를 넣으면 localPosition을 조작해서 손패안에서의 간격을 맞출수있고,손패전체를 움직이게할수도있음
+  
+  스크립트에서 transform키워드를 통해 자신의 Transform컴포넌트에 즉시 접근할수있음
+  일단 스크립트에서 using UnityEngine.InputSystem;으로 입력클래스를 임포트하고,
+  업데이트에서
+	float horizontalInput = 0f; //이동방향설정,초기값은 중립값인 0
+
+	// 2. 현재 기기에 키보드가 연결되어 있는지 확인
+	if (Keyboard.current != null)
+	{
+		// 왼쪽 화살표나 A키를 누르고 있는 동안 -1을 적용
+		if (Keyboard.current.leftArrowKey.isPressed || Keyboard.current.aKey.isPressed)
+		{
+			horizontalInput = -1f;
+		}
+		// 오른쪽 화살표나 D키를 누르고 있는 동안 1을 적용
+		else if (Keyboard.current.rightArrowKey.isPressed || Keyboard.current.dKey.isPressed)
+		{
+			horizontalInput = 1f;
+		}
+	}
+
+	// 3. 이동할 방향 벡터 계산 (Vector3.right는 X축 양의 방향)
+	Vector3 moveDirection = Vector3.right * horizontalInput;
+
+	// 4. Transform 컴포넌트 이동 처리 (프레임 단위가 아닌 초 단위로 일정하게 이동)
+	transform.Translate(moveDirection * moveSpeed * Time.deltaTime);
+  이런식으로 처리하면됨
+  그리고 스크립트에 public로 상태값을 열어두면,유니티 Inspector에서 그 값을 수정할수도있음()
+  
+*5. Object.Instantiate를 활용한 프리팹(Prefab) 동적 생성  
+  프리팹이란 씬에 배치된 오브젝트를 재사용가능한 템플릿형태의 파일로 저장해둔걸 말함
+  즉 클래스라고 볼수있고,프리팹을 통해서 쉽게 똑같은 복제본을 찍어낼수있고,원본과 복제본사이에는 계속 연결이 되어있어서,
+  프리팹의 원본을 수정하면 모든 복제본이 한번에 업데이트됨(단 복제본을 수정한다고 원본이 수정되진않음)
+  
+  유니티의 스크립팅 api인 Object.Instantiate는 팩토리패턴이나 new와 같은 역할을 함
+  이건 프리팹원본을 참조하여 메모리(하이어라키)에 새로운 게임오브젝트를 동적으로 할당하고 배치시킴
+  
+  가장 쉽게 프리팹을 만드는방법은 하이어라키에 있는 오브젝트를 프로젝트창으로 드래그하면됨
+  이러면 해당 오브젝트가 저장되는식임
+  
+  이걸 만들땐
+    // 1. 찍어낼 원본 프리팹을 담을 변수 선언 (Inspector에서 주입받기 위해 public 선언)
+    public GameObject cardPrefab;
+  이렇게 스크립트에 선언하고,
+	if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)//입력을 딱 한프레임에만 받을수있음
+	{
+		//매개변수: (원본 프리팹, 생성 위치, 회전값)
+		Instantiate(cardPrefab, Vector3.zero, Quaternion.identity);
+	}
+  이런식으로 처리할수있음(키보드가 연결되어있고,스페이스바가 이번프레임에 막 눌렸는지를 확인)
+  이렇게 스크립트를 만들어냈으면,하이어라키에서 Empty를 생성하고,이거의 이름을 바꿔준후(GameManager 이런거),스크립트를 여기에 붙여주면됨
+  그리고나서 해당오브젝트의 스크립트설정에다가 GameObject cardPrefab를 등록해주면됨(di같은느낌),
+  
+  이건 몬스터스폰이나 덱에서 새로운 카드를 손패로 가져올때 사용되는 핵심기술임
+  
+*6. Random.Range를 이용한 난수 생성 및 로직 적용
+  유니티에서 Random.Range(min, max)는 정수를 넣느냐 실수를 넣느냐에 따라 최대값의 포함여부가 달라짐
+  실수 0.0에서 10.0까지 하면 0.0부터 10.0까지 전부 나올수있지만,
+  정수 0에서 10까지하면 0에서부터 9까지밖에 안나옴
+  
+  보통 정수는 Random.Range(0, list.Count)같은 방식으로 작성해서 outOfRange를 일으키지않고 랜덤하게 뭘 뽑을때 사용됨
+  보통 여러종류의 카드가 담긴 배열에서 무작위 카드를 뽑고싶다면
+	string[] deck = { "스페이드 A", "하트 2", "클로버 3", "다이아 4" };
+	int randomIndex = Random.Range(0, deck.Length); // 0, 1, 2, 3 중 하나가 나옴
+	string drawnCard = deck[randomIndex];  
+  이런식으로 하게됨
+  
+*7. 최신 Input System 마스터하기: 마우스 입력과 카드 클릭 처리
+  마우스입력을 처리할때도 Mouse.current 싱글톤을 사용해 현재상태를 폴링해서 읽어옴
+  이때 버튼의 상태는
+    .wasPressedThisFrame:버튼이 눌린 바로 그 프레임(카드클릭시 주로 사용)
+	.isPressed:버튼을 누르고있는동안 지속적으로 반환(카드 드래그앤드롭시 사용)
+	.wasReleasedThisFrame:버튼을 뗀 바로 그 프레임
+  가 있음
+	if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+	{
+		HandleMouseClick();
+	}
+  이런식으로 이벤트를 받을수있음
+  
+  주의할점으로는 
+  스크린좌표(플레이어 모니터픽셀좌표,마우스포인터는 이 좌표를 사용)와 
+  월드좌표(씬 내부의 절대적인 공간좌표,Transform에서 쓴 좌표)를 변환해야한다는것
+  이를위해 ScreenToWorldPoint를 사용해서 마우스가 클릭한 모니터픽셀을 씬 내부의 절대좌표로 변환해줘야함
+
+  
+  마우스의 위치를 월드좌표로 변환했다면,그 좌표에 카드가 있는지를 검사해야함
+  유니티는 물리2d엔진의 Raycast를 사용해서 특정위치에 광선을 쏴서 부딫히는 객체를 찾아냄
+  단 이 광선에 맞으려면 카드프리팹에 반드시 박스콜라이더2d컴포넌트가 붙어있어야함
+  이건
+          // 2. 마우스의 현재 스크린(모니터 픽셀) 좌표 읽어오기
+        Vector2 mouseScreenPos = Mouse.current.position.ReadValue();
+		        // 3. 스크린 좌표를 메인 카메라를 기준으로 게임 월드 좌표로 변환
+        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(
+			new Vector3(mouseScreenPos.x, mouseScreenPos.y, -Camera.main.transform.position.z)
+		);
+        // 4. 변환된 월드 좌표에 광선(Raycast)을 쏘아 객체(Collider)가 있는지 확인
+        // Vector2.zero는 광선을 쏘는 방향입니다. (제자리에서 찌르기 때문에 zero)
+        RaycastHit2D hit = Physics2D.Raycast(mouseWorldPos, Vector2.zero); 
+  이런식으로  좌표변환후에 쏘면됨
+  그리고 hit에는 null 혹은 게임오브젝트가 들어갈테니
+    if (hit.collider != null){...}
+  로 hit을 가지고 작업을 처리할수있음
+  
+  이렇게 마우스클릭을 관리하는건 시스템의 영역이니 GameManager처럼 게임 전체를 관리하는 오브젝트에 스크립트를 넣는게 좋음
+  
+*8.비동기 처리 기초: 코루틴과 WaitForSeconds를 활용한 딜레이 구현  
+  유니티의 코루틴은 메인스레드에서 동작함(멀티스레딩이 아님)
+  그래서 비동기처리를 하면서도 Transform이나 UI같은 내부객체에 접근할때 스레드경합을 걱정할필요가 없음
+  대충 상태머신을 만들고 yield return을 만나면 함수를 멈추고 엔진에 제어권을 넘기고,
+  지정된조건(보통 특정시간경과)을 만족하면 다시 함수로 제어권을 받아오는식의 단일코루틴을 사용하기때문 
+  
+  보통 카드게임같은데서 카드를 한장 뽑고,0.5초대기,또 다음 카드를 뽑고,이펙트 재생 이런식으로 타이밍제어를 할때도 주로쓰임
+  
+  코루틴은 이런식으로 호출하고
+    private bool isSpawning = false;
+	
+
+    void Update()
+    {
+        // 스페이스바가 눌렸고, 현재 코루틴이 실행 중이 아닐 때만 작동
+        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame && !isSpawning)
+        {
+            // 1. 코루틴 실행은 반드시 StartCoroutine() 메서드로 감싸서 호출해야 합니다.
+            StartCoroutine(SpawnMultipleCardsRoutine());
+        }
+    }
+  코루틴함수는 반드시 IEnumerator를 반환해야함
+    private WaitForSeconds waitHalfSec = new WaitForSeconds(0.5f);
+	
+    IEnumerator SpawnMultipleCardsRoutine()
+    {
+        isSpawning = true;
+        Debug.Log("카드 드로우 시작...");
+
+        for (int i = 0; i < 3; i++)
+        {
+            // 랜덤한 위치에 카드 스폰 (이전 강의 로직)
+            float randomX = Random.Range(-5.0f, 5.0f);
+            float randomY = Random.Range(-3.0f, 3.0f);
+            Instantiate(cardPrefab, new Vector3(randomX, randomY, 0f), Quaternion.identity);
+
+            Debug.Log($"{i + 1}번째 카드 스폰 완료!");
+
+            // 3. 핵심: 0.5초 동안 대기한 후 다음 반복문 진행
+            // 백엔드의 await Task.Delay(500)과 같은 역할입니다.
+            yield return waitHalfSec;
+        }
+
+        Debug.Log("카드 드로우 모두 완료!");
+        isSpawning = false; // 다시 스페이스바를 누를 수 있도록 플래그 해제
+    }
+  이런식으로 반복문안에 yield return을 넣는식으로 제어를 할수있음
+  
+  만약 중간에 실행을 멈추고싶다면 
+    StopCoroutine()
+  을 사용할수있고,
+  yield return new WaitForSeconds(0.5f);로 매번 new를쓰는거보단
+    private WaitForSeconds waitHalfSec = new WaitForSeconds(0.5f);
+  를 클래스레벨 이상으로 선언해두고 저걸 리턴하는게 성능적으로 더 나음
+  이게 백엔드랑 다른건,게임의 특성상 저런 오브젝트들이 몇개가 나올지 모르고(뱀서같은경우 총알하나하나가 다 오브젝트니까),
+  그렇기때문에 이런부분에서 gc에 부하를 주는걸 최대한 막아야함
+  또한 유니티는 기본적으로 싱글스레드로 동작하기때문인것도 있음
+  
+  또한 요즘 유니티에선 코루틴보다 UniTask를 메인으로 쓴다고하니 나중에 찾아보자
+  
+  
+  
+2. 코어 게임 시스템 뼈대 만들기  
+*1. 효율적인 씬(Scene) 구조 설계 이론 (Title, Lobby, InGame 분리) 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
